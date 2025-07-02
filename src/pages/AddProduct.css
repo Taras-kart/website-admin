@@ -1,0 +1,492 @@
+.add-product-page {
+  color: gold;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding: 30px;
+}
+
+.admin-section1,
+.admin-section2 {
+  background-color: #000;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
+}
+
+.admin-section1 h2,
+.admin-section2 h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: gold;
+}
+
+.category-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.category-buttons button {
+  padding: 10px 20px;
+  background: none;
+  border: 2px solid white;
+  color: white;
+  font-weight: bold;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.category-buttons button:hover {
+  border-color: gold;
+  color: gold;
+}
+
+.category-buttons button.active {
+  color: gold;
+  border: 1.5px solid gold;
+  box-shadow: 0 0 10px #ffd277;
+}
+
+.brand-search {
+  width: 97%;
+  padding: 10px 10px;
+  font-size: 16px;
+  border: 2px solid gold;
+  border-radius: 8px;
+  background-color: #111;
+  color: gold;
+  outline: none;
+  margin-bottom: 10px;
+  align-self: flex-start;
+  margin-right: 10px;
+}
+
+.brand-dropdown {
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #111;
+  border: 1px solid gold;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.brand-item {
+  padding: 8px 12px;
+  color: white;
+  background-color: #222;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.brand-item:hover {
+  background-color: #333;
+  color: gold;
+}
+
+.add-new-brand-button {
+  margin-top: 10px;
+  background: none;
+  border: 2px solid white;
+  color: white;
+  font-weight: bold;
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-new-brand-button:hover {
+  border-color: gold;
+  color: gold;
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.popup-box {
+  background-color: #111;
+  padding: 30px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  color: gold;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+}
+
+.popup-box h3 {
+  margin-bottom: 20px;
+  font-size: 20px;
+}
+
+.popup-box input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid gold;
+  border-radius: 8px;
+  background-color: #000;
+  color: white;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.popup-actions button {
+  padding: 10px 20px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.popup-actions button:first-child {
+  background-color: gold;
+  color: black;
+}
+
+.popup-actions button:last-child {
+  background-color: #333;
+  color: white;
+}
+
+.popup-actions button:last-child:hover {
+  background-color: #555;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* section3 */
+.admin-section3 {
+  background-color: #000;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
+  margin-top: 20px;
+}
+
+.admin-section3 h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: gold;
+}
+
+.admin-section3 .brand-search {
+  width: 97%;
+  padding: 10px;
+  font-size: 16px;
+  border: 2px solid gold;
+  border-radius: 8px;
+  background-color: #111;
+  color: gold;
+  outline: none;
+  margin-bottom: 15px;
+}
+
+.admin-section3 .brand-dropdown {
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #111;
+  border: 1px solid gold;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-section3 .brand-item {
+  padding: 8px 12px;
+  color: white;
+  background-color: #222;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.admin-section3 .brand-item:hover {
+  background-color: #333;
+  color: gold;
+}
+
+.admin-section3 .add-new-brand-button {
+  margin-top: 15px;
+  background: none;
+  border: 2px solid white;
+  color: white;
+  font-weight: bold;
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.admin-section3 .add-new-brand-button:hover {
+  border-color: gold;
+  color: gold;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* section4  */
+.admin-section4 {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  background-color: #000;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
+  border: 1px solid gold;
+}
+
+.section4-left {
+  width: 70%;
+  overflow-y: auto;
+  max-height: 500px;
+  padding-right: 20px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.section4-left::-webkit-scrollbar {
+  display: none;
+}
+
+.section4-heading {
+  font-size: 22px;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid gold;
+  color: gold;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.color-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #111;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.3s;
+  border: 2px solid transparent;
+}
+
+.color-item.active {
+  border: 2px solid gold;
+  background-color: #222;
+}
+
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.size-section {
+  margin-bottom: 30px;
+}
+
+.sub-heading {
+  color: gold;
+  font-size: 18px;
+  margin: 10px 0;
+  border-bottom: 1px dashed gold;
+  padding-bottom: 4px;
+}
+
+.size-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.size-box {
+  padding: 8px 12px;
+  background-color: #222;
+  color: white;
+  border: 1px solid gold;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.size-box.active {
+  background-color: gold;
+  color: black;
+}
+
+.price-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.price-inputs label {
+  color: gold;
+  font-weight: bold;
+}
+
+.price-inputs input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid gold;
+  background-color: #111;
+  color: white;
+  font-size: 16px;
+  outline: none;
+}
+
+.section4-right {
+  width: 28%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.upload-btn {
+  padding: 12px 20px;
+  background: none;
+  border: 2px solid gold;
+  color: gold;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.upload-btn:hover {
+  background-color: gold;
+  color: black;
+}
+
+.preview-image {
+  max-width: 100%;
+  height: auto;
+  border: 2px solid gold;
+  border-radius: 12px;
+  margin-top: 50px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* section 5 */
+.admin-section5 {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.add-product-final-btn {
+  background-color: black;
+  border: 2px solid gold;
+  color: gold;
+  padding: 14px 28px;
+  font-size: 18px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-product-final-btn:hover {
+  background-color: gold;
+  color: black;
+}
+
+.popup-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #111;
+  color: white;
+  padding: 20px 30px;
+  border-radius: 12px;
+  z-index: 1000;
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+}
+
+.popup-card.success {
+  border: 2px solid #00cc66;
+  color: #00cc66;
+}
+
+.popup-card.error {
+  border: 2px solid #ff4444;
+  color: #ff4444;
+}
