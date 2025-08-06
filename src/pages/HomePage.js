@@ -21,25 +21,25 @@ const HomePage = () => {
       <div className="admin-body">
         <div className="admin-sidebar">
           <button
-  className={`sidebar-button ${activeTab === 'Add' ? 'active' : ''}`}
-  onClick={() => setActiveTab('Add')}
->
-  <span>Add Product</span>
-</button>
+            className={`sidebar-button ${activeTab === 'Add' ? 'active' : ''}`}
+            onClick={() => setActiveTab('Add')}
+          >
+            <span>Add Product</span>
+          </button>
 
-<button
-  className={`sidebar-button ${activeTab === 'Update' ? 'active' : ''}`}
-  onClick={() => setActiveTab('Update')}
->
-  <span>Update Product</span>
-</button>
+          <button
+            className={`sidebar-button ${activeTab === 'Update' ? 'active' : ''}`}
+            onClick={() => setActiveTab('Update')}
+          >
+            <span>Update Product</span>
+          </button>
 
-<button
-  className={`sidebar-button ${activeTab === 'Delete' ? 'active' : ''}`}
-  onClick={() => setActiveTab('Delete')}
->
-  <span>Delete Product</span>
-</button>
+          <button
+            className={`sidebar-button ${activeTab === 'Delete' ? 'active' : ''}`}
+            onClick={() => setActiveTab('Delete')}
+          >
+            <span>Delete Product</span>
+          </button>
 
         </div>
         <div className="admin-main">{renderContent()}</div>

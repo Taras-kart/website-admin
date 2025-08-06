@@ -427,6 +427,47 @@
   border-radius: 12px;
   margin-top: 50px;
 }
+.price-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.price-table th,
+.price-table td {
+  border: 1px solid gold;
+  padding: 10px;
+  text-align: left;
+  color: Gold;
+  background-color: black;
+}
+
+.price-table th {
+  background-color: black;
+  color: gold;
+}
+
+.price-table input {
+  width: 90%;
+  margin: 0 auto;
+  padding: 8px;
+  border: 1px solid gold;
+  border-radius: 5px;
+  color: white;
+}
+
+.centered-input {
+  text-align: center;
+}
+
+.centered-input input {
+  width: 50%;
+  margin: 0 auto;
+  display: block;
+  color: white;
+}
+
+
 
 
 

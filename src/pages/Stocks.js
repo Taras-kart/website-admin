@@ -1,95 +1,72 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './Stocks.css';
 import Navbar from './NavbarAdmin';
 
 const Stocks = () => {
-  const [stockData, setStockData] = useState([
-    { id: 1, name: 'Nike', quantity: 100, price: 2000, supplier: 'Nike Inc.', image: 'https://via.placeholder.com/80' },
-    { id: 2, name: 'Adidas', quantity: 50, price: 1500, supplier: 'Adidas Group', image: 'https://via.placeholder.com/80' },
-    { id: 3, name: 'Puma', quantity: 80, price: 1200, supplier: 'Puma SE', image: 'https://via.placeholder.com/80' }
-  ]);
+  const [stockData, setStockData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleInputChange = (index, field, value) => {
-    const updated = [...stockData];
-    updated[index][field] = field === 'quantity' || field === 'price' ? parseInt(value) : value;
-    setStockData(updated);
+  const fetchStocks = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/stocks');
+      const data = await response.json();
+      setStockData(data);
+    } catch (error) {
+      console.error('Failed to fetch stock data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddStock = () => {
-    const newStock = {
-      id: stockData.length + 1,
-      name: '',
-      quantity: 0,
-      price: 0,
-      supplier: '',
-      image: 'https://via.placeholder.com/80'
-    };
-    setStockData([...stockData, newStock]);
-  };
+  useEffect(() => {
+    fetchStocks();
+  }, []);
 
   return (
     <div className="stocks-page">
-        <Navbar />
+      <Navbar />
+
       <div className="section-header">
         <h2>Stock Management</h2>
+        <button className="refresh-button" onClick={fetchStocks}>🔄 Refresh</button>
       </div>
 
       <div className="section-table">
-        <h3>Stock List</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Sl. No</th>
-              <th>Product Name</th>
-              <th>Quantity</th>
-              <th>Price</th>
-              <th>Supplier</th>
-              <th>Image</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stockData.map((stock, idx) => (
-              <tr key={stock.id}>
-                <td>{idx + 1}</td>
-                <td>
-                  <input
-                    type="text"
-                    value={stock.name}
-                    onChange={(e) => handleInputChange(idx, 'name', e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={stock.quantity}
-                    onChange={(e) => handleInputChange(idx, 'quantity', e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={stock.price}
-                    onChange={(e) => handleInputChange(idx, 'price', e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    value={stock.supplier}
-                    onChange={(e) => handleInputChange(idx, 'supplier', e.target.value)}
-                  />
-                </td>
-                <td>
-                  <img src={stock.image} alt="Stock" className="stock-image" />
-                </td>
+        <h3>Live Stock Overview</h3>
+        {loading ? (
+          <p>Loading stocks...</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Sl. No</th>
+                <th>Brand</th>
+                <th>Product Name</th>
+                <th>Color</th>
+                <th>Size</th>
+                <th>Quantity</th>
+                <th>Supplier</th>
+                <th>Image</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="add-stock-button">
-        <button onClick={handleAddStock}>Add New Stock</button>
+            </thead>
+            <tbody>
+              {stockData.map((stock, index) => (
+                <tr key={stock.id}>
+                  <td>{index + 1}</td>
+                  <td>{stock.brand}</td>
+                  <td>{stock.productName}</td>
+                  <td>{stock.color}</td>
+                  <td>{stock.size}</td>
+                  <td>{stock.quantity}</td>
+                  <td>{stock.supplier || 'N/A'}</td>
+                  <td>
+                    <img src={stock.imageUrl} alt={stock.productName} className="stock-image" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

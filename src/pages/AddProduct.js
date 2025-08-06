@@ -36,36 +36,75 @@ const AddProduct = () => {
     const [newProduct, setNewProduct] = useState('');
 
     /* section 4 */
-    const [originalPrice, setOriginalPrice] = useState('');
-    const [discount, setDiscount] = useState('');
-    const [finalPrice, setFinalPrice] = useState('');
+    const [originalPriceB2B, setOriginalPriceB2B] = useState('');
+    const [discountB2B, setDiscountB2B] = useState('');
+    const [finalPriceB2B, setFinalPriceB2B] = useState('');
+
+    const [originalPriceB2C, setOriginalPriceB2C] = useState('');
+    const [discountB2C, setDiscountB2C] = useState('');
+    const [finalPriceB2C, setFinalPriceB2C] = useState('');
+
+    const [b2bPrice, setB2bPrice] = useState('');
+    const [b2cPrice, setB2cPrice] = useState('');
+    const [totalCount, setTotalCount] = useState('');
+
     const [selectedColor, setSelectedColor] = useState('');
     const [selectedSize, setSelectedSize] = useState('');
     const [uploadedImage, setUploadedImage] = useState(null);
 
-    const handlePriceChange = (value) => {
-        setOriginalPrice(value);
+    const handlePriceChangeB2B = (value) => {
+        setOriginalPriceB2B(value);
         const price = parseFloat(value);
-        const disc = parseFloat(discount);
+        const disc = parseFloat(discountB2B);
         if (!isNaN(price) && !isNaN(disc)) {
-            setFinalPrice((price - (price * disc) / 100).toFixed(2));
+            setFinalPriceB2B((price - (price * disc) / 100).toFixed(2));
         }
     };
 
-    const handleDiscountChange = (value) => {
-        setDiscount(value);
-        const price = parseFloat(originalPrice);
+    const handleDiscountChangeB2B = (value) => {
+        setDiscountB2B(value);
+        const price = parseFloat(originalPriceB2B);
         const disc = parseFloat(value);
         if (!isNaN(price) && !isNaN(disc)) {
-            setFinalPrice((price - (price * disc) / 100).toFixed(2));
+            setFinalPriceB2B((price - (price * disc) / 100).toFixed(2));
         }
     };
 
-    const handleImageUpload = (e) => {
+    const handlePriceChangeB2C = (value) => {
+        setOriginalPriceB2C(value);
+        const price = parseFloat(value);
+        const disc = parseFloat(discountB2C);
+        if (!isNaN(price) && !isNaN(disc)) {
+            setFinalPriceB2C((price - (price * disc) / 100).toFixed(2));
+        }
+    };
+
+    const handleDiscountChangeB2C = (value) => {
+        setDiscountB2C(value);
+        const price = parseFloat(originalPriceB2C);
+        const disc = parseFloat(value);
+        if (!isNaN(price) && !isNaN(disc)) {
+            setFinalPriceB2C((price - (price * disc) / 100).toFixed(2));
+        }
+    };
+
+    const handleImageUpload = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            const imageUrl = URL.createObjectURL(file);
-            setUploadedImage(imageUrl);
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const response = await fetch('http://localhost:5000/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            setUploadedImage(data.imageUrl);
+        } catch (error) {
+            console.error('Image upload failed:', error);
         }
     };
 
@@ -88,11 +127,6 @@ const AddProduct = () => {
     ];
 
     const adultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXLL'];
-
-
-
-
-
     /* end of section 4 */
 
 
@@ -101,32 +135,78 @@ const AddProduct = () => {
     const [popupMessage, setPopupMessage] = useState('');
     const [popupType, setPopupType] = useState('');
 
-    const handleAddProduct = () => {
+    const handleAddProduct = async () => {
         if (
             !selectedCategory ||
             !brandInput ||
             !productInput ||
             !selectedColor ||
             !selectedSize ||
-            !originalPrice ||
-            !discount ||
-            !finalPrice
+            !originalPriceB2B ||
+            !discountB2B ||
+            !finalPriceB2B ||
+            !originalPriceB2C ||
+            !discountB2C ||
+            !finalPriceB2C ||
+
+            !uploadedImage
         ) {
             setPopupMessage('Please fill all the required fields.');
             setPopupType('error');
         } else {
-            setPopupMessage('Product added successfully!');
-            setPopupType('success');
+            const productData = {
+                category: selectedCategory,
+                brand: brandInput,
+                product_name: productInput,
+                color: selectedColor,
+                size: selectedSize,
+                original_price_b2b: parseFloat(originalPriceB2B),
+                discount_b2b: parseFloat(discountB2B),
+                final_price_b2b: parseFloat(finalPriceB2B),
+                original_price_b2c: parseFloat(originalPriceB2C),
+                discount_b2c: parseFloat(discountB2C),
+                final_price_b2c: parseFloat(finalPriceB2C),
+                total_count: parseInt(totalCount),
+                image_url: uploadedImage
+            };
 
-            setSelectedCategory('');
-            setBrandInput('');
-            setProductInput('');
-            setSelectedColor('');
-            setSelectedSize('');
-            setOriginalPrice('');
-            setDiscount('');
-            setFinalPrice('');
-            setUploadedImage(null);
+
+            try {
+                const response = await fetch('http://localhost:5000/api/products', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productData),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Product added:', result);
+
+                    setPopupMessage('Product added successfully!');
+                    setPopupType('success');
+
+                    setSelectedCategory('');
+                    setBrandInput('');
+                    setProductInput('');
+                    setSelectedColor('');
+                    setSelectedSize('');
+                    setOriginalPriceB2B('');
+                    setDiscountB2B('');
+                    setFinalPriceB2B('');
+                    setOriginalPriceB2C('');
+                    setDiscountB2C('');
+                    setFinalPriceB2C('');
+
+                    setUploadedImage(null);
+                } else {
+                    setPopupMessage('Failed to add product. Try again.');
+                    setPopupType('error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                setPopupMessage('Something went wrong!');
+                setPopupType('error');
+            }
         }
 
         setTimeout(() => {
@@ -134,6 +214,7 @@ const AddProduct = () => {
             setPopupType('');
         }, 3000);
     };
+
 
 
 
@@ -210,11 +291,8 @@ const AddProduct = () => {
                 <h2>Category</h2>
                 <div className="category-buttons">
                     {['Men', 'Women', 'Kids - Boys', 'Kids - Girls'].map((category) => (
-                        <button
-                            key={category}
-                            className={selectedCategory === category ? 'active' : ''}
-                            onClick={() => handleCategorySelect(category)}
-                        >
+                        <button key={category}
+                            className={selectedCategory === category ? 'active' : ''} onClick={() => handleCategorySelect(category)} >
                             {category}
                         </button>
                     ))}
@@ -230,21 +308,15 @@ const AddProduct = () => {
                     onChange={handleBrandSearch}
                     onFocus={() => {
                         const filtered = brandList.filter((brand) =>
-                            brand.toLowerCase().includes(brandInput.toLowerCase())
-                        );
+                            brand.toLowerCase().includes(brandInput.toLowerCase()));
                         setFilteredBrands(filtered);
                         setShowDropdownBrand(true);
-                    }}
-                    className="brand-search"
-                />
+                    }} className="brand-search" />
                 {showDropdownBrand && (
                     <div className="brand-dropdown">
                         {filteredBrands.map((brand) => (
-                            <div
-                                key={brand}
-                                className="brand-item"
-                                onClick={() => handleBrandSelect(brand)}
-                            >
+                            <div key={brand} className="brand-item"
+                                onClick={() => handleBrandSelect(brand)} >
                                 {brand}
                             </div>
                         ))}
@@ -268,17 +340,11 @@ const AddProduct = () => {
                         );
                         setFilteredProducts(filtered);
                         setShowDropdownProduct(true);
-                    }}
-                    className="brand-search"
-                />
+                    }} className="brand-search" />
                 {showDropdownProduct && (
                     <div className="brand-dropdown">
                         {filteredProducts.map((product) => (
-                            <div
-                                key={product}
-                                className="brand-item"
-                                onClick={() => handleProductSelect(product)}
-                            >
+                            <div key={product} className="brand-item" onClick={() => handleProductSelect(product)} >
                                 {product}
                             </div>
                         ))}
@@ -293,12 +359,9 @@ const AddProduct = () => {
                 <div className="popup-overlay">
                     <div className="popup-box">
                         <h3>Add a New Brand</h3>
-                        <input
-                            type="text"
-                            placeholder="Enter new brand name"
-                            value={newBrand}
-                            onChange={(e) => setNewBrand(e.target.value)}
-                        />
+                        <input type="text"
+                            placeholder="Enter new brand name" value={newBrand}
+                            onChange={(e) => setNewBrand(e.target.value)} />
                         <div className="popup-actions">
                             <button onClick={handleAddNewBrand}>Add Brand</button>
                             <button onClick={() => setShowPopupBrand(false)}>Cancel</button>
@@ -311,12 +374,8 @@ const AddProduct = () => {
                 <div className="popup-overlay">
                     <div className="popup-box">
                         <h3>Add a New Product</h3>
-                        <input
-                            type="text"
-                            placeholder="Enter new product name"
-                            value={newProduct}
-                            onChange={(e) => setNewProduct(e.target.value)}
-                        />
+                        <input type="text" placeholder="Enter new product name"
+                            value={newProduct} onChange={(e) => setNewProduct(e.target.value)} />
                         <div className="popup-actions">
                             <button onClick={handleAddNewProduct}>Add Product</button>
                             <button onClick={() => setShowPopupProduct(false)}>Cancel</button>
@@ -330,11 +389,8 @@ const AddProduct = () => {
                     <div className="section4-heading">Color</div>
                     <div className="color-grid">
                         {colors.map(color => (
-                            <div
-                                className={`color-item ${selectedColor === color ? 'active' : ''}`}
-                                key={color}
-                                onClick={() => setSelectedColor(color)}
-                            >
+                            <div className={`color-item ${selectedColor === color ? 'active' : ''}`}
+                                key={color} onClick={() => setSelectedColor(color)} >
                                 <div className="color-swatch" style={{ backgroundColor: colorMap[color] }}></div>
                                 {color}
                             </div>
@@ -346,11 +402,8 @@ const AddProduct = () => {
                         <div className="sub-heading">Kids</div>
                         <div className="size-grid">
                             {kidsSizes.map(size => (
-                                <div
-                                    className={`size-box ${selectedSize === size ? 'active' : ''}`}
-                                    key={size}
-                                    onClick={() => setSelectedSize(size)}
-                                >
+                                <div className={`size-box ${selectedSize === size ? 'active' : ''}`}
+                                    key={size} onClick={() => setSelectedSize(size)} >
                                     {size}
                                 </div>
                             ))}
@@ -358,11 +411,8 @@ const AddProduct = () => {
                         <div className="sub-heading">Adults</div>
                         <div className="size-grid">
                             {adultSizes.map(size => (
-                                <div
-                                    className={`size-box ${selectedSize === size ? 'active' : ''}`}
-                                    key={size}
-                                    onClick={() => setSelectedSize(size)}
-                                >
+                                <div className={`size-box ${selectedSize === size ? 'active' : ''}`}
+                                    key={size} onClick={() => setSelectedSize(size)} >
                                     {size}
                                 </div>
                             ))}
@@ -370,21 +420,78 @@ const AddProduct = () => {
                     </div>
 
                     <div className="price-inputs">
-                        <label>Original Price</label>
-                        <input
-                            type="number"
-                            value={originalPrice}
-                            onChange={(e) => handlePriceChange(e.target.value)}
-                        />
-                        <label>Discount (%)</label>
-                        <input
-                            type="number"
-                            value={discount}
-                            onChange={(e) => handleDiscountChange(e.target.value)}
-                        />
-                        <label>Final Price</label>
-                        <input type="number" value={finalPrice} readOnly />
+                        <table className="price-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>B2B</th>
+                                    <th>B2C</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Original Price</td>
+                                    <td>
+                                        <input
+                                            type="number"
+                                            value={originalPriceB2B}
+                                            onChange={(e) => handlePriceChangeB2B(e.target.value)}
+                                        />
+
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="number"
+                                            value={originalPriceB2C}
+                                            onChange={(e) => handlePriceChangeB2C(e.target.value)}
+                                        />
+
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Discount (%)</td>
+                                    <td>
+                                        <input
+                                            type="number"
+                                            value={discountB2B}
+                                            onChange={(e) => handleDiscountChangeB2B(e.target.value)}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="number"
+                                            value={discountB2C}
+                                            onChange={(e) => handleDiscountChangeB2C(e.target.value)}
+                                        />
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Final Price</td>
+                                    <td>
+                                        <input type="number" value={finalPriceB2B} readOnly />
+                                    </td>
+                                    <td>
+                                        <input type="number" value={finalPriceB2C} readOnly />
+                                    </td>
+                                </tr>
+
+
+                                <tr>
+                                    <td>Total Count</td>
+                                    <td colSpan="2" className="centered-input">
+                                        <input
+                                            type="number"
+                                            value={totalCount}
+                                            onChange={(e) => setTotalCount(e.target.value)}
+                                        />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+
+
                 </div>
 
                 <div className="section4-right">

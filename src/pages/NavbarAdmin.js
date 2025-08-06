@@ -36,6 +36,7 @@ const NavbarAdmin = () => {
     { name: 'Transactions', path: '/transactions' },
     { name: 'Stocks', path: '/stocks' },
     { name: 'Sales', path: '/sales' },
+    { name: 'Customers', path: '/customers' },
     //{ name: 'All Brands', path: '/brands' }
   ];
 
@@ -68,32 +69,11 @@ const NavbarAdmin = () => {
             ))}
           </div>
 
-          {/*<div className="search-bar-final Btn">
-            <FaSearch className="search-icon-final" />
-            <input type="text" placeholder="search a product" />
-          </div>
-
-          <div className="icon-buttons-final">
-            <Link to="/profile" className="icon-btn profile-icon">
-              <FaUser className={location.pathname === '/profile' ? 'icon-active' : 'icon-default'} />
-            </Link>
-
-            <Link to="/wishlist" className="icon-btn wishlist-icon">
-              <FaHeart className={location.pathname === '/wishlist' ? 'icon-active' : 'icon-default'} />
-              {wishlistItems.length > 0 && <span className="red-dot" />}
-            </Link>
-
-            <Link to="/cart" className="icon-btn cart-icon">
-              <FaShoppingBag className={location.pathname === '/cart' ? 'icon-active' : 'icon-default'} />
-              {cartItems.length > 0 && <span className="red-dot" />}
-            </Link>
-          </div> */}
         </div>
       </div>
 
       <div className="bottom-row-final mobile-only-final">
         <div className="search-bar-final Btn">
-          {/*<FaSearch className="search-icon-final" /> */}
           <input type="text" placeholder="search a product" />
         </div>
       </div>
@@ -101,7 +81,6 @@ const NavbarAdmin = () => {
       {isMobileNavOpen && (
         <div className="mobile-drawer-final" ref={mobileNavRef}>
           <div className="close-btn-final" onClick={() => setIsMobileNavOpen(false)}>
-            {/*<FaTimes /> */}
           </div>
           <div className="nav-links-final">
             {navLinks.map(({ name, path }) => (
@@ -115,22 +94,7 @@ const NavbarAdmin = () => {
               </Link>
             ))}
           </div>
-          {/*<div className="icon-buttons-final">
-            <Link to="/profile" className="icon-btn profile-icon">
-              <FaUser className={location.pathname === '/profile' ? 'icon-active' : 'icon-default'} />
-              <span>Profile</span>
-            </Link>
-            <Link to="/wishlist" className="icon-btn wishlist-icon">
-              <FaHeart className={location.pathname === '/wishlist' ? 'icon-active' : 'icon-default'} />
-              {wishlistItems.length > 0 && <span className="red-dot" />}
-              <span>Wishlist</span>
-            </Link>
-            <Link to="/cart" className="icon-btn cart-icon">
-              <FaShoppingBag className={location.pathname === '/cart' ? 'icon-active' : 'icon-default'} />
-              {cartItems.length > 0 && <span className="red-dot" />}
-              <span>Cart</span>
-            </Link>
-          </div> */}
+         
         </div>
       )}
     </nav>

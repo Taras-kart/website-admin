@@ -46,7 +46,7 @@ const Sales = () => {
 
   return (
     <div className="sales-page">
-        <Navbar />
+      <Navbar />
       <div className="sales-section1">
         <h2>Select Category</h2>
         <div className="category-buttons">
@@ -77,31 +77,13 @@ const Sales = () => {
             {salesData.map((sale) => (
               <tr key={sale.id}>
                 <td>
-                  <input
-                    type="text"
-                    value={sale.productName}
-                    onChange={(e) =>
-                      handleUpdateSaleData(sale.id, 'productName', e.target.value)
-                    }
-                  />
+                  <input type="text" value={sale.productName} onChange={(e) => handleUpdateSaleData(sale.id, 'productName', e.target.value)} />
                 </td>
                 <td>
-                  <input
-                    type="number"
-                    value={sale.salesPrice}
-                    onChange={(e) =>
-                      handleUpdateSaleData(sale.id, 'salesPrice', e.target.value)
-                    }
-                  />
+                  <input type="number" value={sale.salesPrice} onChange={(e) => handleUpdateSaleData(sale.id, 'salesPrice', e.target.value)} />
                 </td>
                 <td>
-                  <input
-                    type="number"
-                    value={sale.unitsSold}
-                    onChange={(e) =>
-                      handleUpdateSaleData(sale.id, 'unitsSold', e.target.value)
-                    }
-                  />
+                  <input type="number" value={sale.unitsSold} onChange={(e) => handleUpdateSaleData(sale.id, 'unitsSold', e.target.value)} />
                 </td>
                 <td>{(sale.salesPrice * sale.unitsSold).toFixed(2)}</td>
               </tr>
