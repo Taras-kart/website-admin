@@ -1,4 +1,11 @@
-.b2b-header {
+.b2b-container-b2b {
+  padding: 2rem;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+}
+
+.b2b-header-b2b {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -6,7 +13,13 @@
   padding: 0 1rem;
 }
 
-.add-btn {
+.heading-b2b {
+  color: #000;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.add-btn-b2b {
   padding: 12px 20px;
   background-color: black;
   color: gold;
@@ -17,12 +30,12 @@
   transition: all 0.3s ease;
 }
 
-.add-btn:hover {
+.add-btn-b2b:hover {
   background-color: gold;
   color: black;
 }
 
-.customers-table {
+.customers-table-b2b {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -32,58 +45,55 @@
   box-shadow: 0 0 8px rgba(0,0,0,0.1);
 }
 
-.customers-table th,
-.customers-table td {
+.table-th-b2b,
+.table-td-b2b {
   border: 1px solid gold;
   padding: 14px 16px;
   text-align: left;
+  font-weight: bold;
 }
 
-.customers-table th {
+.table-th-b2b {
   background-color: black;
   color: gold;
-  font-weight: 600;
   font-size: 15px;
 }
 
-.customers-table td {
+.table-td-b2b {
   background-color: white;
   color: black;
   font-size: 14px;
 }
 
-.action-btn,
-.delete-btn {
+.action-btn-b2b,
+.delete-btn-b2b {
   padding: 8px 14px;
   font-size: 13px;
   border-radius: 6px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.action-btn {
+.action-btn-b2b {
   background-color: gold;
   color: black;
   border: 1px solid gold;
   margin-right: 8px;
 }
 
-.action-btn:hover {
+.action-btn-b2b:hover,
+.delete-btn-b2b:hover {
   opacity: 0.85;
 }
 
-.delete-btn {
+.delete-btn-b2b {
   background-color: black;
   color: gold;
   border: 1px solid gold;
 }
 
-.delete-btn:hover {
-  opacity: 0.85;
-}
-
-.popup-overlay {
+.popup-overlay-b2b {
   position: fixed;
   top: 0;
   left: 0;
@@ -96,70 +106,85 @@
   z-index: 1000;
 }
 
-.popup-box {
-  background-color: white;
+.popup-box-b2b {
+  background: linear-gradient(to bottom, #fffef8, #fffdf2);
   padding: 2rem 2rem 1.5rem;
-  border-radius: 12px;
-  width: 360px;
+  border-radius: 16px;
+  width: 400px;
+  max-width: 90%;
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   border: 2px solid gold;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  animation: popupShow 0.3s ease-out;
 }
 
-.popup-box h3 {
-  margin-bottom: 0.5rem;
-  color: black;
-  font-size: 18px;
-  font-weight: 600;
+@keyframes popupShow {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.popup-title-b2b {
+  color: #111;
+  font-size: 20px;
+  font-weight: 700;
   text-align: center;
+  margin-bottom: 0.5rem;
 }
 
-.popup-close {
+.popup-close-b2b {
   position: absolute;
-  right: 16px;
-  top: 12px;
+  right: 18px;
+  top: 14px;
   font-size: 22px;
   cursor: pointer;
   color: black;
   font-weight: bold;
 }
 
-.popup-box input {
-  padding: 12px;
-  border: 1px solid gold;
-  border-radius: 8px;
+.popup-input-b2b {
+  padding: 12px 14px;
+  border: 1.5px solid gold;
+  border-radius: 10px;
   font-size: 14px;
   outline: none;
+  background-color: #fff;
+  font-weight: 500;
 }
 
-.submit-btn {
+.submit-btn-b2b {
   padding: 12px;
   background-color: black;
   color: gold;
   border: 2px solid gold;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.submit-btn:hover {
+.submit-btn-b2b:hover {
   background-color: gold;
   color: black;
 }
 
-.popup-success {
+.popup-success-b2b {
   margin-top: 1.5rem;
   background-color: gold;
   color: black;
   padding: 12px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   width: fit-content;
   border: 2px solid black;
   animation: fadeOut 2s ease-in-out forwards;

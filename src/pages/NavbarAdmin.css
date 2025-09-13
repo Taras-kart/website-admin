@@ -146,6 +146,14 @@ body {
   position: relative;
   color: gold;
 }
+
+.logo-final video {
+  height: 60px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(255, 210, 119, 0.15);
+  object-fit: cover;
+}
+
 .active-final svg {
   fill: white !important; 
 }

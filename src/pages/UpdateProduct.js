@@ -1,52 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './UpdateProduct.css';
+
+const API_BASE = 'http://localhost:5000'; // Change this to your API URL
 
 const UpdateProduct = () => {
     const [selectedCategory, setSelectedCategory] = useState('Men');
-    const [products, setProducts] = useState([
-        {
-            id: 1,
-            brandName: 'Nike',
-            productName: 'Men Urban Style',
-            color: 'Black',
-            size: 'M',
-            originalPrice: 2000,
-            discount: 10,
-            image: 'https://via.placeholder.com/80'
-        },
-        {
-            id: 2,
-            brandName: 'Adidas',
-            productName: 'Casual Shirt',
-            color: 'Blue',
-            size: 'L',
-            originalPrice: 1500,
-            discount: 5,
-            image: 'https://via.placeholder.com/80'
-        }
-    ]);
-
+    const [products, setProducts] = useState([]);
     const [popupMessage, setPopupMessage] = useState('');
+    const [popupType, setPopupType] = useState('');
     const [popupConfirm, setPopupConfirm] = useState(false);
-    /*const [popupMessage, setPopupMessage] = useState(''); */
-        const [popupType, setPopupType] = useState('');
+    const [updatedProducts, setUpdatedProducts] = useState([]);
+
+    // Fetch products from backend
+    useEffect(() => {
+        fetch(`${API_BASE}/api/products?category=${encodeURIComponent(selectedCategory)}`)
+            .then(res => res.json())
+            .then(data => {
+                setProducts(data);
+                setUpdatedProducts(data); // keep copy for edits
+            })
+            .catch(err => console.error('Error fetching products:', err));
+    }, [selectedCategory]);
 
     const handleInputChange = (index, field, value) => {
-        const updated = [...products];
+        const updated = [...updatedProducts];
         updated[index][field] = field === 'originalPrice' || field === 'discount' ? parseFloat(value) : value;
-        setProducts(updated);
+        setUpdatedProducts(updated);
     };
 
     const handleImageChange = (index, file) => {
-        const updated = [...products];
+        const updated = [...updatedProducts];
         if (file) {
             updated[index].image = URL.createObjectURL(file);
+            updated[index].newImageFile = file; // store actual file for upload
         }
-        setProducts(updated);
+        setUpdatedProducts(updated);
     };
 
     const handleUpdateClick = () => {
-        const isValid = products.every(
+        const isValid = updatedProducts.every(
             p =>
                 p.brandName &&
                 p.productName &&
@@ -65,12 +57,39 @@ const UpdateProduct = () => {
         }
     };
 
-    const confirmUpdate = (confirmed) => {
+    const confirmUpdate = async (confirmed) => {
         setPopupConfirm(false);
         if (confirmed) {
-            setPopupMessage('Product updated successfully.');
-            setPopupType('success');
-            setTimeout(() => setPopupMessage(''), 2000);
+            try {
+                // send updated products to backend
+                for (let product of updatedProducts) {
+                    const formData = new FormData();
+                    formData.append('brandName', product.brandName);
+                    formData.append('productName', product.productName);
+                    formData.append('color', product.color);
+                    formData.append('size', product.size);
+                    formData.append('originalPrice', product.originalPrice);
+                    formData.append('discount', product.discount);
+                    if (product.newImageFile) {
+                        formData.append('image', product.newImageFile);
+                    }
+
+                    await fetch(`${API_BASE}/api/products/${product.id}`, {
+                        method: 'PUT',
+                        body: formData
+                    });
+                }
+
+                setProducts(updatedProducts); // instantly update table
+                setPopupMessage('Product updated successfully.');
+                setPopupType('success');
+                setTimeout(() => setPopupMessage(''), 2000);
+            } catch (err) {
+                console.error(err);
+                setPopupMessage('Error updating products.');
+                setPopupType('error');
+                setTimeout(() => setPopupMessage(''), 2000);
+            }
         }
     };
 
@@ -94,89 +113,89 @@ const UpdateProduct = () => {
             <div className="update-section2">
                 <h2>Product Table</h2>
                 <div className="table-scroll-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Sl. No</th>
-                            <th>Brand Name</th>
-                            <th>Product Name</th>
-                            <th>Color</th>
-                            <th>Size</th>
-                            <th>Original Price</th>
-                            <th>Discount (%)</th>
-                            <th>Final Price</th>
-                            <th>Image</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {products.map((product, idx) => {
-                            const finalPrice = (
-                                product.originalPrice -
-                                (product.originalPrice * product.discount) / 100
-                            ).toFixed(2);
-                            return (
-                                <tr key={product.id}>
-                                    <td>{idx + 1}</td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            value={product.brandName}
-                                            onChange={e => handleInputChange(idx, 'brandName', e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            value={product.productName}
-                                            onChange={e => handleInputChange(idx, 'productName', e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            value={product.color}
-                                            onChange={e => handleInputChange(idx, 'color', e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            value={product.size}
-                                            onChange={e => handleInputChange(idx, 'size', e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            value={product.originalPrice}
-                                            onChange={e => handleInputChange(idx, 'originalPrice', e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            value={product.discount}
-                                            onChange={e => handleInputChange(idx, 'discount', e.target.value)}
-                                        />
-                                    </td>
-                                    <td>{finalPrice}</td>
-                                    <td>
-                                        <img src={product.image} alt="product" className="table-image" />
-                                        <label className="image-upload-btn">
-                                            Add New Image
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Sl. No</th>
+                                <th>Brand Name</th>
+                                <th>Product Name</th>
+                                <th>Color</th>
+                                <th>Size</th>
+                                <th>Original Price</th>
+                                <th>Discount (%)</th>
+                                <th>Final Price</th>
+                                <th>Image</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {updatedProducts.map((product, idx) => {
+                                const finalPrice = (
+                                    product.originalPrice -
+                                    (product.originalPrice * product.discount) / 100
+                                ).toFixed(2);
+                                return (
+                                    <tr key={product.id}>
+                                        <td>{idx + 1}</td>
+                                        <td>
                                             <input
-                                                type="file"
-                                                accept="image/*"
-                                                style={{ display: 'none' }}
-                                                onChange={e => handleImageChange(idx, e.target.files[0])}
+                                                type="text"
+                                                value={product.brandName}
+                                                onChange={e => handleInputChange(idx, 'brandName', e.target.value)}
                                             />
-                                        </label>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                value={product.productName}
+                                                onChange={e => handleInputChange(idx, 'productName', e.target.value)}
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                value={product.color}
+                                                onChange={e => handleInputChange(idx, 'color', e.target.value)}
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                value={product.size}
+                                                onChange={e => handleInputChange(idx, 'size', e.target.value)}
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="number"
+                                                value={product.originalPrice}
+                                                onChange={e => handleInputChange(idx, 'originalPrice', e.target.value)}
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="number"
+                                                value={product.discount}
+                                                onChange={e => handleInputChange(idx, 'discount', e.target.value)}
+                                            />
+                                        </td>
+                                        <td>{finalPrice}</td>
+                                        <td>
+                                            <img src={product.image} alt="product" className="table-image" />
+                                            <label className="image-upload-btn">
+                                                Add New Image
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    style={{ display: 'none' }}
+                                                    onChange={e => handleImageChange(idx, e.target.files[0])}
+                                                />
+                                            </label>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

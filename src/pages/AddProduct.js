@@ -1,11 +1,27 @@
 import React, { useState } from 'react';
 import './AddProduct.css';
 
+const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app';
+const DEFAULT_ASSETS_BASE = 'https://taras-kart-backend.vercel.app/uploads';
+
+const API_BASE_RAW =
+    (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+    (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
+    DEFAULT_API_BASE;
+
+const ASSETS_BASE_RAW =
+    (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ASSETS_BASE) ||
+    (typeof process !== 'undefined' && process.env && process.env.REACT_APP_ASSETS_BASE) ||
+    DEFAULT_ASSETS_BASE;
+
+const API_BASE = API_BASE_RAW.replace(/\/+$/, '');
+const ASSETS_BASE = ASSETS_BASE_RAW.replace(/\/+$/, '');
+
 const AddProduct = () => {
     const [brandList, setBrandList] = useState([
         'Nike', 'Adidas', 'Puma', 'Reebok', 'Under Armour', 'New Balance',
         'Asics', 'Skechers', 'Fila', 'Converse', 'Vans', 'Jordan',
-        'Levi\'s', 'Zara', 'H&M', 'Gucci', 'Prada', 'Balenciaga',
+        "Levi's", 'Zara', 'H&M', 'Gucci', 'Prada', 'Balenciaga',
         'Chanel', 'Burberry', 'Lacoste', 'Tommy Hilfiger', 'Diesel',
         'Armani', 'Calvin Klein', 'Versace', 'Louis Vuitton', 'Guess',
         'Hugo Boss', 'Patagonia'
@@ -35,7 +51,6 @@ const AddProduct = () => {
     const [showPopupProduct, setShowPopupProduct] = useState(false);
     const [newProduct, setNewProduct] = useState('');
 
-    /* section 4 */
     const [originalPriceB2B, setOriginalPriceB2B] = useState('');
     const [discountB2B, setDiscountB2B] = useState('');
     const [finalPriceB2B, setFinalPriceB2B] = useState('');
@@ -44,8 +59,6 @@ const AddProduct = () => {
     const [discountB2C, setDiscountB2C] = useState('');
     const [finalPriceB2C, setFinalPriceB2C] = useState('');
 
-    const [b2bPrice, setB2bPrice] = useState('');
-    const [b2cPrice, setB2cPrice] = useState('');
     const [totalCount, setTotalCount] = useState('');
 
     const [selectedColor, setSelectedColor] = useState('');
@@ -88,23 +101,31 @@ const AddProduct = () => {
         }
     };
 
+    const normalizeAssetUrl = (maybeRelative) => {
+        if (!maybeRelative) return '';
+        if (/^https?:\/\//i.test(maybeRelative)) return maybeRelative;
+        const base = ASSETS_BASE || API_BASE;
+        if (!base) return maybeRelative;
+        const needsSlash = !maybeRelative.startsWith('/');
+        return `${base}${needsSlash ? '/' : ''}${maybeRelative}`;
+    };
+
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         const formData = new FormData();
         formData.append('image', file);
-
         try {
-            const response = await fetch('http://localhost:5000/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
-            setUploadedImage(data.imageUrl);
-        } catch (error) {
-            console.error('Image upload failed:', error);
+            const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: formData });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Upload failed (${res.status}): ${text.slice(0, 200)}`);
+            }
+            const data = await res.json();
+            const url = normalizeAssetUrl(data.imageUrl || data.url || data.path);
+            setUploadedImage(url);
+        } catch (err) {
+            console.error('Image upload failed:', err);
         }
     };
 
@@ -127,11 +148,7 @@ const AddProduct = () => {
     ];
 
     const adultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXLL'];
-    /* end of section 4 */
 
-
-
-    /* section 5 */
     const [popupMessage, setPopupMessage] = useState('');
     const [popupType, setPopupType] = useState('');
 
@@ -148,7 +165,6 @@ const AddProduct = () => {
             !originalPriceB2C ||
             !discountB2C ||
             !finalPriceB2C ||
-
             !uploadedImage
         ) {
             setPopupMessage('Please fill all the required fields.');
@@ -170,41 +186,35 @@ const AddProduct = () => {
                 image_url: uploadedImage
             };
 
-
             try {
-                const response = await fetch('http://localhost:5000/api/products', {
+                const res = await fetch(`${API_BASE}/api/products`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(productData),
+                    body: JSON.stringify(productData)
                 });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('✅ Product added:', result);
-
-                    setPopupMessage('Product added successfully!');
-                    setPopupType('success');
-
-                    setSelectedCategory('');
-                    setBrandInput('');
-                    setProductInput('');
-                    setSelectedColor('');
-                    setSelectedSize('');
-                    setOriginalPriceB2B('');
-                    setDiscountB2B('');
-                    setFinalPriceB2B('');
-                    setOriginalPriceB2C('');
-                    setDiscountB2C('');
-                    setFinalPriceB2C('');
-
-                    setUploadedImage(null);
-                } else {
-                    setPopupMessage('Failed to add product. Try again.');
-                    setPopupType('error');
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(`Create failed (${res.status}): ${text.slice(0, 200)}`);
                 }
+                await res.json();
+                setPopupMessage('Product added successfully!');
+                setPopupType('success');
+                setSelectedCategory('');
+                setBrandInput('');
+                setProductInput('');
+                setSelectedColor('');
+                setSelectedSize('');
+                setOriginalPriceB2B('');
+                setDiscountB2B('');
+                setFinalPriceB2B('');
+                setOriginalPriceB2C('');
+                setDiscountB2C('');
+                setFinalPriceB2C('');
+                setTotalCount('');
+                setUploadedImage(null);
             } catch (error) {
                 console.error('Error:', error);
-                setPopupMessage('Something went wrong!');
+                setPopupMessage('Failed to add product.');
                 setPopupType('error');
             }
         }
@@ -214,18 +224,6 @@ const AddProduct = () => {
             setPopupType('');
         }, 3000);
     };
-
-
-
-
-
-
-
-
-
-
-
-    /* end of section 5 */
 
     const handleCategorySelect = (category) => {
         setSelectedCategory(category);
@@ -291,8 +289,11 @@ const AddProduct = () => {
                 <h2>Category</h2>
                 <div className="category-buttons">
                     {['Men', 'Women', 'Kids - Boys', 'Kids - Girls'].map((category) => (
-                        <button key={category}
-                            className={selectedCategory === category ? 'active' : ''} onClick={() => handleCategorySelect(category)} >
+                        <button
+                            key={category}
+                            className={selectedCategory === category ? 'active' : ''}
+                            onClick={() => handleCategorySelect(category)}
+                        >
                             {category}
                         </button>
                     ))}
@@ -308,15 +309,21 @@ const AddProduct = () => {
                     onChange={handleBrandSearch}
                     onFocus={() => {
                         const filtered = brandList.filter((brand) =>
-                            brand.toLowerCase().includes(brandInput.toLowerCase()));
+                            brand.toLowerCase().includes(brandInput.toLowerCase())
+                        );
                         setFilteredBrands(filtered);
                         setShowDropdownBrand(true);
-                    }} className="brand-search" />
+                    }}
+                    className="brand-search"
+                />
                 {showDropdownBrand && (
                     <div className="brand-dropdown">
                         {filteredBrands.map((brand) => (
-                            <div key={brand} className="brand-item"
-                                onClick={() => handleBrandSelect(brand)} >
+                            <div
+                                key={brand}
+                                className="brand-item"
+                                onClick={() => handleBrandSelect(brand)}
+                            >
                                 {brand}
                             </div>
                         ))}
@@ -340,11 +347,17 @@ const AddProduct = () => {
                         );
                         setFilteredProducts(filtered);
                         setShowDropdownProduct(true);
-                    }} className="brand-search" />
+                    }}
+                    className="brand-search"
+                />
                 {showDropdownProduct && (
                     <div className="brand-dropdown">
                         {filteredProducts.map((product) => (
-                            <div key={product} className="brand-item" onClick={() => handleProductSelect(product)} >
+                            <div
+                                key={product}
+                                className="brand-item"
+                                onClick={() => handleProductSelect(product)}
+                            >
                                 {product}
                             </div>
                         ))}
@@ -359,9 +372,12 @@ const AddProduct = () => {
                 <div className="popup-overlay">
                     <div className="popup-box">
                         <h3>Add a New Brand</h3>
-                        <input type="text"
-                            placeholder="Enter new brand name" value={newBrand}
-                            onChange={(e) => setNewBrand(e.target.value)} />
+                        <input
+                            type="text"
+                            placeholder="Enter new brand name"
+                            value={newBrand}
+                            onChange={(e) => setNewBrand(e.target.value)}
+                        />
                         <div className="popup-actions">
                             <button onClick={handleAddNewBrand}>Add Brand</button>
                             <button onClick={() => setShowPopupBrand(false)}>Cancel</button>
@@ -374,8 +390,12 @@ const AddProduct = () => {
                 <div className="popup-overlay">
                     <div className="popup-box">
                         <h3>Add a New Product</h3>
-                        <input type="text" placeholder="Enter new product name"
-                            value={newProduct} onChange={(e) => setNewProduct(e.target.value)} />
+                        <input
+                            type="text"
+                            placeholder="Enter new product name"
+                            value={newProduct}
+                            onChange={(e) => setNewProduct(e.target.value)}
+                        />
                         <div className="popup-actions">
                             <button onClick={handleAddNewProduct}>Add Product</button>
                             <button onClick={() => setShowPopupProduct(false)}>Cancel</button>
@@ -388,9 +408,12 @@ const AddProduct = () => {
                 <div className="section4-left">
                     <div className="section4-heading">Color</div>
                     <div className="color-grid">
-                        {colors.map(color => (
-                            <div className={`color-item ${selectedColor === color ? 'active' : ''}`}
-                                key={color} onClick={() => setSelectedColor(color)} >
+                        {colors.map((color) => (
+                            <div
+                                className={`color-item ${selectedColor === color ? 'active' : ''}`}
+                                key={color}
+                                onClick={() => setSelectedColor(color)}
+                            >
                                 <div className="color-swatch" style={{ backgroundColor: colorMap[color] }}></div>
                                 {color}
                             </div>
@@ -401,18 +424,24 @@ const AddProduct = () => {
                     <div className="size-section">
                         <div className="sub-heading">Kids</div>
                         <div className="size-grid">
-                            {kidsSizes.map(size => (
-                                <div className={`size-box ${selectedSize === size ? 'active' : ''}`}
-                                    key={size} onClick={() => setSelectedSize(size)} >
+                            {kidsSizes.map((size) => (
+                                <div
+                                    className={`size-box ${selectedSize === size ? 'active' : ''}`}
+                                    key={size}
+                                    onClick={() => setSelectedSize(size)}
+                                >
                                     {size}
                                 </div>
                             ))}
                         </div>
                         <div className="sub-heading">Adults</div>
                         <div className="size-grid">
-                            {adultSizes.map(size => (
-                                <div className={`size-box ${selectedSize === size ? 'active' : ''}`}
-                                    key={size} onClick={() => setSelectedSize(size)} >
+                            {adultSizes.map((size) => (
+                                <div
+                                    className={`size-box ${selectedSize === size ? 'active' : ''}`}
+                                    key={size}
+                                    onClick={() => setSelectedSize(size)}
+                                >
                                     {size}
                                 </div>
                             ))}
@@ -437,7 +466,6 @@ const AddProduct = () => {
                                             value={originalPriceB2B}
                                             onChange={(e) => handlePriceChangeB2B(e.target.value)}
                                         />
-
                                     </td>
                                     <td>
                                         <input
@@ -445,7 +473,6 @@ const AddProduct = () => {
                                             value={originalPriceB2C}
                                             onChange={(e) => handlePriceChangeB2C(e.target.value)}
                                         />
-
                                     </td>
                                 </tr>
                                 <tr>
@@ -465,7 +492,6 @@ const AddProduct = () => {
                                         />
                                     </td>
                                 </tr>
-
                                 <tr>
                                     <td>Final Price</td>
                                     <td>
@@ -475,8 +501,6 @@ const AddProduct = () => {
                                         <input type="number" value={finalPriceB2C} readOnly />
                                     </td>
                                 </tr>
-
-
                                 <tr>
                                     <td>Total Count</td>
                                     <td colSpan="2" className="centered-input">
@@ -490,8 +514,6 @@ const AddProduct = () => {
                             </tbody>
                         </table>
                     </div>
-
-
                 </div>
 
                 <div className="section4-right">
@@ -507,7 +529,6 @@ const AddProduct = () => {
                 </div>
             </div>
 
-
             <div className="admin-section5">
                 <button className="add-product-final-btn" onClick={handleAddProduct}>Add Product</button>
             </div>
@@ -517,9 +538,6 @@ const AddProduct = () => {
                     {popupMessage}
                 </div>
             )}
-
-
-
         </div>
     );
 };

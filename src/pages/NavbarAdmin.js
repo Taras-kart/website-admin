@@ -44,8 +44,12 @@ const NavbarAdmin = () => {
     <nav className="navbar-final">
       <div className="top-row-final">
         <div className="logo-final">
-          <img src="/images/bg.jpg" alt="Logo" />
+          <video autoPlay loop muted playsInline>
+            <source src="/images/logo.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
         </div>
+
 
         <div className="nav-toggle-final" onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}>
           <div className="dot-grid-final">
