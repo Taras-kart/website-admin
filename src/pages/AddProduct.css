@@ -273,11 +273,8 @@
 
 
 
-/* section4  */
-.admin-section4 {
-  display: flex;
-  justify-content: space-between;
-  gap: 40px;
+.admin-section4-final {
+  display: block;
   background-color: #000;
   padding: 25px;
   border-radius: 12px;
@@ -285,20 +282,16 @@
   border: 1px solid gold;
 }
 
-.section4-left {
-  width: 70%;
-  overflow-y: auto;
-  max-height: 500px;
-  padding-right: 20px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+.section4-left-final {
+  width: 100%;
+  overflow: hidden;
 }
 
-.section4-left::-webkit-scrollbar {
+.section4-right-final {
   display: none;
 }
 
-.section4-heading {
+.section4-heading-final {
   font-size: 22px;
   margin-bottom: 10px;
   padding-bottom: 5px;
@@ -306,44 +299,44 @@
   color: gold;
 }
 
-.color-grid {
+.color-grid-final {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
-.color-item {
+.color-item-final {
   display: flex;
   align-items: center;
   gap: 10px;
   background-color: #111;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
   color: white;
   font-size: 14px;
   cursor: pointer;
-  transition: 0.3s;
+  transition: 0.2s ease;
   border: 2px solid transparent;
 }
 
-.color-item.active {
+.color-item-final.active-final {
   border: 2px solid gold;
   background-color: #222;
 }
 
-.color-swatch {
+.color-swatch-final {
   width: 20px;
   height: 20px;
   border-radius: 4px;
   border: 1px solid #ccc;
 }
 
-.size-section {
-  margin-bottom: 30px;
+.size-section-final {
+  margin-bottom: 24px;
 }
 
-.sub-heading {
+.sub-heading-final {
   color: gold;
   font-size: 18px;
   margin: 10px 0;
@@ -351,58 +344,127 @@
   padding-bottom: 4px;
 }
 
-.size-grid {
+.size-grid-final {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.size-box {
+.size-box-final {
   padding: 8px 12px;
   background-color: #222;
   color: white;
   border: 1px solid gold;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  transition: 0.3s;
+  transition: 0.2s ease;
 }
 
-.size-box.active {
+.size-box-final.active-final {
   background-color: gold;
   color: black;
 }
 
-.price-inputs {
+.price-inputs-final {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
 
-.price-inputs label {
-  color: gold;
-  font-weight: bold;
+.price-table-scope-final * {
+  box-sizing: border-box;
 }
 
-.price-inputs input {
-  padding: 10px;
-  border-radius: 8px;
-  border: 2px solid gold;
-  background-color: #111;
-  color: white;
-  font-size: 16px;
-  outline: none;
+.price-table-scope-final table,
+.price-table-scope-final thead,
+.price-table-scope-final tbody,
+.price-table-scope-final tr,
+.price-table-scope-final th,
+.price-table-scope-final td {
+  all: revert;
 }
 
-.section4-right {
-  width: 28%;
+.price-table-final {
+  display: table;
+  width: 100%;
+  max-width: 760px;
+  margin: 12px 0 0 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: black;
+}
+
+.price-table-final thead {
+  display: table-header-group;
+  background: black;
+}
+
+.price-table-final tbody {
+  display: table-row-group;
+}
+
+.price-table-final tr {
+  display: table-row;
+}
+
+.price-table-final th,
+.price-table-final td {
+  display: table-cell;
+  border: 1px solid gold !important;
+  padding: 10px !important;
+  text-align: left !important;
+  color: gold !important;
+  background-color: black !important;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.price-table-final th {
+  color: gold !important;
+}
+
+.price-table-final td:first-child {
+  width: 40%;
+}
+
+.price-table-final td:nth-child(2),
+.price-table-final td:nth-child(3) {
+  width: 30%;
+}
+
+.price-table-final input {
+  width: 100% !important;
+  padding: 8px !important;
+  border: 1px solid gold !important;
+  border-radius: 6px !important;
+  background: #111 !important;
+  color: white !important;
+  outline: none !important;
+}
+
+.centered-input-final {
+  text-align: center;
+}
+
+.centered-input-final input {
+  width: 60% !important;
+  margin: 0 auto !important;
+  display: block !important;
+  color: white !important;
+}
+
+.image-upload-container-final {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px dashed gold;
 }
 
-.upload-btn {
+.upload-btn-final {
   padding: 12px 20px;
   background: none;
   border: 2px solid gold;
@@ -411,62 +473,22 @@
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
 }
 
-.upload-btn:hover {
+.upload-btn-final:hover {
   background-color: gold;
   color: black;
 }
 
-.preview-image {
-  max-width: 100%;
+.preview-image-final {
+  max-width: 760px;
+  width: 100%;
   height: auto;
   border: 2px solid gold;
   border-radius: 12px;
-  margin-top: 50px;
 }
-.price-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-.price-table th,
-.price-table td {
-  border: 1px solid gold;
-  padding: 10px;
-  text-align: left;
-  color: Gold;
-  background-color: black;
-}
-
-.price-table th {
-  background-color: black;
-  color: gold;
-}
-
-.price-table input {
-  width: 90%;
-  margin: 0 auto;
-  padding: 8px;
-  border: 1px solid gold;
-  border-radius: 5px;
-  color: white;
-}
-
-.centered-input {
-  text-align: center;
-}
-
-.centered-input input {
-  width: 50%;
-  margin: 0 auto;
-  display: block;
-  color: white;
-}
-
 
 
 

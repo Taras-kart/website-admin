@@ -404,130 +404,132 @@ const AddProduct = () => {
                 </div>
             )}
 
-            <div className="admin-section4">
-                <div className="section4-left">
-                    <div className="section4-heading">Color</div>
-                    <div className="color-grid">
-                        {colors.map((color) => (
-                            <div
-                                className={`color-item ${selectedColor === color ? 'active' : ''}`}
-                                key={color}
-                                onClick={() => setSelectedColor(color)}
-                            >
-                                <div className="color-swatch" style={{ backgroundColor: colorMap[color] }}></div>
-                                {color}
-                            </div>
-                        ))}
-                    </div>
+            <div className="admin-section4-final">
+  <div className="section4-left-final">
+    <div className="section4-heading-final">Color</div>
+    <div className="color-grid-final">
+      {colors.map((color) => (
+        <div
+          className={`color-item-final ${selectedColor === color ? 'active-final' : ''}`}
+          key={color}
+          onClick={() => setSelectedColor(color)}
+        >
+          <div className="color-swatch-final" style={{ backgroundColor: colorMap[color] }}></div>
+          {color}
+        </div>
+      ))}
+    </div>
 
-                    <div className="section4-heading">Size</div>
-                    <div className="size-section">
-                        <div className="sub-heading">Kids</div>
-                        <div className="size-grid">
-                            {kidsSizes.map((size) => (
-                                <div
-                                    className={`size-box ${selectedSize === size ? 'active' : ''}`}
-                                    key={size}
-                                    onClick={() => setSelectedSize(size)}
-                                >
-                                    {size}
-                                </div>
-                            ))}
-                        </div>
-                        <div className="sub-heading">Adults</div>
-                        <div className="size-grid">
-                            {adultSizes.map((size) => (
-                                <div
-                                    className={`size-box ${selectedSize === size ? 'active' : ''}`}
-                                    key={size}
-                                    onClick={() => setSelectedSize(size)}
-                                >
-                                    {size}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+    <div className="section4-heading-final">Size</div>
+    <div className="size-section-final">
+      <div className="sub-heading-final">Kids</div>
+      <div className="size-grid-final">
+        {kidsSizes.map((size) => (
+          <div
+            className={`size-box-final ${selectedSize === size ? 'active-final' : ''}`}
+            key={size}
+            onClick={() => setSelectedSize(size)}
+          >
+            {size}
+          </div>
+        ))}
+      </div>
+      <div className="sub-heading-final">Adults</div>
+      <div className="size-grid-final">
+        {adultSizes.map((size) => (
+          <div
+            className={`size-box-final ${selectedSize === size ? 'active-final' : ''}`}
+            key={size}
+            onClick={() => setSelectedSize(size)}
+          >
+            {size}
+          </div>
+        ))}
+      </div>
+    </div>
 
-                    <div className="price-inputs">
-                        <table className="price-table">
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                    <th>B2B</th>
-                                    <th>B2C</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Original Price</td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            value={originalPriceB2B}
-                                            onChange={(e) => handlePriceChangeB2B(e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            value={originalPriceB2C}
-                                            onChange={(e) => handlePriceChangeB2C(e.target.value)}
-                                        />
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Discount (%)</td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            value={discountB2B}
-                                            onChange={(e) => handleDiscountChangeB2B(e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            value={discountB2C}
-                                            onChange={(e) => handleDiscountChangeB2C(e.target.value)}
-                                        />
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Final Price</td>
-                                    <td>
-                                        <input type="number" value={finalPriceB2B} readOnly />
-                                    </td>
-                                    <td>
-                                        <input type="number" value={finalPriceB2C} readOnly />
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Total Count</td>
-                                    <td colSpan="2" className="centered-input">
-                                        <input
-                                            type="number"
-                                            value={totalCount}
-                                            onChange={(e) => setTotalCount(e.target.value)}
-                                        />
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div className="price-inputs-final">
+      <div className="price-table-scope-final">
+        <table className="price-table-final">
+          <thead>
+            <tr>
+              <th></th>
+              <th>B2B</th>
+              <th>B2C</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Original Price</td>
+              <td>
+                <input
+                  type="number"
+                  value={originalPriceB2B}
+                  onChange={(e) => handlePriceChangeB2B(e.target.value)}
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  value={originalPriceB2C}
+                  onChange={(e) => handlePriceChangeB2C(e.target.value)}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Discount (%)</td>
+              <td>
+                <input
+                  type="number"
+                  value={discountB2B}
+                  onChange={(e) => handleDiscountChangeB2B(e.target.value)}
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  value={discountB2C}
+                  onChange={(e) => handleDiscountChangeB2C(e.target.value)}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Final Price</td>
+              <td>
+                <input type="number" value={finalPriceB2B} readOnly />
+              </td>
+              <td>
+                <input type="number" value={finalPriceB2C} readOnly />
+              </td>
+            </tr>
+            <tr>
+              <td>Total Count</td>
+              <td colSpan="2" className="centered-input-final">
+                <input
+                  type="number"
+                  value={totalCount}
+                  onChange={(e) => setTotalCount(e.target.value)}
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-                <div className="section4-right">
-                    <div className="image-upload-container">
-                        <label className="upload-btn">
-                            Upload Image
-                            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
-                        </label>
-                        {uploadedImage && (
-                            <img src={uploadedImage} alt="Uploaded" className="preview-image" />
-                        )}
-                    </div>
-                </div>
-            </div>
+    <div className="image-upload-container-final">
+      <label className="upload-btn-final">
+        Upload Image
+        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+      </label>
+      {uploadedImage && (
+        <img src={uploadedImage} alt="Uploaded" className="preview-image-final" />
+      )}
+    </div>
+  </div>
+
+  <div className="section4-right-final"></div>
+</div>
 
             <div className="admin-section5">
                 <button className="add-product-final-btn" onClick={handleAddProduct}>Add Product</button>

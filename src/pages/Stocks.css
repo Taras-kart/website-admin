@@ -1,45 +1,183 @@
 .stocks-page {
   color: gold;
   font-family: Arial, sans-serif;
-  padding: 30px;
+  padding: 24px;
   background-color: #000;
-  margin-top: -20px;
+  margin-top: 0px;
 }
 
-.section-header {
-  text-align: center;
-  margin-bottom: 30px;
+.stocks-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
-.section-header h2 {
-  font-size: 24px;
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: #111;
+  border: 1px solid gold;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.15);
+}
+
+.card.ok {
+  border-color: #3cb371;
+}
+
+.card.warn {
+  border-color: #ffbf00;
+}
+
+.card.danger {
+  border-color: #ff6b6b;
+}
+
+.card-title {
+  font-size: 12px;
+  color: #d9d9d9;
+  margin-bottom: 6px;
+}
+
+.card-value {
+  font-size: 22px;
+  font-weight: bold;
   color: gold;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 8px 14px;
+  background: transparent;
+  border: 2px solid white;
+  color: white;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: .2s;
+}
+
+.chip:hover {
+  border-color: gold;
+  color: gold;
+}
+
+.chip.active {
+  border-color: gold;
+  background: black;
+  color: gold;
+}
+
+.control-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid gold;
+  background: #0d0d0d;
+  color: white;
+  min-width: 280px;
+  outline: none;
+}
+
+.select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid gold;
+  background: #0d0d0d;
+  color: white;
+  outline: none;
+}
+
+.refresh {
+  padding: 10px 16px;
+  background: none;
+  border: 2px solid gold;
+  color: gold;
+  font-weight: bold;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.refresh:hover {
+  background: gold;
+  color: black;
+}
+
+.thresholds {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.threshold {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: #111;
+  border: 1px solid gold;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.threshold label {
+  font-size: 12px;
+  color: #d9d9d9;
+}
+
+.threshold input {
+  width: 80px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid gold;
+  background: #0d0d0d;
+  color: white;
+  outline: none;
 }
 
 .section-table {
   width: 96%;
   margin-bottom: 30px;
   background-color: #111;
-  padding: 25px;
+  padding: 20px;
   border-radius: 12px;
   box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
 }
 
 .section-table h3 {
-  font-size: 22px;
-  margin-bottom: 15px;
+  font-size: 20px;
+  margin-bottom: 12px;
   border-bottom: 2px solid gold;
-  padding-bottom: 5px;
+  padding-bottom: 6px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   color: white;
+  min-width: 1000px;
 }
 
 th, td {
-  padding: 12px;
+  padding: 10px;
   border: 1px solid gold;
   text-align: center;
   vertical-align: middle;
@@ -51,41 +189,45 @@ th {
   font-weight: bold;
 }
 
-td input {
-  width: 100%;
-  padding: 8px;
-  background-color: transparent;
-  color: white;
-  font-size: 14px;
-  outline: none;
-  border: transparent;
-}
-
 .stock-image {
-  width: 60px;
-  height: auto;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
   border-radius: 6px;
-  margin-bottom: 8px;
 }
 
-.add-stock-button {
-  text-align: center;
-  margin-top: 20px;
+.status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid currentColor;
 }
 
-.add-stock-button button {
-  padding: 14px 30px;
-  background: none;
-  border: 2px solid gold;
-  color: gold;
-  font-weight: bold;
-  border-radius: 10px;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.status.ok {
+  color: #3cb371;
 }
 
-.add-stock-button button:hover {
-  background-color: gold;
-  color: black;
+.status.low {
+  color: #ffbf00;
+}
+
+.status.high {
+  color: #1e90ff;
+}
+
+.status.out {
+  color: #ff6b6b;
+}
+
+tr.row-low td {
+  background: rgba(255, 191, 0, 0.05);
+}
+
+tr.row-high td {
+  background: rgba(30, 144, 255, 0.05);
+}
+
+tr.row-out td {
+  background: rgba(255, 107, 107, 0.06);
 }
