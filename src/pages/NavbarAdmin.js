@@ -1,35 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-//import { FaUser, FaHeart, FaShoppingBag, FaSearch, FaTimes } from 'react-icons/fa';
-import './NavbarAdmin.css';
+import React, { useState, useEffect, useRef } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import './NavbarAdmin.css'
 
 const NavbarAdmin = () => {
-  //const { wishlistItems } = useWishlist();
-  //const { cartItems } = useCart();
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const location = useLocation();
-  const mobileNavRef = useRef(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+  const location = useLocation()
+  const mobileNavRef = useRef(null)
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
-      if (
-        mobileNavRef.current &&
-        !mobileNavRef.current.contains(event.target) &&
-        !event.target.closest('.nav-toggle-final')
-      ) {
-        setIsMobileNavOpen(false);
+      if (mobileNavRef.current && !mobileNavRef.current.contains(event.target) && !event.target.closest('.nav-toggle-final')) {
+        setIsMobileNavOpen(false)
       }
-    };
-    if (isMobileNavOpen) {
-      document.addEventListener('click', handleOutsideClick);
     }
-    return () => document.removeEventListener('click', handleOutsideClick);
-  }, [isMobileNavOpen]);
+    if (isMobileNavOpen) {
+      document.addEventListener('click', handleOutsideClick)
+    }
+    return () => document.removeEventListener('click', handleOutsideClick)
+  }, [isMobileNavOpen])
 
   const handleNavClick = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setIsMobileNavOpen(false);
-  };
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setIsMobileNavOpen(false)
+  }
 
   const navLinks = [
     { name: 'Products', path: '/' },
@@ -37,8 +30,9 @@ const NavbarAdmin = () => {
     { name: 'Stocks', path: '/stocks' },
     { name: 'Sales', path: '/sales' },
     { name: 'Customers', path: '/customers' },
-    //{ name: 'All Brands', path: '/brands' }
-  ];
+    { name: 'POS', path: '/pos' },
+    { name: 'Import', path: '/import' }
+  ]
 
   return (
     <nav className="navbar-final">
@@ -46,11 +40,8 @@ const NavbarAdmin = () => {
         <div className="logo-final">
           <video autoPlay loop muted playsInline>
             <source src="/images/logo.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
           </video>
         </div>
-
-
         <div className="nav-toggle-final" onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}>
           <div className="dot-grid-final">
             {[...Array(9)].map((_, i) => (
@@ -58,7 +49,6 @@ const NavbarAdmin = () => {
             ))}
           </div>
         </div>
-
         <div className="nav-right-final desktop-tab-only-final">
           <div className="nav-links-final">
             {navLinks.map(({ name, path }) => (
@@ -72,20 +62,16 @@ const NavbarAdmin = () => {
               </Link>
             ))}
           </div>
-
         </div>
       </div>
-
       <div className="bottom-row-final mobile-only-final">
         <div className="search-bar-final Btn">
           <input type="text" placeholder="search a product" />
         </div>
       </div>
-
       {isMobileNavOpen && (
         <div className="mobile-drawer-final" ref={mobileNavRef}>
-          <div className="close-btn-final" onClick={() => setIsMobileNavOpen(false)}>
-          </div>
+          <div className="close-btn-final" onClick={() => setIsMobileNavOpen(false)}></div>
           <div className="nav-links-final">
             {navLinks.map(({ name, path }) => (
               <Link
@@ -98,11 +84,10 @@ const NavbarAdmin = () => {
               </Link>
             ))}
           </div>
-         
         </div>
       )}
     </nav>
-  );
-};
+  )
+}
 
-export default NavbarAdmin;
+export default NavbarAdmin
