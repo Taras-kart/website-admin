@@ -9,15 +9,19 @@ export default function ImportStock() {
   const { user } = useAuth();
   const { show, hide } = useLoading();
   const [file, setFile] = useState(null);
+  const [imageZip, setImageZip] = useState(null);
   const [gender, setGender] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [message, setMessage] = useState('');
   const [jobs, setJobs] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState(null);
+  const [progressImages, setProgressImages] = useState(null);
 
   const branchId = user?.branch_id;
   const canUpload = useMemo(() => !!file && !!branchId && !uploading && !!gender, [file, branchId, uploading, gender]);
+  const canUploadImages = useMemo(() => !!imageZip && !!branchId && !uploadingImages && !!gender, [imageZip, branchId, uploadingImages, gender]);
 
   useEffect(() => {
     const saved = localStorage.getItem('import_gender') || '';
@@ -43,15 +47,15 @@ export default function ImportStock() {
     fetchJobs();
   }, [branchId]);
 
-  async function processJob(jobId) {
+  async function processJob(jobId, setProg) {
     let start = 0;
-    setProgress({ jobId, state: 'Processing…', done: 0, total: null });
+    setProg({ jobId, state: 'Processing…', done: 0, total: null });
     for (;;) {
       const r = await apiPost(`/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=200`);
       const next = r.nextStart ?? (start + (r.processed || 0));
       const total = r.totalRows ?? null;
       const doneCount = Math.min(next, total ?? next);
-      setProgress({ jobId, state: r.done ? 'Completed' : 'Processing…', done: doneCount, total });
+      setProg({ jobId, state: r.done ? 'Completed' : 'Processing…', done: doneCount, total });
       if (r.done) break;
       start = next;
     }
@@ -79,12 +83,45 @@ export default function ImportStock() {
       const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd);
       setMessage('Uploaded. Starting processing…');
       setFile(null);
-      await processJob(job.id);
+      await processJob(job.id, setProgress);
       await fetchJobs();
     } catch (err) {
       setMessage(err?.payload?.message || err?.message || 'Upload failed');
     } finally {
       setUploading(false);
+      hide();
+      setTimeout(() => setMessage(''), 3000);
+    }
+  }
+
+  async function onUploadImages(e) {
+    e.preventDefault();
+    if (!imageZip || !branchId || !gender) {
+      setMessage('Please select a category and choose a ZIP file.');
+      return;
+    }
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      setMessage('You are not logged in');
+      return;
+    }
+    setUploadingImages(true);
+    setMessage('');
+    show();
+    try {
+      const fd = new FormData();
+      fd.append('imagesZip', imageZip);
+      fd.append('gender', gender);
+      localStorage.setItem('import_gender', gender);
+      const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import-images`, fd);
+      setMessage('Images ZIP uploaded. Starting processing…');
+      setImageZip(null);
+      await processJob(job.id, setProgressImages);
+      await fetchJobs();
+    } catch (err) {
+      setMessage(err?.payload?.message || err?.message || 'Image upload failed');
+    } finally {
+      setUploadingImages(false);
       hide();
       setTimeout(() => setMessage(''), 3000);
     }
@@ -96,9 +133,9 @@ export default function ImportStock() {
       <div className="import-wrap-admin">
         <div className="import-card-admin">
           <div className="import-title-admin">Import Stock</div>
-          <div className="import-subtitle-admin">Select category and upload your branch Excel file (.xlsx, .xls, .csv)</div>
+          <div className="import-subtitle-admin">Select category and upload your branch Excel file (.xlsx, .xls, .csv) or Images ZIP (.zip)</div>
 
-          <form onSubmit={onUpload} className="import-form-admin">
+          <form className="import-form-admin" onSubmit={(e) => e.preventDefault()}>
             <div className="row-two">
               <div className="select-wrap">
                 <label className="label">Category</label>
@@ -115,24 +152,42 @@ export default function ImportStock() {
                 </select>
               </div>
 
-              <div className="import-filebox-admin">
-                <label className="label">Excel / CSV</label>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                />
-                {file ? (
-                  <div className="import-filehint-admin">{file.name} • {(file.size / 1024 / 1024).toFixed(2)} MB</div>
-                ) : (
-                  <div className="import-filehint-admin">No file selected</div>
-                )}
+              <div className="row-two-inner">
+                <div className="import-filebox-admin">
+                  <label className="label">Excel / CSV</label>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  />
+                  {file ? (
+                    <div className="import-filehint-admin">{file.name} • {(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                  ) : (
+                    <div className="import-filehint-admin">No file selected</div>
+                  )}
+                  <button className="import-btn-admin" onClick={onUpload} disabled={!canUpload}>
+                    {uploading ? 'Uploading…' : 'Upload Excel'}
+                  </button>
+                </div>
+
+                <div className="import-filebox-admin">
+                  <label className="label">Images ZIP Folder</label>
+                  <input
+                    type="file"
+                    accept=".zip"
+                    onChange={(e) => setImageZip(e.target.files?.[0] || null)}
+                  />
+                  {imageZip ? (
+                    <div className="import-filehint-admin">{imageZip.name} • {(imageZip.size / 1024 / 1024).toFixed(2)} MB</div>
+                  ) : (
+                    <div className="import-filehint-admin">No ZIP selected</div>
+                  )}
+                  <button className="import-btn-admin" onClick={onUploadImages} disabled={!canUploadImages}>
+                    {uploadingImages ? 'Uploading…' : 'Upload Images ZIP'}
+                  </button>
+                </div>
               </div>
             </div>
-
-            <button className="import-btn-admin" type="submit" disabled={!canUpload}>
-              {uploading ? 'Uploading…' : 'Upload'}
-            </button>
 
             <div className="inline-info">
               <span className={`pill-mini ${gender ? 'ok' : 'warn'}`}>{gender ? `Category: ${gender}` : 'Select a category to enable upload'}</span>
@@ -142,6 +197,11 @@ export default function ImportStock() {
             {progress ? (
               <div className="import-msg-admin">
                 {progress.state} {progress.total ? `${progress.done}/${progress.total}` : `${progress.done}+`} rows
+              </div>
+            ) : null}
+            {progressImages ? (
+              <div className="import-msg-admin">
+                {progressImages.state} {progressImages.total ? `${progressImages.done}/${progressImages.total}` : `${progressImages.done}+`} rows
               </div>
             ) : null}
           </form>
