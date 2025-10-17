@@ -1,120 +1,284 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './Sales.css';
 import Navbar from './NavbarAdmin';
 
-const Sales = () => {
-  const [selectedCategory, setSelectedCategory] = useState('Men');
-  const [salesData, setSalesData] = useState([
-    { id: 1, productName: 'Men Urban Style', salesPrice: 2500, unitsSold: 100 },
-    { id: 2, productName: 'Casual Shirt', salesPrice: 1800, unitsSold: 50 },
-    { id: 3, productName: 'Women Casual Wear', salesPrice: 1500, unitsSold: 75 },
-  ]);
-  const [popupMessage, setPopupMessage] = useState('');
-  const [popupConfirm, setPopupConfirm] = useState(false);
+const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app';
+const API_BASE_RAW =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
+  DEFAULT_API_BASE;
+const API_BASE = API_BASE_RAW.replace(/\/+$/, '');
+const statuses = ['ALL', 'PLACED', 'CONFIRMED', 'PACKED', 'SHIPPED', 'CANCELLED'];
 
-  const handleCategoryChange = (category) => {
-    setSelectedCategory(category);
+export default function Sales() {
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState('ALL');
+  const [q, setQ] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const fetchSales = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/sales/web`);
+      const data = await res.json();
+      setSales(Array.isArray(data) ? data : []);
+    } catch {
+      setSales([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleUpdateSaleData = (id, field, value) => {
-    const updatedSalesData = salesData.map((sale) => {
-      if (sale.id === id) {
-        return { ...sale, [field]: field === 'salesPrice' || field === 'unitsSold' ? parseFloat(value) : value };
-      }
-      return sale;
+  useEffect(() => {
+    fetchSales();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const ql = q.trim().toLowerCase();
+    const fromTs = from ? new Date(from + 'T00:00:00').getTime() : null;
+    const toTs = to ? new Date(to + 'T23:59:59').getTime() : null;
+    return sales.filter((s) => {
+      const okStatus = status === 'ALL' ? true : String(s.status || '').toUpperCase() === status;
+      const created = s.created_at ? new Date(s.created_at).getTime() : null;
+      const okFrom = fromTs ? (created ? created >= fromTs : true) : true;
+      const okTo = toTs ? (created ? created <= toTs : true) : true;
+      const t = s.totals || {};
+      const hay = [
+        s.id,
+        s.customer_name,
+        s.customer_email,
+        s.customer_mobile,
+        s.status,
+        s.payment_status,
+        t?.payable
+      ]
+        .join(' ')
+        .toLowerCase();
+      const okQ = ql ? hay.includes(ql) : true;
+      return okStatus && okFrom && okTo && okQ;
     });
-    setSalesData(updatedSalesData);
-  };
+  }, [sales, status, q, from, to]);
 
-  const handleUpdateClick = () => {
-    const isValid = salesData.every(
-      (sale) => sale.productName && sale.salesPrice && sale.unitsSold
-    );
-    if (!isValid) {
-      setPopupMessage('Please fill all the fields.');
-    } else {
-      setPopupConfirm(true);
+  const grand = useMemo(() => {
+    return filtered.reduce((acc, s) => acc + Number(s?.totals?.payable || 0), 0);
+  }, [filtered]);
+
+  const openDetail = async (id) => {
+    setDetailLoading(true);
+    setDetail(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/sales/web/${id}`);
+      const data = await res.json();
+      setDetail(data);
+    } catch {
+      setDetail(null);
+    } finally {
+      setDetailLoading(false);
     }
   };
 
-  const confirmUpdate = (confirmed) => {
-    setPopupConfirm(false);
-    if (confirmed) {
-      setPopupMessage('Sales data updated successfully.');
-    }
-  };
+  const fmt = (n) => `₹${Number(n || 0).toFixed(2)}`;
 
   return (
     <div className="sales-page">
       <Navbar />
-      <div className="sales-section1">
-        <h2>Select Category</h2>
-        <div className="category-buttons">
-          {['Men', 'Women', 'Kids'].map((category) => (
-            <button
-              key={category}
-              className={selectedCategory === category ? 'active' : ''}
-              onClick={() => handleCategoryChange(category)}
-            >
-              {category}
-            </button>
-          ))}
+      <div className="sales-head">
+        <h1>Orders</h1>
+        <div className="actions">
+          <button onClick={fetchSales}>Refresh</button>
         </div>
       </div>
 
-      <div className="sales-section2">
-        <h2>Sales Data</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Product Name</th>
-              <th>Sales Price</th>
-              <th>Units Sold</th>
-              <th>Total Revenue</th>
-            </tr>
-          </thead>
-          <tbody>
-            {salesData.map((sale) => (
-              <tr key={sale.id}>
-                <td>
-                  <input type="text" value={sale.productName} onChange={(e) => handleUpdateSaleData(sale.id, 'productName', e.target.value)} />
-                </td>
-                <td>
-                  <input type="number" value={sale.salesPrice} onChange={(e) => handleUpdateSaleData(sale.id, 'salesPrice', e.target.value)} />
-                </td>
-                <td>
-                  <input type="number" value={sale.unitsSold} onChange={(e) => handleUpdateSaleData(sale.id, 'unitsSold', e.target.value)} />
-                </td>
-                <td>{(sale.salesPrice * sale.unitsSold).toFixed(2)}</td>
-              </tr>
+      <div className="filters">
+        <div className="group">
+          <label>Status</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            {statuses.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
-          </tbody>
-        </table>
+          </select>
+        </div>
+        <div className="group grow">
+          <label>Search</label>
+          <input
+            placeholder="Search by id, name, email, mobile"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+        <div className="group">
+          <label>From</label>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </div>
+        <div className="group">
+          <label>To</label>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
       </div>
 
-      <div className="sales-section3">
-        <button className="update-sales-btn" onClick={handleUpdateClick}>
-          Update Sales Data
-        </button>
+      <div className="summary-bar">
+        <span>{loading ? 'Loading…' : `${filtered.length} orders`}</span>
+        <span>Total Payable {fmt(grand)}</span>
       </div>
 
-      {popupMessage && (
-        <div className="popup-card">
-          {popupMessage}
+      <div className="sales-table-wrap">
+        {loading ? (
+          <div className="loader">
+            <div className="spin" />
+            <span>Loading orders…</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="empty">No orders found</div>
+        ) : (
+          <table className="sales-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Placed</th>
+                <th>Status</th>
+                <th>Payment</th>
+                <th>Customer</th>
+                <th>Mobile</th>
+                <th>Email</th>
+                <th>Payable</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s) => (
+                <tr key={s.id}>
+                  <td>#{s.id}</td>
+                  <td>{s.created_at ? new Date(s.created_at).toLocaleString() : '-'}</td>
+                  <td>
+                    <span className={`pill ${String(s.status || '').toLowerCase()}`}>
+                      {String(s.status || '').toUpperCase() || '-'}
+                    </span>
+                  </td>
+                  <td>{String(s.payment_status || 'COD').toUpperCase()}</td>
+                  <td>{s.customer_name || '-'}</td>
+                  <td>{s.customer_mobile || '-'}</td>
+                  <td className="muted">{s.customer_email || '-'}</td>
+                  <td>{fmt(s?.totals?.payable)}</td>
+                  <td>
+                    <button className="mini" onClick={() => openDetail(s.id)}>
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {detailLoading && (
+        <div className="modal-wrap">
+          <div className="modal center">
+            <div className="loader">
+              <div className="spin" />
+              <span>Loading…</span>
+            </div>
+          </div>
         </div>
       )}
 
-      {popupConfirm && (
-        <div className="popup-confirm-box">
-          <p>Are you sure to update the sales data?</p>
-          <div className="popup-actions">
-            <button onClick={() => confirmUpdate(true)}>Yes</button>
-            <button onClick={() => confirmUpdate(false)}>No</button>
+      {detail && !detailLoading && (
+        <div className="modal-wrap" onClick={() => setDetail(null)}>
+          <div className="modal fancy" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Order #{detail?.sale?.id}</h3>
+              <button className="mini ghost" onClick={() => setDetail(null)}>
+                Close
+              </button>
+            </div>
+
+            <div className="order-meta full">
+              <div>
+                <div className="label">Status</div>
+                <div className="value">{String(detail?.sale?.status || '').toUpperCase()}</div>
+              </div>
+              <div>
+                <div className="label">Payment</div>
+                <div className="value">{String(detail?.sale?.payment_status || 'COD').toUpperCase()}</div>
+              </div>
+              <div>
+                <div className="label">Customer</div>
+                <div className="value">
+                  {detail?.sale?.customer_name || '-'}
+                  {detail?.sale?.customer_mobile ? ` · ${detail?.sale?.customer_mobile}` : ''}
+                </div>
+              </div>
+              <div>
+                <div className="label">Email</div>
+                <div className="value">{detail?.sale?.customer_email || '-'}</div>
+              </div>
+              <div>
+                <div className="label">Payable</div>
+                <div className="value strong">{fmt(detail?.sale?.totals?.payable)}</div>
+              </div>
+            </div>
+
+            {detail?.sale?.shipping_address && (
+              <div className="ship-block">
+                <h4>Shipping Address</h4>
+                <p>{detail.sale.shipping_address.line1}</p>
+                {detail.sale.shipping_address.line2 && <p>{detail.sale.shipping_address.line2}</p>}
+                <p>
+                  {detail.sale.shipping_address.city}, {detail.sale.shipping_address.state} -{' '}
+                  {detail.sale.shipping_address.pincode}
+                </p>
+              </div>
+            )}
+
+            <div className="items-head">Items</div>
+
+            <div className="items grid">
+              {Array.isArray(detail?.items) && detail.items.length > 0 ? (
+                detail.items.map((it, i) => (
+                  <div className="item cardish" key={`${it.variant_id}-${i}`}>
+                    <div className="media wide">
+                      {it.image_url ? <img src={it.image_url} alt="" /> : <div className="ph" />}
+                    </div>
+                    <div className="info cols">
+                      <div className="row">
+                        <span className="label">Variant</span>
+                        <span>#{it.variant_id}</span>
+                      </div>
+                      <div className="row">
+                        <span className="label">Size</span>
+                        <span>{it.size || '-'}</span>
+                      </div>
+                      <div className="row">
+                        <span className="label">Colour</span>
+                        <span>{it.colour || '-'}</span>
+                      </div>
+                      <div className="row">
+                        <span className="label">EAN</span>
+                        <span className="muted">{it.ean_code || '-'}</span>
+                      </div>
+                    </div>
+                    <div className="money tall">
+                      <div className="qty">x{it.qty}</div>
+                      <div className="price">{fmt(it.price)}</div>
+                      {it.mrp != null && Number(it.mrp) > 0 ? (
+                        <div className="mrp">MRP {fmt(it.mrp)}</div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="empty">No items</div>
+              )}
+            </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-export default Sales;
+}
