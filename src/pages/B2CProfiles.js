@@ -24,25 +24,34 @@ const B2CProfiles = () => {
 
   return (
     <div className="b2c-container">
-      <h2 className="b2c-title">B2C Customer Profiles</h2>
-      <table className="b2c-table">
-        <thead>
-          <tr>
-            <th>Full Name</th>
-            <th>Email</th>
-            <th>Mobile</th>
-          </tr>
-        </thead>
-        <tbody>
-          {b2cCustomers.map(customer => (
-            <tr key={customer.id}>
-              <td><strong>{customer.name}</strong></td>
-              <td><strong>{customer.email}</strong></td>
-              <td><strong>{customer.mobile}</strong></td>
+      <div className="b2c-header">
+        <h2 className="b2c-title">B2C Customers</h2>
+      </div>
+      <div className="b2c-table-wrap">
+        <table className="b2c-table">
+          <thead>
+            <tr>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Mobile</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {b2cCustomers.map(customer => (
+              <tr key={customer.id}>
+                <td>{customer.name}</td>
+                <td>{customer.email}</td>
+                <td>{customer.mobile}</td>
+              </tr>
+            ))}
+            {b2cCustomers.length === 0 && (
+              <tr>
+                <td colSpan="3" className="b2c-empty">No customers found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

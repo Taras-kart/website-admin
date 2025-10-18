@@ -73,33 +73,40 @@ const B2BProfiles = () => {
   return (
     <div className="b2b-container-b2b">
       <div className="b2b-header-b2b">
-        <h2 className="heading-b2b">B2B Customers List</h2>
+        <h2 className="heading-b2b">B2B Customers</h2>
         <button className="add-btn-b2b" onClick={() => setShowPopup(true)}>Add New Customer</button>
       </div>
 
-      <table className="customers-table-b2b">
-        <thead>
-          <tr>
-            <th className="table-th-b2b">Name</th>
-            <th className="table-th-b2b">Email</th>
-            <th className="table-th-b2b">Mobile</th>
-            <th className="table-th-b2b">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {b2bCustomers.map(customer => (
-            <tr key={customer.id}>
-              <td className="table-td-b2b">{customer.name}</td>
-              <td className="table-td-b2b">{customer.email}</td>
-              <td className="table-td-b2b">{customer.mobile}</td>
-              <td className="table-td-b2b">
-                <button className="action-btn-b2b">Change Password</button>
-                <button className="delete-btn-b2b">Delete</button>
-              </td>
+      <div className="table-wrap-b2b">
+        <table className="customers-table-b2b">
+          <thead>
+            <tr>
+              <th className="table-th-b2b">Name</th>
+              <th className="table-th-b2b">Email</th>
+              <th className="table-th-b2b">Mobile</th>
+              <th className="table-th-b2b">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {b2bCustomers.map(customer => (
+              <tr key={customer.id}>
+                <td className="table-td-b2b">{customer.name}</td>
+                <td className="table-td-b2b">{customer.email}</td>
+                <td className="table-td-b2b">{customer.mobile}</td>
+                <td className="table-td-b2b">
+                  <button className="action-btn-b2b">Change Password</button>
+                  <button className="delete-btn-b2b">Delete</button>
+                </td>
+              </tr>
+            ))}
+            {b2bCustomers.length === 0 && (
+              <tr>
+                <td className="table-td-b2b empty-b2b" colSpan="4">No customers yet</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {showPopup && (
         <div className="popup-overlay-b2b">

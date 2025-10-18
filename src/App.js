@@ -9,6 +9,7 @@ import Sales from './pages/Sales'
 import Customers from './pages/Customers'
 import LoginAdmin from './pages/LoginAdmin'
 import ImportStock from './pages/ImportStock'
+import POS from './pages/POS'
 
 function RequireAuth({ children }) {
   const { token } = useAuth()
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/stocks" element={<RequireAuth><Stocks /></RequireAuth>} />
             <Route path="/sales" element={<RequireAuth><Sales /></RequireAuth>} />
             <Route path="/customers" element={<RequireAuth><Customers /></RequireAuth>} />
+            <Route path="/pos" element={<RequireAuth><POS /></RequireAuth>} />
             <Route path="/import" element={<RequireAuth><ImportStock /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

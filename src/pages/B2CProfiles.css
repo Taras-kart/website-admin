@@ -1,41 +1,94 @@
+:root {
+  --black: #000;
+  --white: #fff;
+  --gold: #d4af37;
+}
+
+* {
+  box-sizing: border-box
+}
+
 .b2c-container {
-  padding: 2rem;
-  font-family: 'Segoe UI', sans-serif;
-  background-color: #f9f9f9;
   min-height: 100vh;
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Segoe UI', system-ui, -apple-system, Arial, Helvetica, sans-serif;
+  padding: 24px;
+}
+
+.b2c-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px auto 24px;
+  max-width: 1200px;
 }
 
 .b2c-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: #111;
+  color: var(--gold);
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: .3px;
+}
+
+.b2c-table-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, rgba(255, 215, 0, .03), transparent 40%);
+  border: 1px solid rgba(212, 175, 55, .25);
+  border-radius: 14px;
+  padding: 10px;
 }
 
 .b2c-table {
   width: 100%;
-  border-collapse: collapse;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  background: white;
-  border-radius: 8px;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 10px;
   overflow: hidden;
 }
 
 .b2c-table th,
 .b2c-table td {
   padding: 14px 16px;
-  border: 1px solid #ccc;
   text-align: left;
-  font-size: 15px;
+  border-bottom: 1px solid rgba(212, 175, 55, .25);
+  font-size: 14px;
 }
 
 .b2c-table th {
-  background-color: black;
-  color: gold;
-  font-weight: bold;
+  background: #0a0a0a;
+  color: var(--gold);
+  border-bottom: 1px solid var(--gold);
+  font-weight: 700;
+  letter-spacing: .3px;
 }
 
 .b2c-table td {
-  color: #222;
-  background-color: #fff;
+  color: var(--white);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .02), transparent);
+}
+
+.b2c-table tbody tr:hover td {
+  background: rgba(255, 255, 255, .04);
+}
+
+.b2c-empty {
+  text-align: center;
+  color: rgba(255, 255, 255, .7);
+  font-style: italic;
+  padding: 20px;
+}
+
+@media (max-width:720px) {
+  .b2c-title {
+    font-size: 22px
+  }
+
+  .b2c-table th,
+  .b2c-table td {
+    padding: 12px 10px;
+    font-size: 13px
+  }
 }
