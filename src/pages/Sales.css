@@ -137,11 +137,25 @@
   border: 1px solid var(--border);
 }
 
-.pill.placed { color: var(--gold); }
-.pill.confirmed { color: #93f2c8; }
-.pill.packed { color: #a3e7ff; }
-.pill.shipped { color: #c9d8ff; }
-.pill.cancelled { color: #ff9b9b; }
+.pill.placed {
+  color: var(--gold);
+}
+
+.pill.confirmed {
+  color: #93f2c8;
+}
+
+.pill.packed {
+  color: #a3e7ff;
+}
+
+.pill.shipped {
+  color: #c9d8ff;
+}
+
+.pill.cancelled {
+  color: #ff9b9b;
+}
 
 .mini {
   height: 34px;
@@ -344,7 +358,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 900px) {

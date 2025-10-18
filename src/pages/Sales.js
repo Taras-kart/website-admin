@@ -37,6 +37,22 @@ export default function Sales() {
     fetchSales();
   }, []);
 
+  const getPayable = (s) => {
+    if (s && s.totals && s.totals.payable != null) return Number(s.totals.payable);
+    if (s && s.total != null) return Number(s.total);
+    if (Array.isArray(s?.items) && s.items.length) {
+      return s.items.reduce((acc, it) => acc + Number(it.price || 0) * Number(it.qty || 0), 0);
+    }
+    return 0;
+  };
+
+  const getCustomerLabel = (s) => {
+    const name = s?.customer_name && String(s.customer_name).trim();
+    if (name) return name;
+    if (s?.branch_id) return `Branch #${s.branch_id}`;
+    return '-';
+  };
+
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
     const fromTs = from ? new Date(from + 'T00:00:00').getTime() : null;
@@ -49,12 +65,13 @@ export default function Sales() {
       const t = s.totals || {};
       const hay = [
         s.id,
-        s.customer_name,
+        getCustomerLabel(s),
         s.customer_email,
         s.customer_mobile,
         s.status,
         s.payment_status,
-        t?.payable
+        t?.payable,
+        getPayable(s)
       ]
         .join(' ')
         .toLowerCase();
@@ -64,7 +81,7 @@ export default function Sales() {
   }, [sales, status, q, from, to]);
 
   const grand = useMemo(() => {
-    return filtered.reduce((acc, s) => acc + Number(s?.totals?.payable || 0), 0);
+    return filtered.reduce((acc, s) => acc + getPayable(s), 0);
   }, [filtered]);
 
   const openDetail = async (id) => {
@@ -161,10 +178,10 @@ export default function Sales() {
                     </span>
                   </td>
                   <td>{String(s.payment_status || 'COD').toUpperCase()}</td>
-                  <td>{s.customer_name || '-'}</td>
+                  <td>{getCustomerLabel(s)}</td>
                   <td>{s.customer_mobile || '-'}</td>
                   <td className="muted">{s.customer_email || '-'}</td>
-                  <td>{fmt(s?.totals?.payable)}</td>
+                  <td>{fmt(getPayable(s))}</td>
                   <td>
                     <button className="mini" onClick={() => openDetail(s.id)}>
                       View Details
@@ -210,7 +227,7 @@ export default function Sales() {
               <div>
                 <div className="label">Customer</div>
                 <div className="value">
-                  {detail?.sale?.customer_name || '-'}
+                  {getCustomerLabel(detail?.sale)}
                   {detail?.sale?.customer_mobile ? ` · ${detail?.sale?.customer_mobile}` : ''}
                 </div>
               </div>
@@ -220,7 +237,7 @@ export default function Sales() {
               </div>
               <div>
                 <div className="label">Payable</div>
-                <div className="value strong">{fmt(detail?.sale?.totals?.payable)}</div>
+                <div className="value strong">{fmt(detail?.sale?.totals?.payable ?? detail?.sale?.total)}</div>
               </div>
             </div>
 
@@ -230,8 +247,7 @@ export default function Sales() {
                 <p>{detail.sale.shipping_address.line1}</p>
                 {detail.sale.shipping_address.line2 && <p>{detail.sale.shipping_address.line2}</p>}
                 <p>
-                  {detail.sale.shipping_address.city}, {detail.sale.shipping_address.state} -{' '}
-                  {detail.sale.shipping_address.pincode}
+                  {detail.sale.shipping_address.city}, {detail.sale.shipping_address.state} - {detail.sale.shipping_address.pincode}
                 </p>
               </div>
             )}
@@ -266,9 +282,7 @@ export default function Sales() {
                     <div className="money tall">
                       <div className="qty">x{it.qty}</div>
                       <div className="price">{fmt(it.price)}</div>
-                      {it.mrp != null && Number(it.mrp) > 0 ? (
-                        <div className="mrp">MRP {fmt(it.mrp)}</div>
-                      ) : null}
+                      {it.mrp != null && Number(it.mrp) > 0 ? <div className="mrp">MRP {fmt(it.mrp)}</div> : null}
                     </div>
                   </div>
                 ))
