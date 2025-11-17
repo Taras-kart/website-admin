@@ -113,6 +113,12 @@ export default function ImportStock() {
     return n.endsWith('.jpg') || n.endsWith('.jpeg') || n.endsWith('.png') || n.endsWith('.webp');
   }
 
+  function extractEANFromPath(path) {
+    const base = baseNameNoExt(path);
+    const m = String(base).match(/(\d{12,14})/);
+    return m ? m[1] : '';
+  }
+
   async function uploadToCloudinary(blob, publicIdBase) {
     const form = new FormData();
     form.append('file', blob);
@@ -131,7 +137,11 @@ export default function ImportStock() {
     if (eanSet) return eanSet;
     try {
       const list = await apiGet(`/api/products?limit=10000`);
-      const s = new Set((Array.isArray(list) ? list : []).map(p => String(p.ean_code || '').trim()).filter(Boolean));
+      const s = new Set(
+        (Array.isArray(list) ? list : [])
+          .map(p => String(p.ean_code || '').trim())
+          .filter(Boolean)
+      );
       setEanSet(s);
       return s;
     } catch {
@@ -162,15 +172,15 @@ export default function ImportStock() {
       let matched = 0;
       const unmatched = [];
       for (const f of entries) {
-        const base = baseNameNoExt(f.name).trim();
-        if (!base || !eans.has(base)) {
-          unmatched.push({ file: f.name, ean: base || '(none)' });
+        const ean = extractEANFromPath(f.name).trim();
+        if (!ean || !eans.has(ean)) {
+          unmatched.push({ file: f.name, ean: ean || '(none)' });
           done += 1;
           setImageProgress({ done, total });
           continue;
         }
         const blob = await f.async('blob');
-        await uploadToCloudinary(blob, base);
+        await uploadToCloudinary(blob, ean);
         matched += 1;
         done += 1;
         setImageProgress({ done, total });
@@ -192,18 +202,17 @@ export default function ImportStock() {
     <div className="import-page-admin">
       <Navbar />
       <div className="import-wrap-admin">
-
         <div className="import-card-admin">
           <div className="import-title-admin">Import Stock (Excel)</div>
           <div className="import-subtitle-admin">Upload your branch Excel file for a selected category.</div>
-          <form className="import-form-admin" onSubmit={(e) => e.preventDefault()}>
+          <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
             <div className="excel-block">
               <div className="select-wrap">
                 <label className="label">Category</label>
                 <select
                   className={`audience-select ${gender ? '' : 'invalid'}`}
                   value={gender}
-                  onChange={(e) => setGender(e.target.value)}
+                  onChange={e => setGender(e.target.value)}
                   required
                 >
                   <option value="">Select Category</option>
@@ -217,10 +226,12 @@ export default function ImportStock() {
                 <input
                   type="file"
                   accept=".xlsx,.xls,.csv"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  onChange={e => setFile(e.target.files?.[0] || null)}
                 />
                 {file ? (
-                  <div className="import-filehint-admin">{file.name} • {(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                  <div className="import-filehint-admin">
+                    {file.name} • {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </div>
                 ) : (
                   <div className="import-filehint-admin">No file selected</div>
                 )}
@@ -230,12 +241,15 @@ export default function ImportStock() {
                 {message ? <div className="import-msg-admin">{message}</div> : null}
                 {progress ? (
                   <div className="import-msg-admin">
-                    {progress.state} {progress.total ? `${progress.done}/${progress.total}` : `${progress.done}+`} rows
+                    {progress.state}{' '}
+                    {progress.total ? `${progress.done}/${progress.total}` : `${progress.done}+`} rows
                   </div>
                 ) : null}
               </div>
               <div className="inline-info">
-                <span className={`pill-mini ${gender ? 'ok' : 'warn'}`}>{gender ? `Category: ${gender}` : 'Select a category for Excel upload'}</span>
+                <span className={`pill-mini ${gender ? 'ok' : 'warn'}`}>
+                  {gender ? `Category: ${gender}` : 'Select a category for Excel upload'}
+                </span>
               </div>
             </div>
           </form>
@@ -243,23 +257,33 @@ export default function ImportStock() {
 
         <div className="import-card-admin">
           <div className="import-title-admin">Upload Product Images (ZIP by EAN)</div>
-          <div className="import-subtitle-admin">Images will be matched by EAN across all categories. Only unmatched EANs will be listed below.</div>
-          <form className="import-form-admin" onSubmit={(e) => e.preventDefault()}>
+          <div className="import-subtitle-admin">
+            Images will be matched by EAN across all categories. Only unmatched EANs will be listed below.
+          </div>
+          <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
             <div className="zip-block">
               <div className="import-filebox-admin">
                 <label className="label">Images ZIP Folder</label>
                 <input
                   type="file"
                   accept=".zip"
-                  onChange={(e) => setImageZip(e.target.files?.[0] || null)}
+                  onChange={e => setImageZip(e.target.files?.[0] || null)}
                 />
                 {imageZip ? (
-                  <div className="import-filehint-admin">{imageZip.name} • {(imageZip.size / 1024 / 1024).toFixed(2)} MB</div>
+                  <div className="import-filehint-admin">
+                    {imageZip.name} • {(imageZip.size / 1024 / 1024).toFixed(2)} MB
+                  </div>
                 ) : (
                   <div className="import-filehint-admin">No ZIP selected</div>
                 )}
-                <button className="import-btn-admin" onClick={onUploadImages} disabled={!canUploadImages || uploadingImages}>
-                  {uploadingImages ? `Uploading ${imageProgress.done}/${imageProgress.total}…` : 'Upload Images ZIP'}
+                <button
+                  className="import-btn-admin"
+                  onClick={onUploadImages}
+                  disabled={!canUploadImages || uploadingImages}
+                >
+                  {uploadingImages
+                    ? `Uploading ${imageProgress.done}/${imageProgress.total}…`
+                    : 'Upload Images ZIP'}
                 </button>
                 {imageMessage ? <div className="import-msg-admin">{imageMessage}</div> : null}
                 <div className="image-stats">
@@ -308,24 +332,32 @@ export default function ImportStock() {
                 </tr>
               </thead>
               <tbody>
-                {jobs.map((j) => (
+                {jobs.map(j => (
                   <tr key={j.id} className="import-row-card">
                     <td data-label="ID">{j.id}</td>
                     <td data-label="File">{j.file_name || '-'}</td>
                     <td data-label="Gender">{j.gender || '-'}</td>
                     <td data-label="Status">
-                      <span className={`pill-admin ${String(j.status_enum || '').toLowerCase()}`}>{j.status_enum}</span>
+                      <span className={`pill-admin ${String(j.status_enum || '').toLowerCase()}`}>
+                        {j.status_enum}
+                      </span>
                     </td>
                     <td data-label="Total">{j.rows_total ?? 0}</td>
                     <td data-label="Success">{j.rows_success ?? 0}</td>
                     <td data-label="Error">{j.rows_error ?? 0}</td>
-                    <td data-label="Uploaded">{j.uploaded_at ? new Date(j.uploaded_at).toLocaleString() : '-'}</td>
-                    <td data-label="Completed">{j.completed_at ? new Date(j.completed_at).toLocaleString() : '-'}</td>
+                    <td data-label="Uploaded">
+                      {j.uploaded_at ? new Date(j.uploaded_at).toLocaleString() : '-'}
+                    </td>
+                    <td data-label="Completed">
+                      {j.completed_at ? new Date(j.completed_at).toLocaleString() : '-'}
+                    </td>
                   </tr>
                 ))}
                 {!jobs.length && (
                   <tr>
-                    <td colSpan="9" className="import-empty-admin">No imports yet</td>
+                    <td colSpan="9" className="import-empty-admin">
+                      No imports yet
+                    </td>
                   </tr>
                 )}
               </tbody>
