@@ -8,7 +8,7 @@ const NavbarAdmin = () => {
   const mobileNavRef = useRef(null)
 
   useEffect(() => {
-    const handleOutsideClick = (event) => {
+    const handleOutsideClick = event => {
       if (mobileNavRef.current && !mobileNavRef.current.contains(event.target) && !event.target.closest('.nav-toggle-final')) {
         setIsMobileNavOpen(false)
       }
@@ -31,7 +31,8 @@ const NavbarAdmin = () => {
     { name: 'Sales', path: '/sales' },
     { name: 'Customers', path: '/customers' },
     { name: 'POS', path: '/pos' },
-    { name: 'Import', path: '/import' }
+    { name: 'Import', path: '/import' },
+    { name: 'Homepage Images', path: '/homepage-images' }
   ]
 
   return (
@@ -64,11 +65,13 @@ const NavbarAdmin = () => {
           </div>
         </div>
       </div>
+
       <div className="bottom-row-final mobile-only-final">
         <div className="search-bar-final Btn">
           <input type="text" placeholder="search a product" />
         </div>
       </div>
+
       {isMobileNavOpen && (
         <div className="mobile-drawer-final" ref={mobileNavRef}>
           <div className="close-btn-final" onClick={() => setIsMobileNavOpen(false)}></div>
