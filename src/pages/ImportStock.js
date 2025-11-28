@@ -26,10 +26,24 @@ export default function ImportStock() {
   const [eanSet, setEanSet] = useState(null);
   const [matchStats, setMatchStats] = useState({ matched: 0, total: 0, skipped: 0 });
   const [unmatchedList, setUnmatchedList] = useState([]);
+  const [b2cDiscount, setB2cDiscount] = useState('');
+  const [b2bDiscount, setB2bDiscount] = useState('');
+  const [savingDiscounts, setSavingDiscounts] = useState(false);
+  const [discountMessage, setDiscountMessage] = useState('');
 
   const branchId = user?.branch_id;
   const canUpload = useMemo(() => !!file && !!branchId && !uploading && !!gender, [file, branchId, uploading, gender]);
   const canUploadImages = useMemo(() => !!imageZip && !!branchId && !uploadingImages, [imageZip, branchId, uploadingImages]);
+  const canSaveDiscounts = useMemo(
+    () =>
+      !!branchId &&
+      !savingDiscounts &&
+      b2cDiscount !== '' &&
+      b2bDiscount !== '' &&
+      !isNaN(parseFloat(b2cDiscount)) &&
+      !isNaN(parseFloat(b2bDiscount)),
+    [branchId, savingDiscounts, b2cDiscount, b2bDiscount]
+  );
 
   useEffect(() => {
     const saved = localStorage.getItem('import_gender') || '';
@@ -51,8 +65,30 @@ export default function ImportStock() {
     }
   }
 
+  async function fetchDiscounts() {
+    if (!branchId) return;
+    try {
+      const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/discounts`);
+      if (data && typeof data === 'object') {
+        if (data.b2c_discount_pct !== undefined && data.b2c_discount_pct !== null) {
+          setB2cDiscount(String(data.b2c_discount_pct));
+        }
+        if (data.b2b_discount_pct !== undefined && data.b2b_discount_pct !== null) {
+          setB2bDiscount(String(data.b2b_discount_pct));
+        }
+      }
+    } catch {
+      setB2cDiscount('');
+      setB2bDiscount('');
+    }
+  }
+
   useEffect(() => {
     fetchJobs();
+  }, [branchId]);
+
+  useEffect(() => {
+    fetchDiscounts();
   }, [branchId]);
 
   async function processJob(jobId, setProg) {
@@ -198,6 +234,36 @@ export default function ImportStock() {
     }
   }
 
+  async function onSaveDiscounts(e) {
+    e.preventDefault();
+    if (!branchId) {
+      setDiscountMessage('Branch not found');
+      return;
+    }
+    const b2c = parseFloat(b2cDiscount);
+    const b2b = parseFloat(b2bDiscount);
+    if (isNaN(b2c) || isNaN(b2b)) {
+      setDiscountMessage('Enter valid discount percentages');
+      return;
+    }
+    setSavingDiscounts(true);
+    setDiscountMessage('');
+    show();
+    try {
+      await apiPost(`/api/branch/${encodeURIComponent(branchId)}/discounts`, {
+        b2c_discount_pct: b2c,
+        b2b_discount_pct: b2b
+      });
+      setDiscountMessage('Discounts saved successfully');
+    } catch (err) {
+      setDiscountMessage(err?.payload?.message || err?.message || 'Failed to save discounts');
+    } finally {
+      setSavingDiscounts(false);
+      hide();
+      setTimeout(() => setDiscountMessage(''), 4000);
+    }
+  }
+
   return (
     <div className="import-page-admin">
       <Navbar />
@@ -305,6 +371,51 @@ export default function ImportStock() {
                   </div>
                 )}
               </div>
+            </div>
+          </form>
+        </div>
+
+        <div className="import-card-admin">
+          <div className="import-title-admin">B2C / B2B Discounts</div>
+          <div className="import-subtitle-admin">
+            Set discount percentages for all products in this branch. These are kept separate from Excel and image uploads.
+          </div>
+          <form className="import-form-admin" onSubmit={onSaveDiscounts}>
+            <div className="discount-block">
+              <div className="discount-row">
+                <div className="discount-field">
+                  <label className="label">B2C Discount (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={b2cDiscount}
+                    onChange={e => setB2cDiscount(e.target.value)}
+                    className="discount-input"
+                  />
+                </div>
+                <div className="discount-field">
+                  <label className="label">B2B Discount (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={b2bDiscount}
+                    onChange={e => setB2bDiscount(e.target.value)}
+                    className="discount-input"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="import-btn-admin"
+                disabled={!canSaveDiscounts}
+              >
+                {savingDiscounts ? 'Saving…' : 'Save Discounts'}
+              </button>
+              {discountMessage ? <div className="import-msg-admin">{discountMessage}</div> : null}
             </div>
           </form>
         </div>
