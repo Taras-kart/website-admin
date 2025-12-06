@@ -8,7 +8,9 @@ export default function EditableImage({ slotId, section, imageUrl, defaultUrl, a
   const inputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
 
-  const handleClick = () => {
+  const handleClick = e => {
+    e.preventDefault()
+    e.stopPropagation()
     if (inputRef.current) inputRef.current.click()
   }
 

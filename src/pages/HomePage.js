@@ -1,3 +1,4 @@
+// D:\shopping-admin\src\pages\HomePage.js
 import React, { useState } from 'react';
 import './HomePage.css';
 import Navbar from './NavbarAdmin';
@@ -40,7 +41,6 @@ const HomePage = () => {
           >
             <span>Delete Product</span>
           </button>
-
         </div>
         <div className="admin-main">{renderContent()}</div>
       </div>

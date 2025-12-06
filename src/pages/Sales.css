@@ -280,7 +280,7 @@
 .orders-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 840px;
+  min-width: 940px;
 }
 
 .orders-table-head {
@@ -613,6 +613,149 @@
   color: var(--orders-gold);
 }
 
+.orders-progress-card {
+  border-radius: var(--orders-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.12), transparent 70%),
+    var(--orders-panel-soft-2);
+  padding: 10px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.orders-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.orders-progress-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.orders-progress-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--orders-gold);
+}
+
+.orders-progress-header-sub {
+  font-size: 11px;
+  color: var(--orders-muted);
+}
+
+.orders-progress-status-pill {
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  color: var(--orders-white);
+  background: rgba(9, 10, 16, 0.96);
+  text-align: right;
+  max-width: 220px;
+}
+
+.orders-timeline {
+  position: relative;
+  padding: 16px 6px 6px;
+}
+
+.orders-timeline-line {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 24px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
+  pointer-events: none;
+}
+
+.orders-timeline-cancelled .orders-timeline-line {
+  background: linear-gradient(90deg, rgba(255, 155, 155, 0.4), rgba(255, 255, 255, 0.08));
+}
+
+.orders-timeline-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.orders-timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.orders-timeline-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border-width: 2px;
+  border-style: solid;
+  background: var(--orders-panel-soft);
+  box-sizing: border-box;
+}
+
+.orders-timeline-dot-done {
+  border-color: var(--orders-gold);
+  background: radial-gradient(circle at center, var(--orders-gold), transparent 70%);
+}
+
+.orders-timeline-dot-active {
+  border-color: var(--orders-gold);
+  background: radial-gradient(circle at center, rgba(255, 211, 110, 0.85), transparent 70%);
+  box-shadow: 0 0 0 1px rgba(255, 211, 110, 0.5);
+}
+
+.orders-timeline-dot-upcoming {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: var(--orders-panel-soft-2);
+}
+
+.orders-timeline-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.orders-timeline-caption {
+  font-size: 10px;
+  color: var(--orders-muted);
+}
+
+.orders-progress-footer {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.orders-progress-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.orders-progress-meta-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orders-muted);
+}
+
+.orders-progress-meta-value {
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .orders-shipping-card {
   border-radius: var(--orders-radius-md);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -763,6 +906,55 @@
   color: var(--orders-muted);
 }
 
+.orders-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 170px;
+}
+
+.orders-progress-track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.orders-progress-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  border-width: 1px;
+  border-style: solid;
+  background: rgba(10, 11, 18, 0.96);
+  box-sizing: border-box;
+}
+
+.orders-progress-dot-done {
+  border-color: var(--orders-gold);
+  background: radial-gradient(circle at center, var(--orders-gold), transparent 70%);
+}
+
+.orders-progress-dot-active {
+  border-color: var(--orders-gold);
+  background: radial-gradient(circle at center, rgba(255, 211, 110, 0.85), transparent 70%);
+  box-shadow: 0 0 0 1px rgba(255, 211, 110, 0.55);
+}
+
+.orders-progress-dot-upcoming {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: var(--orders-panel-soft-2);
+}
+
+.orders-progress-dot-cancelled {
+  border-color: #ff9b9b;
+  background: rgba(255, 155, 155, 0.25);
+}
+
+.orders-progress-text {
+  font-size: 11px;
+  color: var(--orders-muted);
+}
+
 /* animations */
 
 @keyframes orders-spin {
@@ -775,6 +967,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -785,6 +978,7 @@
     opacity: 0;
     transform: scale(0.96) translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -838,6 +1032,15 @@
   .orders-modal-header-actions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .orders-timeline-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 10px;
+  }
+
+  .orders-progress-status-pill {
+    max-width: 100%;
   }
 }
 

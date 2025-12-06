@@ -1,171 +1,98 @@
+/* D:\shopping-admin\src\pages\HomePage.css */
 .admin-homepage {
-  background-color: #f9f9f9;
+  background-color: #000000;
+  color: #ffffff;
   font-family: Arial, sans-serif;
-  overflow: hidden;
 }
 
 .admin-body {
   display: flex;
+  margin-top: 15px;
+  flex-direction: column;
   height: calc(100vh - 70px);
 }
 
 .admin-sidebar {
-  width: 24%;
-  background-color: black;
+  width: 100%;
+  background-color: #000000;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
-  gap: 20px;
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  overflow: hidden;
+  gap: 12px;
+  padding: 12px 24px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
 }
 
 .sidebar-button {
   background: none;
-  border: 2px solid white;
-  color: white;
-  padding: 12px 15px;
-  font-size: 16px;
-  font-weight: bold;
-  border-radius: 10px;
-  transition: 0.3s;
+  border: 1px solid #ffffff;
+  color: #ffffff;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  transition: 0.2s;
   cursor: pointer;
-  width: 80%;
+  min-width: 130px;
   text-align: center;
 }
 
 .sidebar-button:hover {
-  border-color: gold;
-  color: gold;
+  border-color: #ffd700;
+  color: #ffd700;
 }
 
 .sidebar-button.active {
-  width: 80%;
-  padding: 12px 15px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(to right, #77530a, #ffd277, #77530a, #77530a, #ffd277, #77530a);
-  background-size: 250%;
-  background-position: left;
-  color: gold;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition-duration: 1s;
-  overflow: hidden;
-  z-index: 2;
+  border: 1px solid #ffd700;
+  background-color: #ffd700;
+  color: #000000;
 }
 
 .sidebar-button.active span {
-  position: relative;
-  z-index: 2;
-  color: gold !important;
-}
-
-.sidebar-button.active::before {
-  position: absolute;
-  content: '';
-  width: 97%;
-  height: 90%;
-  border-radius: 8px;
-  background-color: rgba(0, 0, 0, 0.842);
-  background-size: 200%;
-  transition-duration: 1s;
-  z-index: 1;
-}
-
-.sidebar-button.active:hover {
-  background-position: right;
-  transition-duration: 1s;
-}
-
-.sidebar-button.active:hover::before {
-  background-position: right;
-  transition-duration: 1s;
-}
-
-.sidebar-button.active:active {
-  transform: scale(0.95);
+  color: inherit;
 }
 
 .admin-main {
-  width: 75%;
-  padding: 30px;
+  flex: 1;
+  width: 100%;
+  padding: 20px 24px;
+  box-sizing: border-box;
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  margin-left: 25%;
-  height: calc(100vh - 70px);
 }
 
 .admin-main::-webkit-scrollbar {
   display: none;
 }
 
-@media (max-width: 1024px) {
-  .admin-body {
-    flex-direction: column;
-  }
-
+@media (max-width: 900px) {
   .admin-sidebar {
-    position: relative;
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-around;
-    align-items: center;
-    height: auto;
-    padding: 20px;
-    top: 0;
-  }
-
-  .sidebar-button {
-    width: auto;
-  }
-
-  .admin-main {
-    margin-left: 0;
-    width: 100%;
-    height: calc(100vh - 70px - 100px);
-  }
-}
-
-@media (max-width: 768px) {
-  .sidebar-button {
-    font-size: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
     padding: 10px 12px;
   }
 
-  .admin-main {
-    padding: 20px;
-  }
-}
-
-@media (max-width: 500px) {
   .sidebar-button {
+    min-width: 110px;
     font-size: 13px;
-    padding: 8px 10px;
+    padding: 7px 10px;
   }
 
-  .admin-sidebar {
-    flex-wrap: wrap;
-    gap: 10px;
+  .admin-main {
+    padding: 16px;
   }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 480px) {
+  .admin-sidebar {
+    gap: 8px;
+  }
+
   .sidebar-button {
+    min-width: 100px;
     font-size: 12px;
     padding: 6px 8px;
-  }
-
-  .admin-sidebar {
-    justify-content: center;
-    gap: 8px;
   }
 }
