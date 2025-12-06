@@ -26,9 +26,26 @@ function computeStepFromShiprocket(srStatus) {
   if (!s) return 0;
   if (s.includes('DELIVERED')) return 4;
   if (s.includes('OUT FOR DELIVERY') || s.includes('OUT_FOR_DELIVERY')) return 3;
-  if (s.includes('PICKED') || s.includes('DISPATCH') || s.includes('IN TRANSIT') || s.includes('SHIPPED')) return 3;
-  if (s.includes('PACKED')) return 2;
-  if (s.includes('CONFIRMED') || s.includes('PROCESSING') || s.includes('ACCEPTED')) return 1;
+  if (s.includes('IN TRANSIT') || s.includes('DISPATCH') || s.includes('SHIPPED') || s.includes('PICKED')) return 3;
+  if (s.includes('AWB') || s.includes('PACKED') || s.includes('MANIFEST')) return 2;
+  if (s.includes('CONFIRMED') || s.includes('PROCESSING') || s.includes('ACCEPTED') || s.includes('CREATED')) return 1;
+  return 0;
+}
+
+function computeStepFromShipment(sh, srCore) {
+  if (!sh && !srCore) return 0;
+  const s = statusText(sh?.status || '');
+  const sr = statusText(srCore?.current_status || '');
+  const combined = `${s} ${sr}`.trim();
+  if (!combined) {
+    if (sh && sh.awb) return 2;
+    return 1;
+  }
+  if (combined.includes('DELIVERED')) return 4;
+  if (combined.includes('OUT FOR DELIVERY') || combined.includes('OUT_FOR_DELIVERY')) return 3;
+  if (combined.includes('IN TRANSIT') || combined.includes('DISPATCH') || combined.includes('SHIPPED') || combined.includes('PICKED')) return 3;
+  if (combined.includes('PACKED') || combined.includes('MANIFEST')) return 2;
+  if (combined.includes('CONFIRMED') || combined.includes('PROCESSING') || combined.includes('ACCEPTED') || combined.includes('CREATED')) return 1;
   return 0;
 }
 
@@ -72,7 +89,7 @@ function buildTrackingSnapshot(raw) {
     core.edd ||
     null;
   const lastEventRaw =
-    (lastTrack && (lastTrack.date || lastTrack.pickup_date)) ||
+    (lastTrack && (lastTrack.date || lastTrack.pickup_date || lastTrack.updated_time_stamp)) ||
     core.updated_time_stamp ||
     core.last_status_time ||
     null;
@@ -243,31 +260,21 @@ export default function Sales() {
   const detailLocalOrderStatus = detailSale ? statusText(detailSale.status || 'PLACED') : '';
   const detailIsCancelled = detailLocalOrderStatus === 'CANCELLED';
   const detailShiprocketStatus = statusText(detailTrackingSnapshot.status);
-  let detailShiprocketStep = computeStepFromShiprocket(detailShiprocketStatus);
-  if (!detailIsCancelled && detailTrackingSnapshot.eddText && detailShiprocketStep < 3) {
-    detailShiprocketStep = 3;
-  }
+  const detailShipmentStepIndex = computeStepFromShipment(
+    detailLatestShipment,
+    detailTrackingSnapshot.core
+  );
+  const detailBaseLocalStep = computeStepFromLocal(detailLocalOrderStatus);
+  const detailBaseShiprocketStep = computeStepFromShiprocket(detailShiprocketStatus);
+  const detailEffectiveStepIndex = detailSale
+    ? Math.max(detailBaseLocalStep, detailBaseShiprocketStep, detailShipmentStepIndex)
+    : 0;
   const detailPlacedText = detailSale?.created_at
     ? new Date(detailSale.created_at).toLocaleString()
     : '-';
   const detailExpectedDelivery = detailSale
     ? buildExpectedDeliveryText(detailTrackingSnapshot, detailSale, detailLatestShipment)
     : '-';
-  let detailEffectiveBase = detailSale
-    ? Math.max(
-        computeStepFromLocal(detailLocalOrderStatus),
-        detailShiprocketStep
-      )
-    : 0;
-  if (
-    !detailIsCancelled &&
-    detailExpectedDelivery &&
-    detailExpectedDelivery !== '-' &&
-    detailEffectiveBase < 3
-  ) {
-    detailEffectiveBase = 3;
-  }
-  const detailEffectiveStepIndex = detailEffectiveBase;
   const detailLastUpdateTime = (() => {
     if (!detail) return '-';
     if (detailTrackingSnapshot.lastEventText) return detailTrackingSnapshot.lastEventText;
@@ -281,6 +288,9 @@ export default function Sales() {
     if (Number.isNaN(t.getTime())) return '-';
     return t.toLocaleString('en-IN');
   })();
+
+  const hasShipments = Array.isArray(detailShipments) && detailShipments.length > 0;
+  const shiprocketBaseUrl = 'https://app.shiprocket.in';
 
   return (
     <div className="orders-screen">
@@ -393,7 +403,6 @@ export default function Sales() {
                     <th className="orders-table-head">Order</th>
                     <th className="orders-table-head">Placed at</th>
                     <th className="orders-table-head">Status</th>
-                    <th className="orders-table-head">Progress</th>
                     <th className="orders-table-head">Payment</th>
                     <th className="orders-table-head">Customer</th>
                     <th className="orders-table-head">Mobile</th>
@@ -405,8 +414,6 @@ export default function Sales() {
                 <tbody>
                   {filtered.map((s) => {
                     const localStatus = statusText(s.status || 'PLACED');
-                    const isCancelledRow = localStatus === 'CANCELLED';
-                    const localStep = computeStepFromLocal(localStatus);
                     return (
                       <tr key={s.id} className="orders-table-row">
                         <td className="orders-table-cell">
@@ -425,34 +432,6 @@ export default function Sales() {
                           >
                             {localStatus || '-'}
                           </span>
-                        </td>
-                        <td className="orders-table-cell">
-                          <div className="orders-progress">
-                            <div className="orders-progress-track">
-                              {ORDER_STEPS.map((step, index) => {
-                                const state = isCancelledRow
-                                  ? 'cancelled'
-                                  : index < localStep
-                                  ? 'done'
-                                  : index === localStep
-                                  ? 'active'
-                                  : 'upcoming';
-                                return (
-                                  <span
-                                    key={step}
-                                    className={`orders-progress-dot orders-progress-dot-${state}`}
-                                  />
-                                );
-                              })}
-                            </div>
-                            <div className="orders-progress-text">
-                              {isCancelledRow
-                                ? 'Cancelled'
-                                : `${ORDER_STEPS[localStep]} • Step ${localStep + 1} of ${
-                                    ORDER_STEPS.length
-                                  }`}
-                            </div>
-                          </div>
                         </td>
                         <td className="orders-table-cell">
                           <span className="orders-payment-chip">
@@ -628,6 +607,45 @@ export default function Sales() {
                     {detailLastUpdateTime}
                   </span>
                 </div>
+                <div className="orders-progress-meta orders-progress-meta-actions">
+                  {hasShipments ? (
+                    <div className="orders-doc-buttons">
+                      <a
+                        href={`${API_BASE}/api/shiprocket/label/${detailSale?.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="orders-btn-small"
+                      >
+                        Label
+                      </a>
+                      <a
+                        href={`${API_BASE}/api/shiprocket/invoice/${detailSale?.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="orders-btn-small"
+                      >
+                        Tax invoice
+                      </a>
+                      <a
+                        href={`${API_BASE}/api/shiprocket/manifest/${detailSale?.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="orders-btn-small"
+                      >
+                        Manifest
+                      </a>
+                    </div>
+                  ) : (
+                    <a
+                      href={shiprocketBaseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="orders-btn-small"
+                    >
+                      Go to Shiprocket
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -643,7 +661,7 @@ export default function Sales() {
                     <p>{detailSale.shipping_address.line2}</p>
                   )}
                   <p>
-                    {detailSale.shipping_address.city},{' '}
+                    {detailSale.shipping_address.city}{' '}
                     {detailSale.shipping_address.state} -{' '}
                     {detailSale.shipping_address.pincode}
                   </p>
