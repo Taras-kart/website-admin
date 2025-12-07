@@ -11,6 +11,7 @@ import LoginAdmin from './pages/LoginAdmin'
 import ImportStock from './pages/ImportStock'
 import POS from './pages/POS'
 import AdminHomepageImages from './pages/AdminHomepageImages'
+import OrderIssues from './pages/OrderIssues'
 
 function RequireAuth({ children }) {
   const { token } = useAuth()
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/pos" element={<RequireAuth><POS /></RequireAuth>} />
             <Route path="/import" element={<RequireAuth><ImportStock /></RequireAuth>} />
             <Route path="/homepage-images" element={<RequireAuth><AdminHomepageImages /></RequireAuth>} />
+            <Route path="/order-issues" element={<RequireAuth><OrderIssues /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>

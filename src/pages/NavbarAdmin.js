@@ -32,7 +32,8 @@ const NavbarAdmin = () => {
     { name: 'Customers', path: '/customers' },
     { name: 'POS', path: '/pos' },
     { name: 'Import', path: '/import' },
-    { name: 'Homepage Images', path: '/homepage-images' }
+    { name: 'Homepage Images', path: '/homepage-images' },
+    { name: 'Cancellations', path: '/order-issues' }
   ]
 
   return (
