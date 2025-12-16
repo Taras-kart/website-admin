@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import './OrderIssues.css'
 import Navbar from './NavbarAdmin'
 import OrderCancelPopup from './OrderCancelPopup'
+import { useNavigate } from 'react-router-dom'
 
 const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app'
 const API_BASE_RAW =
@@ -41,7 +42,19 @@ function fmtAmount(n) {
   return `₹${Number(n || 0).toFixed(2)}`
 }
 
+function refundStatusLabel(r) {
+  const ref = statusText(r.refund_status || '')
+  const st = statusText(r.status || '')
+  if (ref === 'REFUNDED') return 'Refund completed'
+  if (ref === 'PENDING_REFUND') return 'Refund approved'
+  if (st === 'REQUESTED') return 'Pending review'
+  if (st === 'APPROVED') return 'Approved'
+  if (st === 'REJECTED') return 'Rejected'
+  return ref || st || '-'
+}
+
 export default function OrderIssues() {
+  const navigate = useNavigate()
   const [sales, setSales] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('cancellations')
@@ -51,6 +64,16 @@ export default function OrderIssues() {
   const [popupSale, setPopupSale] = useState(null)
   const [popupSubmitting, setPopupSubmitting] = useState(false)
   const [cancelBusyId, setCancelBusyId] = useState(null)
+
+  const [returnsLoading, setReturnsLoading] = useState(false)
+  const [returnsError, setReturnsError] = useState('')
+  const [returnsList, setReturnsList] = useState([])
+  const [returnsLoaded, setReturnsLoaded] = useState(false)
+
+  const [refundsLoading, setRefundsLoading] = useState(false)
+  const [refundsError, setRefundsError] = useState('')
+  const [refundsList, setRefundsList] = useState([])
+  const [refundsLoaded, setRefundsLoaded] = useState(false)
 
   const fetchSales = async () => {
     setLoading(true)
@@ -153,6 +176,49 @@ export default function OrderIssues() {
       setCancelBusyId(null)
     }
   }
+
+  const fetchReturns = async () => {
+    setReturnsLoading(true)
+    setReturnsError('')
+    try {
+      const res = await fetch(`${API_BASE}/api/returns/admin`)
+      if (!res.ok) throw new Error('Unable to load returns')
+      const data = await res.json()
+      setReturnsList(Array.isArray(data.rows || data) ? data.rows || data : [])
+      setReturnsLoaded(true)
+    } catch (e) {
+      setReturnsError(e.message || 'Could not load returns')
+      setReturnsList([])
+    } finally {
+      setReturnsLoading(false)
+    }
+  }
+
+  const fetchRefunds = async () => {
+    setRefundsLoading(true)
+    setRefundsError('')
+    try {
+      const res = await fetch(`${API_BASE}/api/returns/admin/refunds`)
+      if (!res.ok) throw new Error('Unable to load refunds')
+      const data = await res.json()
+      setRefundsList(Array.isArray(data.rows || data) ? data.rows || data : [])
+      setRefundsLoaded(true)
+    } catch (e) {
+      setRefundsError(e.message || 'Could not load refunds')
+      setRefundsList([])
+    } finally {
+      setRefundsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'returns' && !returnsLoaded && !returnsLoading) {
+      fetchReturns()
+    }
+    if (activeTab === 'refunds' && !refundsLoaded && !refundsLoading) {
+      fetchRefunds()
+    }
+  }, [activeTab, returnsLoaded, returnsLoading, refundsLoaded, refundsLoading])
 
   return (
     <div className="oi-screen">
@@ -387,28 +453,191 @@ export default function OrderIssues() {
         )}
 
         {activeTab === 'returns' && (
-          <section className="oi-placeholder-card">
-            <h2 className="oi-placeholder-title">Returns overview</h2>
-            <p className="oi-placeholder-text">
-              This section is meant for orders that customers want to send back after delivery.
-            </p>
-            <p className="oi-placeholder-text">
-              Once your returns flow is connected, you will see return requests, reasons, and pickup
-              status here so you can act quickly and keep customers updated.
-            </p>
+          <section className="oi-table-card">
+            {returnsLoading ? (
+              <div className="oi-loader">
+                <div className="oi-spinner" />
+                <span className="oi-loader-text">Loading returns</span>
+              </div>
+            ) : returnsError ? (
+              <div className="oi-empty">
+                <div className="oi-empty-icon" />
+                <h3 className="oi-empty-title">Could not load returns</h3>
+                <p className="oi-empty-text">{returnsError}</p>
+                <button className="oi-refresh-btn" onClick={fetchReturns}>
+                  <span className="oi-refresh-dot" />
+                  <span>Retry</span>
+                </button>
+              </div>
+            ) : returnsList.length === 0 ? (
+              <div className="oi-empty">
+                <div className="oi-empty-icon" />
+                <h3 className="oi-empty-title">No return requests yet</h3>
+                <p className="oi-empty-text">
+                  When customers raise a return or replacement request, it will show up here.
+                </p>
+              </div>
+            ) : (
+              <div className="oi-table-scroller">
+                <table className="oi-table">
+                  <thead>
+                    <tr>
+                      <th className="oi-th">Request</th>
+                      <th className="oi-th">Order</th>
+                      <th className="oi-th">Created</th>
+                      <th className="oi-th">Type</th>
+                      <th className="oi-th">Status</th>
+                      <th className="oi-th">Customer</th>
+                      <th className="oi-th">Mobile</th>
+                      <th className="oi-th">Email</th>
+                      <th className="oi-th">Amount</th>
+                      <th className="oi-th">Reason</th>
+                      <th className="oi-th">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {returnsList.map(r => {
+                      const createdAt = r.created_at ? new Date(r.created_at).toLocaleString() : '-'
+                      const status = statusText(r.status || '')
+                      const type = statusText(r.type || '')
+                      const amount =
+                        r.sale_totals && r.sale_totals.payable != null
+                          ? Number(r.sale_totals.payable)
+                          : r.amount || 0
+                      return (
+                        <tr key={r.id} className="oi-tr">
+                          <td className="oi-td">
+                            <span className="oi-pill-id">RR#{String(r.id).slice(0, 8)}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-pill-id">#{r.sale_id}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-muted">{createdAt}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-status-text">{type || '-'}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-status-text">{status || '-'}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-strong">{r.customer_name || '-'}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-text">{r.customer_mobile || '-'}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-muted">{r.customer_email || '-'}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-amount">{fmtAmount(amount)}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-text">
+                              {r.reason || r.reason_code || 'Not specified'}
+                            </span>
+                          </td>
+                          <td className="oi-td">
+                            <button
+                              className="oi-cancel-btn"
+                              onClick={() => navigate(`/returns/${r.id}`)}
+                            >
+                              Review
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
 
         {activeTab === 'refunds' && (
-          <section className="oi-placeholder-card">
-            <h2 className="oi-placeholder-title">Refund tracking</h2>
-            <p className="oi-placeholder-text">
-              This section is meant for monitoring refunds, especially for prepaid orders.
-            </p>
-            <p className="oi-placeholder-text">
-              Later you can use this view to see which refunds are pending, processed, and which
-              customers are waiting for an update.
-            </p>
+          <section className="oi-table-card">
+            {refundsLoading ? (
+              <div className="oi-loader">
+                <div className="oi-spinner" />
+                <span className="oi-loader-text">Loading refunds</span>
+              </div>
+            ) : refundsError ? (
+              <div className="oi-empty">
+                <div className="oi-empty-icon" />
+                <h3 className="oi-empty-title">Could not load refunds</h3>
+                <p className="oi-empty-text">{refundsError}</p>
+                <button className="oi-refresh-btn" onClick={fetchRefunds}>
+                  <span className="oi-refresh-dot" />
+                  <span>Retry</span>
+                </button>
+              </div>
+            ) : refundsList.length === 0 ? (
+              <div className="oi-empty">
+                <div className="oi-empty-icon" />
+                <h3 className="oi-empty-title">No refunds logged yet</h3>
+                <p className="oi-empty-text">
+                  When refunds are initiated, they will show up here with amount and status.
+                </p>
+              </div>
+            ) : (
+              <div className="oi-table-scroller">
+                <table className="oi-table">
+                  <thead>
+                    <tr>
+                      <th className="oi-th">Refund</th>
+                      <th className="oi-th">Order</th>
+                      <th className="oi-th">Request</th>
+                      <th className="oi-th">Amount</th>
+                      <th className="oi-th">Mode</th>
+                      <th className="oi-th">Status</th>
+                      <th className="oi-th">Initiated by</th>
+                      <th className="oi-th">Created</th>
+                      <th className="oi-th">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {refundsList.map(r => {
+                      const createdAt = r.created_at ? new Date(r.created_at).toLocaleString() : '-'
+                      return (
+                        <tr key={r.id} className="oi-tr">
+                          <td className="oi-td">
+                            <span className="oi-pill-id">RF#{String(r.id).slice(0, 8)}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-pill-id">#{r.sale_id}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-text">
+                              {r.return_request_id ? String(r.return_request_id).slice(0, 8) : '-'}
+                            </span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-amount">{fmtAmount(r.amount)}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-text">{r.mode || '-'}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-status-text">{refundStatusLabel(r)}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-text">{r.initiated_by || '-'}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-muted">{createdAt}</span>
+                          </td>
+                          <td className="oi-td">
+                            <span className="oi-text">{r.remarks || '-'}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
       </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './Sales.css';
 import Navbar from './NavbarAdmin';
+import { useAuth } from './AdminAuth';
 
 const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app';
 const API_BASE_RAW =
@@ -126,6 +127,7 @@ function buildExpectedDeliveryText(trackingSnapshot, sale, latestShipment) {
 }
 
 export default function Sales() {
+  const { token } = useAuth();
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('ALL');
@@ -135,11 +137,19 @@ export default function Sales() {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  const authHeaders = useMemo(() => {
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, [token]);
+
   const fetchSales = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/sales/web`);
-      const data = await res.json();
+      if (!token) {
+        setSales([]);
+        return;
+      }
+      const res = await fetch(`${API_BASE}/api/sales/admin`, { headers: authHeaders });
+      const data = await res.json().catch(() => []);
       setSales(Array.isArray(data) ? data : []);
     } catch {
       setSales([]);
@@ -150,7 +160,7 @@ export default function Sales() {
 
   useEffect(() => {
     fetchSales();
-  }, []);
+  }, [token]);
 
   const getPayable = (s) => {
     if (s && s.totals && s.totals.payable != null) return Number(s.totals.payable);
@@ -204,8 +214,8 @@ export default function Sales() {
     setDetail(null);
     try {
       const [saleRes, shRes] = await Promise.all([
-        fetch(`${API_BASE}/api/sales/web/${id}`),
-        fetch(`${API_BASE}/api/shipments/by-sale/${id}`)
+        fetch(`${API_BASE}/api/sales/admin/${id}`, { headers: authHeaders }),
+        fetch(`${API_BASE}/api/shipments/by-sale/${id}`, { headers: authHeaders })
       ]);
       const saleJson = await saleRes.json().catch(() => null);
       const shJson = await shRes.json().catch(() => []);
@@ -217,9 +227,7 @@ export default function Sales() {
       const trackOrderId = latestShipment?.shiprocket_order_id || latestShipment?.awb || '';
       if (trackOrderId) {
         try {
-          const trRes = await fetch(
-            `${API_BASE}/api/shiprocket/track/${encodeURIComponent(trackOrderId)}`
-          );
+          const trRes = await fetch(`${API_BASE}/api/shiprocket/track/${encodeURIComponent(trackOrderId)}`);
           const trJson = await trRes.json().catch(() => null);
           if (trRes.ok && trJson) trackingRaw = trJson;
         } catch {
@@ -260,18 +268,13 @@ export default function Sales() {
   const detailLocalOrderStatus = detailSale ? statusText(detailSale.status || 'PLACED') : '';
   const detailIsCancelled = detailLocalOrderStatus === 'CANCELLED';
   const detailShiprocketStatus = statusText(detailTrackingSnapshot.status);
-  const detailShipmentStepIndex = computeStepFromShipment(
-    detailLatestShipment,
-    detailTrackingSnapshot.core
-  );
+  const detailShipmentStepIndex = computeStepFromShipment(detailLatestShipment, detailTrackingSnapshot.core);
   const detailBaseLocalStep = computeStepFromLocal(detailLocalOrderStatus);
   const detailBaseShiprocketStep = computeStepFromShiprocket(detailShiprocketStatus);
   const detailEffectiveStepIndex = detailSale
     ? Math.max(detailBaseLocalStep, detailBaseShiprocketStep, detailShipmentStepIndex)
     : 0;
-  const detailPlacedText = detailSale?.created_at
-    ? new Date(detailSale.created_at).toLocaleString()
-    : '-';
+  const detailPlacedText = detailSale?.created_at ? new Date(detailSale.created_at).toLocaleString() : '-';
   const detailExpectedDelivery = detailSale
     ? buildExpectedDeliveryText(detailTrackingSnapshot, detailSale, detailLatestShipment)
     : '-';
@@ -426,9 +429,7 @@ export default function Sales() {
                         </td>
                         <td className="orders-table-cell">
                           <span
-                            className={`orders-status-pill orders-status-${String(
-                              s.status || ''
-                            ).toLowerCase()}`}
+                            className={`orders-status-pill orders-status-${String(s.status || '').toLowerCase()}`}
                           >
                             {localStatus || '-'}
                           </span>
@@ -455,10 +456,7 @@ export default function Sales() {
                           <span className="orders-amount">{fmt(getPayable(s))}</span>
                         </td>
                         <td className="orders-table-cell align-right">
-                          <button
-                            className="orders-btn-small"
-                            onClick={() => openDetail(s.id)}
-                          >
+                          <button className="orders-btn-small" onClick={() => openDetail(s.id)}>
                             View details
                           </button>
                         </td>
@@ -495,9 +493,7 @@ export default function Sales() {
               </div>
               <div className="orders-modal-header-actions">
                 <span
-                  className={`orders-status-pill orders-status-${String(
-                    detailSale?.status || ''
-                  ).toLowerCase()} orders-status-pill-lg`}
+                  className={`orders-status-pill orders-status-${String(detailSale?.status || '').toLowerCase()} orders-status-pill-lg`}
                 >
                   {detailLocalOrderStatus || '-'}
                 </span>
@@ -554,11 +550,7 @@ export default function Sales() {
                     : `Currently ${ORDER_STEPS[detailEffectiveStepIndex].toLowerCase()}`}
                 </div>
               </div>
-              <div
-                className={`orders-timeline ${
-                  detailIsCancelled ? 'orders-timeline-cancelled' : ''
-                }`}
-              >
+              <div className={`orders-timeline ${detailIsCancelled ? 'orders-timeline-cancelled' : ''}`}>
                 <div className="orders-timeline-line" />
                 <div className="orders-timeline-steps">
                   {ORDER_STEPS.map((step, index) => {
@@ -572,9 +564,7 @@ export default function Sales() {
                         : 'upcoming';
                     return (
                       <div className="orders-timeline-step" key={step}>
-                        <div
-                          className={`orders-timeline-dot orders-timeline-dot-${stepState}`}
-                        />
+                        <div className={`orders-timeline-dot orders-timeline-dot-${stepState}`} />
                         <div className="orders-timeline-label">{step}</div>
                         <div className="orders-timeline-caption">
                           {step === 'PLACED' && 'Order captured in the system'}
