@@ -1,7 +1,7 @@
 :root {
   --orders-bg: #020409;
   --orders-panel: #070910;
-  --orders-panel-soft: #0b0d16;
+  --orders-panel-soft: #070910;
   --orders-panel-soft-2: #10121f;
   --orders-gold: #ffd36e;
   --orders-white: #ffffff;
@@ -17,8 +17,7 @@
 .orders-screen {
   min-height: 100vh;
   color: var(--orders-white);
-  background:
-    radial-gradient(900px 500px at -10% -20%, rgba(255, 211, 110, 0.11), transparent 60%),
+  background: radial-gradient(900px 500px at -10% -20%, rgba(255, 211, 110, 0.11), transparent 60%),
     radial-gradient(700px 500px at 110% -10%, rgba(255, 255, 255, 0.06), transparent 60%),
     var(--orders-bg);
   padding: 24px 16px 64px;
@@ -74,17 +73,13 @@
   padding: 9px 16px;
   border-radius: 999px;
   border: 1px solid rgba(255, 211, 110, 0.4);
-  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.28), transparent 55%),
-    var(--orders-panel-soft);
+  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.28), transparent 55%), var(--orders-panel-soft);
   color: var(--orders-gold);
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.75);
-  transition:
-    transform var(--orders-transition),
-    box-shadow var(--orders-transition),
-    background var(--orders-transition),
+  transition: transform var(--orders-transition), box-shadow var(--orders-transition), background var(--orders-transition),
     border-color var(--orders-transition);
 }
 
@@ -165,16 +160,12 @@
   height: 38px;
   border-radius: var(--orders-radius-sm);
   border: 1px solid var(--orders-border);
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 55%),
-    var(--orders-panel-soft);
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 55%), var(--orders-panel-soft);
   color: var(--orders-white);
   padding: 0 10px;
   font-size: 13px;
   outline: none;
-  transition:
-    border-color var(--orders-transition),
-    box-shadow var(--orders-transition),
-    background var(--orders-transition),
+  transition: border-color var(--orders-transition), box-shadow var(--orders-transition), background var(--orders-transition),
     transform var(--orders-transition);
 }
 
@@ -192,13 +183,9 @@
   height: 38px;
   border-radius: var(--orders-radius-sm);
   border: 1px solid var(--orders-border);
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.04), transparent 55%),
-    var(--orders-panel-soft);
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.04), transparent 55%), var(--orders-panel-soft);
   padding: 0 10px;
-  transition:
-    border-color var(--orders-transition),
-    box-shadow var(--orders-transition),
-    background var(--orders-transition),
+  transition: border-color var(--orders-transition), box-shadow var(--orders-transition), background var(--orders-transition),
     transform var(--orders-transition);
 }
 
@@ -289,8 +276,7 @@
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: var(--orders-gold);
-  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.16), transparent 60%),
-    var(--orders-panel-soft-2);
+  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.16), transparent 60%), var(--orders-panel-soft-2);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   position: sticky;
   top: 0;
@@ -399,18 +385,13 @@
   padding: 0 12px;
   border-radius: var(--orders-radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.18), transparent 60%),
-    var(--orders-panel-soft-2);
+  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.18), transparent 60%), var(--orders-panel-soft-2);
   color: var(--orders-gold);
   font-weight: 600;
   font-size: 12px;
   cursor: pointer;
-  transition:
-    transform var(--orders-transition),
-    box-shadow var(--orders-transition),
-    background var(--orders-transition),
-    border-color var(--orders-transition),
-    color var(--orders-transition);
+  transition: transform var(--orders-transition), box-shadow var(--orders-transition), background var(--orders-transition),
+    border-color var(--orders-transition), color var(--orders-transition);
 }
 
 .orders-btn-small:hover {
@@ -587,8 +568,7 @@
   border-radius: var(--orders-radius-md);
   border: 1px solid rgba(255, 255, 255, 0.18);
   padding: 10px 12px;
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 60%),
-    var(--orders-panel);
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 60%), var(--orders-panel);
 }
 
 .orders-meta-item {
@@ -616,8 +596,7 @@
 .orders-progress-card {
   border-radius: var(--orders-radius-md);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.12), transparent 70%),
-    var(--orders-panel-soft-2);
+  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.12), transparent 70%), var(--orders-panel-soft-2);
   padding: 10px 12px 10px;
   display: flex;
   flex-direction: column;
@@ -756,11 +735,51 @@
   font-weight: 500;
 }
 
+.orders-progress-meta-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.orders-doc-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.orders-doc-buttons .orders-btn-small {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background-color: black;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+
+.orders-doc-buttons .orders-btn-small:hover {
+  background-color: #f5f5f5;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
+  transform: translateY(-0.5px);
+}
+
+.orders-doc-buttons .orders-btn-small:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
 .orders-shipping-card {
   border-radius: var(--orders-radius-md);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 70%),
-    var(--orders-panel-soft-2);
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 70%), var(--orders-panel-soft-2);
   padding: 12px 14px;
 }
 
@@ -826,8 +845,7 @@
 .orders-item-card {
   border-radius: var(--orders-radius-md);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.03), transparent 70%),
-    var(--orders-panel-soft-2);
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.03), transparent 70%), var(--orders-panel-soft-2);
   padding: 10px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -906,57 +924,6 @@
   color: var(--orders-muted);
 }
 
-.orders-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 170px;
-}
-
-.orders-progress-track {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.orders-progress-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  border-width: 1px;
-  border-style: solid;
-  background: rgba(10, 11, 18, 0.96);
-  box-sizing: border-box;
-}
-
-.orders-progress-dot-done {
-  border-color: var(--orders-gold);
-  background: radial-gradient(circle at center, var(--orders-gold), transparent 70%);
-}
-
-.orders-progress-dot-active {
-  border-color: var(--orders-gold);
-  background: radial-gradient(circle at center, rgba(255, 211, 110, 0.85), transparent 70%);
-  box-shadow: 0 0 0 1px rgba(255, 211, 110, 0.55);
-}
-
-.orders-progress-dot-upcoming {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: var(--orders-panel-soft-2);
-}
-
-.orders-progress-dot-cancelled {
-  border-color: #ff9b9b;
-  background: rgba(255, 155, 155, 0.25);
-}
-
-.orders-progress-text {
-  font-size: 11px;
-  color: var(--orders-muted);
-}
-
-/* animations */
-
 @keyframes orders-spin {
   to {
     transform: rotate(360deg);
@@ -967,7 +934,6 @@
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -978,14 +944,11 @@
     opacity: 0;
     transform: scale(0.96) translateY(8px);
   }
-
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
 }
-
-/* responsive */
 
 @media (max-width: 900px) {
   .orders-screen {
@@ -1052,46 +1015,4 @@
   .orders-items-grid {
     grid-template-columns: 1fr;
   }
-}
-
-
-.orders-progress-meta-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.orders-doc-buttons {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.orders-doc-buttons .orders-btn-small {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background-color: black;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
-}
-
-.orders-doc-buttons .orders-btn-small:hover {
-  background-color: #f5f5f5;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
-  transform: translateY(-0.5px);
-}
-
-.orders-doc-buttons .orders-btn-small:active {
-  transform: translateY(0);
-  box-shadow: none;
 }

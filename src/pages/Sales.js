@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import './Sales.css';
 import Navbar from './NavbarAdmin';
 import { useAuth } from './AdminAuth';
+import OrderDetailPopup from './OrderDetailPopup';
 
 const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app';
 const API_BASE_RAW =
@@ -251,50 +252,6 @@ export default function Sales() {
 
   const fmt = (n) => `₹${Number(n || 0).toFixed(2)}`;
 
-  const detailSale = detail?.sale || null;
-  const detailItems = detail?.items || [];
-  const detailShipments = detail?.shipments || [];
-  const detailLatestShipment =
-    detail?.latestShipment ||
-    (detailShipments.length ? detailShipments[detailShipments.length - 1] : null);
-  const detailTrackingSnapshot =
-    detail?.trackingSnapshot ||
-    {
-      status: '',
-      eddText: null,
-      lastEventText: null,
-      core: null
-    };
-  const detailLocalOrderStatus = detailSale ? statusText(detailSale.status || 'PLACED') : '';
-  const detailIsCancelled = detailLocalOrderStatus === 'CANCELLED';
-  const detailShiprocketStatus = statusText(detailTrackingSnapshot.status);
-  const detailShipmentStepIndex = computeStepFromShipment(detailLatestShipment, detailTrackingSnapshot.core);
-  const detailBaseLocalStep = computeStepFromLocal(detailLocalOrderStatus);
-  const detailBaseShiprocketStep = computeStepFromShiprocket(detailShiprocketStatus);
-  const detailEffectiveStepIndex = detailSale
-    ? Math.max(detailBaseLocalStep, detailBaseShiprocketStep, detailShipmentStepIndex)
-    : 0;
-  const detailPlacedText = detailSale?.created_at ? new Date(detailSale.created_at).toLocaleString() : '-';
-  const detailExpectedDelivery = detailSale
-    ? buildExpectedDeliveryText(detailTrackingSnapshot, detailSale, detailLatestShipment)
-    : '-';
-  const detailLastUpdateTime = (() => {
-    if (!detail) return '-';
-    if (detailTrackingSnapshot.lastEventText) return detailTrackingSnapshot.lastEventText;
-    const fallbackTime =
-      detailLatestShipment?.updated_at ||
-      detailLatestShipment?.created_at ||
-      detailSale?.updated_at ||
-      detailSale?.created_at;
-    if (!fallbackTime) return '-';
-    const t = new Date(fallbackTime);
-    if (Number.isNaN(t.getTime())) return '-';
-    return t.toLocaleString('en-IN');
-  })();
-
-  const hasShipments = Array.isArray(detailShipments) && detailShipments.length > 0;
-  const shiprocketBaseUrl = 'https://app.shiprocket.in';
-
   return (
     <div className="orders-screen">
       <Navbar />
@@ -302,9 +259,7 @@ export default function Sales() {
         <div className="orders-header">
           <div className="orders-header-main">
             <h1 className="orders-header-title">Orders</h1>
-            <p className="orders-header-subtitle">
-              Track, review and manage every purchase in one place
-            </p>
+            <p className="orders-header-subtitle">Track, review and manage every purchase in one place</p>
           </div>
           <div className="orders-header-actions">
             <button className="orders-btn-refresh" onClick={fetchSales}>
@@ -317,18 +272,12 @@ export default function Sales() {
         <div className="orders-filters-card">
           <div className="orders-filters-top">
             <span className="orders-filters-title">Filters</span>
-            <span className="orders-filters-subtitle">
-              Refine by status, date range or customer details
-            </span>
+            <span className="orders-filters-subtitle">Refine by status, date range or customer details</span>
           </div>
           <div className="orders-filters-grid">
             <div className="orders-filter-group">
               <label className="orders-filter-label">Status</label>
-              <select
-                className="orders-filter-select"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
+              <select className="orders-filter-select" value={status} onChange={(e) => setStatus(e.target.value)}>
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -350,21 +299,11 @@ export default function Sales() {
             </div>
             <div className="orders-filter-group">
               <label className="orders-filter-label">From</label>
-              <input
-                className="orders-filter-input"
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-              />
+              <input className="orders-filter-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             </div>
             <div className="orders-filter-group">
               <label className="orders-filter-label">To</label>
-              <input
-                className="orders-filter-input"
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-              />
+              <input className="orders-filter-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
           </div>
         </div>
@@ -378,9 +317,7 @@ export default function Sales() {
           </div>
           <div className="orders-summary-section">
             <span className="orders-summary-label">Total payable</span>
-            <span className="orders-summary-value orders-summary-value-em">
-              {fmt(grand)}
-            </span>
+            <span className="orders-summary-value orders-summary-value-em">{fmt(grand)}</span>
           </div>
         </div>
 
@@ -394,9 +331,7 @@ export default function Sales() {
             <div className="orders-empty-state">
               <div className="orders-empty-icon" />
               <h3 className="orders-empty-title">No orders found</h3>
-              <p className="orders-empty-text">
-                Try adjusting your filters or clearing the search to see more orders.
-              </p>
+              <p className="orders-empty-text">Try adjusting your filters or clearing the search to see more orders.</p>
             </div>
           ) : (
             <div className="orders-table-scroller">
@@ -423,34 +358,24 @@ export default function Sales() {
                           <span className="orders-order-id">#{s.id}</span>
                         </td>
                         <td className="orders-table-cell">
-                          <span className="orders-table-text-soft">
-                            {s.created_at ? new Date(s.created_at).toLocaleString() : '-'}
-                          </span>
+                          <span className="orders-table-text-soft">{s.created_at ? new Date(s.created_at).toLocaleString() : '-'}</span>
                         </td>
                         <td className="orders-table-cell">
-                          <span
-                            className={`orders-status-pill orders-status-${String(s.status || '').toLowerCase()}`}
-                          >
+                          <span className={`orders-status-pill orders-status-${String(s.status || '').toLowerCase()}`}>
                             {localStatus || '-'}
                           </span>
                         </td>
                         <td className="orders-table-cell">
-                          <span className="orders-payment-chip">
-                            {String(s.payment_status || 'COD').toUpperCase()}
-                          </span>
+                          <span className="orders-payment-chip">{String(s.payment_status || 'COD').toUpperCase()}</span>
                         </td>
                         <td className="orders-table-cell">
                           <span className="orders-table-text-main">{getCustomerLabel(s)}</span>
                         </td>
                         <td className="orders-table-cell">
-                          <span className="orders-table-text-main">
-                            {s.customer_mobile || '-'}
-                          </span>
+                          <span className="orders-table-text-main">{s.customer_mobile || '-'}</span>
                         </td>
                         <td className="orders-table-cell">
-                          <span className="orders-table-text-soft">
-                            {s.customer_email || '-'}
-                          </span>
+                          <span className="orders-table-text-soft">{s.customer_email || '-'}</span>
                         </td>
                         <td className="orders-table-cell align-right">
                           <span className="orders-amount">{fmt(getPayable(s))}</span>
@@ -470,254 +395,20 @@ export default function Sales() {
         </div>
       </div>
 
-      {detailLoading && (
-        <div className="orders-modal-backdrop">
-          <div className="orders-modal orders-modal-center">
-            <div className="orders-loader">
-              <div className="orders-spinner" />
-              <span className="orders-loader-text">Loading order details</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {detail && !detailLoading && (
-        <div className="orders-modal-backdrop" onClick={() => setDetail(null)}>
-          <div className="orders-modal orders-modal-detail" onClick={(e) => e.stopPropagation()}>
-            <div className="orders-modal-header">
-              <div>
-                <h3 className="orders-modal-title">Order #{detailSale?.id}</h3>
-                <p className="orders-modal-subtitle">
-                  Placed on {detailPlacedText}
-                </p>
-              </div>
-              <div className="orders-modal-header-actions">
-                <span
-                  className={`orders-status-pill orders-status-${String(detailSale?.status || '').toLowerCase()} orders-status-pill-lg`}
-                >
-                  {detailLocalOrderStatus || '-'}
-                </span>
-                <button
-                  className="orders-btn-small orders-btn-ghost"
-                  onClick={() => setDetail(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-
-            <div className="orders-meta-grid">
-              <div className="orders-meta-item">
-                <div className="orders-meta-label">Payment</div>
-                <div className="orders-meta-value">
-                  {String(detailSale?.payment_status || 'COD').toUpperCase()}
-                </div>
-              </div>
-              <div className="orders-meta-item">
-                <div className="orders-meta-label">Customer</div>
-                <div className="orders-meta-value">
-                  {getCustomerLabel(detailSale)}
-                  {detailSale?.customer_mobile ? ` · ${detailSale?.customer_mobile}` : ''}
-                </div>
-              </div>
-              <div className="orders-meta-item">
-                <div className="orders-meta-label">Email</div>
-                <div className="orders-meta-value">
-                  {detailSale?.customer_email || '-'}
-                </div>
-              </div>
-              <div className="orders-meta-item">
-                <div className="orders-meta-label">Amount payable</div>
-                <div className="orders-meta-value orders-meta-value-strong">
-                  {fmt(detailSale?.totals?.payable ?? detailSale?.total)}
-                </div>
-              </div>
-            </div>
-
-            <div className="orders-progress-card">
-              <div className="orders-progress-header">
-                <div className="orders-progress-header-main">
-                  <div className="orders-progress-title">Fulfilment progress</div>
-                  <div className="orders-progress-header-sub">
-                    Live view of where this order is in the journey
-                  </div>
-                </div>
-                <div className="orders-progress-status-pill">
-                  {detailIsCancelled
-                    ? 'Order cancelled'
-                    : detailEffectiveStepIndex === ORDER_STEPS.length - 1
-                    ? 'Delivered to customer'
-                    : `Currently ${ORDER_STEPS[detailEffectiveStepIndex].toLowerCase()}`}
-                </div>
-              </div>
-              <div className={`orders-timeline ${detailIsCancelled ? 'orders-timeline-cancelled' : ''}`}>
-                <div className="orders-timeline-line" />
-                <div className="orders-timeline-steps">
-                  {ORDER_STEPS.map((step, index) => {
-                    const stepState =
-                      detailIsCancelled && step !== 'PLACED'
-                        ? 'upcoming'
-                        : index < detailEffectiveStepIndex
-                        ? 'done'
-                        : index === detailEffectiveStepIndex
-                        ? 'active'
-                        : 'upcoming';
-                    return (
-                      <div className="orders-timeline-step" key={step}>
-                        <div className={`orders-timeline-dot orders-timeline-dot-${stepState}`} />
-                        <div className="orders-timeline-label">{step}</div>
-                        <div className="orders-timeline-caption">
-                          {step === 'PLACED' && 'Order captured in the system'}
-                          {step === 'CONFIRMED' && 'Details verified by the team'}
-                          {step === 'PACKED' && 'Items packed and ready to ship'}
-                          {step === 'SHIPPED' && 'With the courier for delivery'}
-                          {step === 'DELIVERED' && 'Delivered to the customer'}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="orders-progress-footer">
-                <div className="orders-progress-meta">
-                  <span className="orders-progress-meta-label">AWB</span>
-                  <span className="orders-progress-meta-value">
-                    {detailLatestShipment?.awb || '-'}
-                  </span>
-                </div>
-                <div className="orders-progress-meta">
-                  <span className="orders-progress-meta-label">Expected delivery</span>
-                  <span className="orders-progress-meta-value">
-                    {detailExpectedDelivery}
-                  </span>
-                </div>
-                <div className="orders-progress-meta">
-                  <span className="orders-progress-meta-label">Last update</span>
-                  <span className="orders-progress-meta-value">
-                    {detailLastUpdateTime}
-                  </span>
-                </div>
-                <div className="orders-progress-meta orders-progress-meta-actions">
-                  {hasShipments ? (
-                    <div className="orders-doc-buttons">
-                      <a
-                        href={`${API_BASE}/api/shiprocket/label/${detailSale?.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="orders-btn-small"
-                      >
-                        Label
-                      </a>
-                      <a
-                        href={`${API_BASE}/api/shiprocket/invoice/${detailSale?.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="orders-btn-small"
-                      >
-                        Tax invoice
-                      </a>
-                      <a
-                        href={`${API_BASE}/api/shiprocket/manifest/${detailSale?.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="orders-btn-small"
-                      >
-                        Manifest
-                      </a>
-                    </div>
-                  ) : (
-                    <a
-                      href={shiprocketBaseUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="orders-btn-small"
-                    >
-                      Go to Shiprocket
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {detailSale?.shipping_address && (
-              <div className="orders-shipping-card">
-                <div className="orders-shipping-header">
-                  <h4 className="orders-shipping-title">Shipping address</h4>
-                  <span className="orders-shipping-tag">Delivery</span>
-                </div>
-                <div className="orders-shipping-body">
-                  <p>{detailSale.shipping_address.line1}</p>
-                  {detailSale.shipping_address.line2 && (
-                    <p>{detailSale.shipping_address.line2}</p>
-                  )}
-                  <p>
-                    {detailSale.shipping_address.city}{' '}
-                    {detailSale.shipping_address.state} -{' '}
-                    {detailSale.shipping_address.pincode}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="orders-items-header">
-              <div>
-                <p className="orders-items-title">Items in this order</p>
-                <p className="orders-items-subtitle">
-                  {Array.isArray(detailItems) ? detailItems.length : 0} item
-                  {Array.isArray(detailItems) && detailItems.length === 1 ? '' : 's'}
-                </p>
-              </div>
-            </div>
-
-            <div className="orders-items-grid">
-              {Array.isArray(detailItems) && detailItems.length > 0 ? (
-                detailItems.map((it, i) => (
-                  <div className="orders-item-card" key={`${it.variant_id}-${i}`}>
-                    <div className="orders-item-media">
-                      {it.image_url ? (
-                        <img src={it.image_url} alt="" />
-                      ) : (
-                        <div className="orders-item-placeholder" />
-                      )}
-                    </div>
-                    <div className="orders-item-main">
-                      <div className="orders-item-top">
-                        <div className="orders-item-meta">
-                          <span className="orders-item-label">Variant</span>
-                          <span className="orders-item-value">#{it.variant_id}</span>
-                        </div>
-                        <div className="orders-item-meta">
-                          <span className="orders-item-label">Size</span>
-                          <span className="orders-item-value">{it.size || '-'}</span>
-                        </div>
-                        <div className="orders-item-meta">
-                          <span className="orders-item-label">Colour</span>
-                          <span className="orders-item-value">{it.colour || '-'}</span>
-                        </div>
-                        <div className="orders-item-meta">
-                          <span className="orders-item-label">EAN</span>
-                          <span className="orders-item-value orders-text-soft">
-                            {it.ean_code || '-'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="orders-item-pricing">
-                        <div className="orders-item-qty">x{it.qty}</div>
-                        <div className="orders-item-price">{fmt(it.price)}</div>
-                        {it.mrp != null && Number(it.mrp) > 0 ? (
-                          <div className="orders-item-mrp">MRP {fmt(it.mrp)}</div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="orders-empty-inline">No items in this order</div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <OrderDetailPopup
+        open={detailLoading || !!detail}
+        loading={detailLoading}
+        detail={detail}
+        onClose={() => setDetail(null)}
+        apiBase={API_BASE}
+        orderSteps={ORDER_STEPS}
+        statusText={statusText}
+        computeStepFromLocal={computeStepFromLocal}
+        computeStepFromShiprocket={computeStepFromShiprocket}
+        computeStepFromShipment={computeStepFromShipment}
+        buildExpectedDeliveryText={buildExpectedDeliveryText}
+        fmt={fmt}
+      />
     </div>
   );
 }
