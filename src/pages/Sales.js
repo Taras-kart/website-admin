@@ -127,11 +127,53 @@ function buildExpectedDeliveryText(trackingSnapshot, sale, latestShipment) {
   });
 }
 
+function normalizePayMode(paymentStatus) {
+  const p = statusText(paymentStatus);
+  if (!p) return 'UNKNOWN';
+  if (p.includes('COD') || p.includes('CASH')) return 'COD';
+  if (p.includes('PREPAID') || p.includes('PAID') || p.includes('ONLINE') || p.includes('RAZORPAY') || p.includes('PAYMENT_SUCCESS')) return 'PREPAID';
+  if (p.includes('PENDING') || p.includes('INIT') || p.includes('CREATED') || p.includes('PROCESSING')) return 'PENDING';
+  if (p.includes('FAILED') || p.includes('CANCEL')) return 'FAILED';
+  return p;
+}
+
+function normalizeOrderStage(saleStatus) {
+  const st = statusText(saleStatus);
+  if (!st) return 'UNKNOWN';
+  if (st.includes('CANCEL')) return 'CANCELLED';
+  if (st.includes('DELIVER')) return 'DELIVERED';
+  if (st.includes('SHIP')) return 'SHIPPED';
+  if (st.includes('PACK')) return 'PACKED';
+  if (st.includes('CONFIRM')) return 'CONFIRMED';
+  if (st.includes('PLACE')) return 'PLACED';
+  return st;
+}
+
+function isIncompleteOrder(s) {
+  const stage = normalizeOrderStage(s?.status);
+  const pay = normalizePayMode(s?.payment_status);
+  const payable = Number((s && s.totals && s.totals.payable != null) ? s.totals.payable : (s && s.total != null ? s.total : 0));
+  const hasCustomer =
+    (s?.customer_name && String(s.customer_name).trim()) ||
+    (s?.customer_email && String(s.customer_email).trim()) ||
+    (s?.customer_mobile && String(s.customer_mobile).trim());
+  const hasItems = Array.isArray(s?.items) ? s.items.length > 0 : true;
+  const missingTotal = !Number.isFinite(payable) || payable <= 0;
+  const badStage = stage === 'UNKNOWN';
+  const badPay = pay === 'UNKNOWN';
+  return !hasCustomer || !hasItems || missingTotal || badStage || badPay;
+}
+
+const PAYMENT_FILTERS = ['ALL', 'COD', 'PREPAID', 'PENDING', 'FAILED'];
+const STAGE_FILTERS = ['ALL', 'COMPLETE', 'INCOMPLETE'];
+
 export default function Sales() {
   const { token } = useAuth();
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('ALL');
+  const [paymentFilter, setPaymentFilter] = useState('ALL');
+  const [stageFilter, setStageFilter] = useState('ALL');
   const [q, setQ] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -185,9 +227,22 @@ export default function Sales() {
     const toTs = to ? new Date(to + 'T23:59:59').getTime() : null;
     return sales.filter((s) => {
       const okStatus = status === 'ALL' ? true : String(s.status || '').toUpperCase() === status;
+
+      const payMode = normalizePayMode(s?.payment_status);
+      const okPayment = paymentFilter === 'ALL' ? true : payMode === paymentFilter;
+
+      const incomplete = isIncompleteOrder(s);
+      const okStage =
+        stageFilter === 'ALL'
+          ? true
+          : stageFilter === 'INCOMPLETE'
+            ? incomplete
+            : !incomplete;
+
       const created = s.created_at ? new Date(s.created_at).getTime() : null;
       const okFrom = fromTs ? (created ? created >= fromTs : true) : true;
       const okTo = toTs ? (created ? created <= toTs : true) : true;
+
       const t = s.totals || {};
       const hay = [
         s.id,
@@ -202,9 +257,9 @@ export default function Sales() {
         .join(' ')
         .toLowerCase();
       const okQ = ql ? hay.includes(ql) : true;
-      return okStatus && okFrom && okTo && okQ;
+      return okStatus && okPayment && okStage && okFrom && okTo && okQ;
     });
-  }, [sales, status, q, from, to]);
+  }, [sales, status, paymentFilter, stageFilter, q, from, to]);
 
   const grand = useMemo(() => {
     return filtered.reduce((acc, s) => acc + getPayable(s), 0);
@@ -272,7 +327,7 @@ export default function Sales() {
         <div className="orders-filters-card">
           <div className="orders-filters-top">
             <span className="orders-filters-title">Filters</span>
-            <span className="orders-filters-subtitle">Refine by status, date range or customer details</span>
+            <span className="orders-filters-subtitle">Refine by status, payment, date range or customer details</span>
           </div>
           <div className="orders-filters-grid">
             <div className="orders-filter-group">
@@ -285,6 +340,29 @@ export default function Sales() {
                 ))}
               </select>
             </div>
+
+            <div className="orders-filter-group">
+              <label className="orders-filter-label">Payment</label>
+              <select className="orders-filter-select" value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}>
+                {PAYMENT_FILTERS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="orders-filter-group">
+              <label className="orders-filter-label">Completeness</label>
+              <select className="orders-filter-select" value={stageFilter} onChange={(e) => setStageFilter(e.target.value)}>
+                {STAGE_FILTERS.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="orders-filter-group orders-filter-group-wide">
               <label className="orders-filter-label">Search</label>
               <div className="orders-filter-search-wrap">
@@ -297,6 +375,7 @@ export default function Sales() {
                 />
               </div>
             </div>
+
             <div className="orders-filter-group">
               <label className="orders-filter-label">From</label>
               <input className="orders-filter-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />

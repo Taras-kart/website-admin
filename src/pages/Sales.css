@@ -134,7 +134,7 @@
 
 .orders-filters-grid {
   display: grid;
-  grid-template-columns: 160px minmax(0, 1.6fr) 160px 160px;
+  grid-template-columns: 160px 160px 160px minmax(0, 1.6fr) 160px 160px;
   gap: 10px;
 }
 
