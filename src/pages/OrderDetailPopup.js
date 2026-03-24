@@ -76,7 +76,6 @@ export default function OrderDetailPopup({
     return t.toLocaleString('en-IN');
   })();
 
-  const hasShipments = !!latestShipment;
   const hasAwb = !!latestShipment?.awb;
   const shipmentId = latestShipment?.shipment_id || latestShipment?.shiprocket_shipment_id || null;
   const shiprocketOrderId = latestShipment?.shiprocket_order_id || latestShipment?.order_id || null;
@@ -105,9 +104,12 @@ export default function OrderDetailPopup({
 
   useEffect(() => {
     if (!courierData) return;
-    const initial = selectedCourierId || recommendedCourierCompanyId || (availableCouriers.length ? availableCouriers[0]?.courier_company_id : null);
+    const initial =
+      selectedCourierId ||
+      recommendedCourierCompanyId ||
+      (availableCouriers.length ? availableCouriers[0]?.courier_company_id : null);
     if (initial) setSelectedCourierId(initial);
-  }, [courierData]);
+  }, [courierData, selectedCourierId, recommendedCourierCompanyId, availableCouriers]);
 
   const tryFetchJson = async (url, options) => {
     const res = await fetch(url, options);
@@ -190,7 +192,7 @@ export default function OrderDetailPopup({
       '';
 
     const isWalletLow = statusCode === 350 || /recharge/i.test(String(msg)) || /recharge/i.test(String(errorFromSr));
-    const isSuccess = !!possibleAwb || (awbAssignStatus === 1) || statusCode === 200;
+    const isSuccess = !!possibleAwb || awbAssignStatus === 1 || statusCode === 200;
 
     return { statusCode, msg, isWalletLow, isSuccess, possibleAwb, errorFromSr };
   };
