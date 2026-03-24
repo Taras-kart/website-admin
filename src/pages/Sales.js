@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './Sales.css';
 import Navbar from './NavbarAdmin';
 import { useAuth } from './AdminAuth';
@@ -12,6 +12,8 @@ const API_BASE_RAW =
 const API_BASE = API_BASE_RAW.replace(/\/+$/, '');
 const STATUSES = ['ALL', 'PLACED', 'CONFIRMED', 'PACKED', 'SHIPPED', 'CANCELLED'];
 const ORDER_STEPS = ['PLACED', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'];
+const PAYMENT_FILTERS = ['ALL', 'COD', 'PREPAID', 'PENDING', 'FAILED'];
+const STAGE_FILTERS = ['ALL', 'COMPLETE', 'INCOMPLETE'];
 
 function statusText(s) {
   return String(s || '').toUpperCase();
@@ -81,40 +83,25 @@ function buildTrackingSnapshot(raw) {
   }
   const tracks = Array.isArray(core.shipment_track) ? core.shipment_track : [];
   const lastTrack = tracks.length ? tracks[tracks.length - 1] : null;
-  const status =
-    (lastTrack && lastTrack.current_status) ||
-    core.current_status ||
-    core.status ||
-    '';
-  const eddRaw =
-    (lastTrack && lastTrack.edd) ||
-    core.edd ||
-    null;
-  const lastEventRaw =
-    (lastTrack && (lastTrack.date || lastTrack.pickup_date || lastTrack.updated_time_stamp)) ||
-    core.updated_time_stamp ||
-    core.last_status_time ||
-    null;
+  const status = (lastTrack && lastTrack.current_status) || core.current_status || core.status || '';
+  const eddRaw = (lastTrack && lastTrack.edd) || core.edd || null;
+  const lastEventRaw = (lastTrack && (lastTrack.date || lastTrack.pickup_date || lastTrack.updated_time_stamp)) || core.updated_time_stamp || core.last_status_time || null;
   const edd = eddRaw ? new Date(eddRaw) : null;
   const lastEvent = lastEventRaw ? new Date(lastEventRaw) : null;
   return {
     status,
-    eddText: edd && !Number.isNaN(edd.getTime())
-      ? edd.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' })
-      : null,
-    lastEventText: lastEvent && !Number.isNaN(lastEvent.getTime())
-      ? lastEvent.toLocaleString('en-IN')
-      : null,
+    eddText:
+      edd && !Number.isNaN(edd.getTime())
+        ? edd.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' })
+        : null,
+    lastEventText: lastEvent && !Number.isNaN(lastEvent.getTime()) ? lastEvent.toLocaleString('en-IN') : null,
     core
   };
 }
 
 function buildExpectedDeliveryText(trackingSnapshot, sale, latestShipment) {
   if (trackingSnapshot && trackingSnapshot.eddText) return trackingSnapshot.eddText;
-  const baseRaw =
-    (latestShipment && (latestShipment.pickup_date || latestShipment.created_at)) ||
-    (sale && (sale.updated_at || sale.created_at)) ||
-    null;
+  const baseRaw = (latestShipment && (latestShipment.pickup_date || latestShipment.created_at)) || (sale && (sale.updated_at || sale.created_at)) || null;
   if (!baseRaw) return '-';
   const base = new Date(baseRaw);
   if (Number.isNaN(base.getTime())) return '-';
@@ -152,7 +139,7 @@ function normalizeOrderStage(saleStatus) {
 function isIncompleteOrder(s) {
   const stage = normalizeOrderStage(s?.status);
   const pay = normalizePayMode(s?.payment_status);
-  const payable = Number((s && s.totals && s.totals.payable != null) ? s.totals.payable : (s && s.total != null ? s.total : 0));
+  const payable = Number(s && s.totals && s.totals.payable != null ? s.totals.payable : s && s.total != null ? s.total : 0);
   const hasCustomer =
     (s?.customer_name && String(s.customer_name).trim()) ||
     (s?.customer_email && String(s.customer_email).trim()) ||
@@ -163,9 +150,6 @@ function isIncompleteOrder(s) {
   const badPay = pay === 'UNKNOWN';
   return !hasCustomer || !hasItems || missingTotal || badStage || badPay;
 }
-
-const PAYMENT_FILTERS = ['ALL', 'COD', 'PREPAID', 'PENDING', 'FAILED'];
-const STAGE_FILTERS = ['ALL', 'COMPLETE', 'INCOMPLETE'];
 
 export default function Sales() {
   const { token } = useAuth();
@@ -184,7 +168,23 @@ export default function Sales() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, [token]);
 
-  const fetchSales = async () => {
+  const getPayable = useCallback((s) => {
+    if (s && s.totals && s.totals.payable != null) return Number(s.totals.payable);
+    if (s && s.total != null) return Number(s.total);
+    if (Array.isArray(s?.items) && s.items.length) {
+      return s.items.reduce((acc, it) => acc + Number(it.price || 0) * Number(it.qty || 0), 0);
+    }
+    return 0;
+  }, []);
+
+  const getCustomerLabel = useCallback((s) => {
+    const name = s?.customer_name && String(s.customer_name).trim();
+    if (name) return name;
+    if (s?.branch_id) return `Branch #${s.branch_id}`;
+    return '-';
+  }, []);
+
+  const fetchSales = useCallback(async () => {
     setLoading(true);
     try {
       if (!token) {
@@ -199,32 +199,17 @@ export default function Sales() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, authHeaders]);
 
   useEffect(() => {
     fetchSales();
-  }, [token]);
-
-  const getPayable = (s) => {
-    if (s && s.totals && s.totals.payable != null) return Number(s.totals.payable);
-    if (s && s.total != null) return Number(s.total);
-    if (Array.isArray(s?.items) && s.items.length) {
-      return s.items.reduce((acc, it) => acc + Number(it.price || 0) * Number(it.qty || 0), 0);
-    }
-    return 0;
-  };
-
-  const getCustomerLabel = (s) => {
-    const name = s?.customer_name && String(s.customer_name).trim();
-    if (name) return name;
-    if (s?.branch_id) return `Branch #${s.branch_id}`;
-    return '-';
-  };
+  }, [fetchSales]);
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
     const fromTs = from ? new Date(from + 'T00:00:00').getTime() : null;
     const toTs = to ? new Date(to + 'T23:59:59').getTime() : null;
+
     return sales.filter((s) => {
       const okStatus = status === 'ALL' ? true : String(s.status || '').toUpperCase() === status;
 
@@ -232,80 +217,74 @@ export default function Sales() {
       const okPayment = paymentFilter === 'ALL' ? true : payMode === paymentFilter;
 
       const incomplete = isIncompleteOrder(s);
-      const okStage =
-        stageFilter === 'ALL'
-          ? true
-          : stageFilter === 'INCOMPLETE'
-            ? incomplete
-            : !incomplete;
+      const okStage = stageFilter === 'ALL' ? true : stageFilter === 'INCOMPLETE' ? incomplete : !incomplete;
 
       const created = s.created_at ? new Date(s.created_at).getTime() : null;
       const okFrom = fromTs ? (created ? created >= fromTs : true) : true;
       const okTo = toTs ? (created ? created <= toTs : true) : true;
 
       const t = s.totals || {};
-      const hay = [
-        s.id,
-        getCustomerLabel(s),
-        s.customer_email,
-        s.customer_mobile,
-        s.status,
-        s.payment_status,
-        t?.payable,
-        getPayable(s)
-      ]
+      const hay = [s.id, getCustomerLabel(s), s.customer_email, s.customer_mobile, s.status, s.payment_status, t?.payable, getPayable(s)]
         .join(' ')
         .toLowerCase();
+
       const okQ = ql ? hay.includes(ql) : true;
       return okStatus && okPayment && okStage && okFrom && okTo && okQ;
     });
-  }, [sales, status, paymentFilter, stageFilter, q, from, to]);
+  }, [sales, status, paymentFilter, stageFilter, q, from, to, getCustomerLabel, getPayable]);
 
   const grand = useMemo(() => {
     return filtered.reduce((acc, s) => acc + getPayable(s), 0);
-  }, [filtered]);
+  }, [filtered, getPayable]);
 
-  const openDetail = async (id) => {
-    setDetailLoading(true);
-    setDetail(null);
-    try {
-      const [saleRes, shRes] = await Promise.all([
-        fetch(`${API_BASE}/api/sales/admin/${id}`, { headers: authHeaders }),
-        fetch(`${API_BASE}/api/shipments/by-sale/${id}`, { headers: authHeaders })
-      ]);
-      const saleJson = await saleRes.json().catch(() => null);
-      const shJson = await shRes.json().catch(() => []);
-      const sale = saleJson && saleJson.sale ? saleJson.sale : saleJson;
-      const items = Array.isArray(saleJson?.items) ? saleJson.items : [];
-      const shipments = Array.isArray(shJson) ? shJson : [];
-      const latestShipment = shipments.length ? shipments[shipments.length - 1] : null;
-      let trackingRaw = null;
-      const trackOrderId = latestShipment?.shiprocket_order_id || latestShipment?.awb || '';
-      if (trackOrderId) {
-        try {
-          const trRes = await fetch(`${API_BASE}/api/shiprocket/track/${encodeURIComponent(trackOrderId)}`);
-          const trJson = await trRes.json().catch(() => null);
-          if (trRes.ok && trJson) trackingRaw = trJson;
-        } catch {
-          trackingRaw = null;
-        }
-      }
-      const trackingSnapshot = buildTrackingSnapshot(trackingRaw);
-      setDetail({
-        sale,
-        items,
-        shipments,
-        trackingSnapshot,
-        latestShipment
-      });
-    } catch {
+  const openDetail = useCallback(
+    async (id) => {
+      setDetailLoading(true);
       setDetail(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
+      try {
+        const [saleRes, shRes] = await Promise.all([
+          fetch(`${API_BASE}/api/sales/admin/${id}`, { headers: authHeaders }),
+          fetch(`${API_BASE}/api/shipments/by-sale/${id}`, { headers: authHeaders })
+        ]);
 
-  const fmt = (n) => `₹${Number(n || 0).toFixed(2)}`;
+        const saleJson = await saleRes.json().catch(() => null);
+        const shJson = await shRes.json().catch(() => []);
+        const sale = saleJson && saleJson.sale ? saleJson.sale : saleJson;
+        const items = Array.isArray(saleJson?.items) ? saleJson.items : [];
+        const shipments = Array.isArray(shJson) ? shJson : [];
+        const latestShipment = shipments.length ? shipments[shipments.length - 1] : null;
+
+        let trackingRaw = null;
+        const trackOrderId = latestShipment?.shiprocket_order_id || latestShipment?.awb || '';
+        if (trackOrderId) {
+          try {
+            const trRes = await fetch(`${API_BASE}/api/shiprocket/track/${encodeURIComponent(trackOrderId)}`);
+            const trJson = await trRes.json().catch(() => null);
+            if (trRes.ok && trJson) trackingRaw = trJson;
+          } catch {
+            trackingRaw = null;
+          }
+        }
+
+        const trackingSnapshot = buildTrackingSnapshot(trackingRaw);
+
+        setDetail({
+          sale,
+          items,
+          shipments,
+          trackingSnapshot,
+          latestShipment
+        });
+      } catch {
+        setDetail(null);
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [authHeaders]
+  );
+
+  const fmt = useCallback((n) => `₹${Number(n || 0).toFixed(2)}`, []);
 
   return (
     <div className="orders-screen">
@@ -380,6 +359,7 @@ export default function Sales() {
               <label className="orders-filter-label">From</label>
               <input className="orders-filter-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             </div>
+
             <div className="orders-filter-group">
               <label className="orders-filter-label">To</label>
               <input className="orders-filter-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
@@ -390,9 +370,7 @@ export default function Sales() {
         <div className="orders-summary-bar">
           <div className="orders-summary-section">
             <span className="orders-summary-label">Orders</span>
-            <span className="orders-summary-value">
-              {loading ? 'Loading…' : `${filtered.length} order${filtered.length === 1 ? '' : 's'}`}
-            </span>
+            <span className="orders-summary-value">{loading ? 'Loading…' : `${filtered.length} order${filtered.length === 1 ? '' : 's'}`}</span>
           </div>
           <div className="orders-summary-section">
             <span className="orders-summary-label">Total payable</span>
@@ -440,9 +418,7 @@ export default function Sales() {
                           <span className="orders-table-text-soft">{s.created_at ? new Date(s.created_at).toLocaleString() : '-'}</span>
                         </td>
                         <td className="orders-table-cell">
-                          <span className={`orders-status-pill orders-status-${String(s.status || '').toLowerCase()}`}>
-                            {localStatus || '-'}
-                          </span>
+                          <span className={`orders-status-pill orders-status-${String(s.status || '').toLowerCase()}`}>{localStatus || '-'}</span>
                         </td>
                         <td className="orders-table-cell">
                           <span className="orders-payment-chip">{String(s.payment_status || 'COD').toUpperCase()}</span>
