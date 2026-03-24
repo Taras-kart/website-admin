@@ -9,6 +9,180 @@ import './ImportStock.css';
 const CLOUD_NAME = 'deymt9uyh';
 const UPLOAD_PRESET = 'unsigned_ean';
 
+function normalizeKey(k) {
+  return String(k || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function pickValue(row, candidates) {
+  const keys = Object.keys(row || {});
+  for (const c of candidates) {
+    const ck = normalizeKey(c);
+    const found = keys.find(k => normalizeKey(k) === ck);
+    if (found !== undefined) return row[found];
+  }
+  for (const c of candidates) {
+    const ck = normalizeKey(c);
+    const found = keys.find(k => normalizeKey(k).includes(ck));
+    if (found !== undefined) return row[found];
+  }
+  return undefined;
+}
+
+function toNumber(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  const s = String(v)
+    .replace(/₹/g, '')
+    .replace(/,/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) return null;
+  const m = s.match(/-?\d+(\.\d+)?/);
+  if (!m) return null;
+  const n = parseFloat(m[0]);
+  return isFinite(n) ? n : null;
+}
+
+function rowHasBannedPhrases(row) {
+  const banned = [
+    'inclusive of all taxes',
+    'brand',
+    'new in',
+    'product',
+    '₹0.00'
+  ];
+  const values = Object.values(row || {})
+    .map(v => String(v ?? '').toLowerCase().trim())
+    .filter(Boolean);
+  return values.some(val => banned.some(b => val === b || val.includes(b)));
+}
+
+function isDefaultBrandOrProduct(s) {
+  const t = String(s ?? '').toLowerCase().trim();
+  if (!t) return true;
+  const defaults = ['brand', 'product', 'new in', 'inclusive of all taxes'];
+  return defaults.includes(t) || defaults.some(d => t.includes(d));
+}
+
+function shouldDropRow(row) {
+  if (!row || typeof row !== 'object') return true;
+
+  const values = Object.values(row).map(v => String(v ?? '').trim());
+  const allEmpty = values.every(v => v === '');
+  if (allEmpty) return true;
+
+  const brand = pickValue(row, ['brand', 'brand name']);
+  const product = pickValue(row, ['product', 'product name', 'name', 'title']);
+
+  const priceVal = pickValue(row, ['price', 'selling price', 'sale price', 'our price', 'sp']);
+  const mrpVal = pickValue(row, ['mrp', 'm.r.p', 'list price', 'regular price']);
+
+  const price = toNumber(priceVal);
+  const mrp = toNumber(mrpVal);
+
+  const priceIsZero = price !== null && price === 0;
+  const mrpIsZero = mrp !== null && mrp === 0;
+
+  const defaultNames = isDefaultBrandOrProduct(brand) || isDefaultBrandOrProduct(product);
+
+  if (rowHasBannedPhrases(row) && (priceIsZero || mrpIsZero)) return true;
+  if (priceIsZero && mrpIsZero && defaultNames) return true;
+
+  return false;
+}
+
+async function cleanExcelOrCsvFile(inputFile) {
+  const name = inputFile?.name || '';
+  const lower = name.toLowerCase();
+
+  if (lower.endsWith('.csv')) {
+    const text = await inputFile.text();
+    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+    if (!lines.length) return inputFile;
+
+    const headerLine = lines[0];
+    const headers = headerLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line || !line.trim()) continue;
+
+      const cols = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let j = 0; j < line.length; j++) {
+        const ch = line[j];
+        if (ch === '"' && line[j + 1] === '"') {
+          cur += '"';
+          j++;
+          continue;
+        }
+        if (ch === '"') {
+          inQuotes = !inQuotes;
+          continue;
+        }
+        if (ch === ',' && !inQuotes) {
+          cols.push(cur);
+          cur = '';
+          continue;
+        }
+        cur += ch;
+      }
+      cols.push(cur);
+
+      const rowObj = {};
+      headers.forEach((h, idx) => {
+        rowObj[h] = cols[idx] ?? '';
+      });
+
+      if (!shouldDropRow(rowObj)) rows.push(rowObj);
+    }
+
+    const esc = v => {
+      const s = String(v ?? '');
+      if (s.includes('"') || s.includes(',') || s.includes('\n') || s.includes('\r')) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const outLines = [];
+    outLines.push(headers.map(esc).join(','));
+    for (const r of rows) outLines.push(headers.map(h => esc(r[h])).join(','));
+
+    const blob = new Blob([outLines.join('\n')], { type: 'text/csv' });
+    return new File([blob], inputFile.name, { type: inputFile.type || 'text/csv' });
+  }
+
+  if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+    const XLSX = (await import('xlsx')).default || (await import('xlsx'));
+    const buf = await inputFile.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheetName = wb.SheetNames?.[0];
+    if (!sheetName) return inputFile;
+
+    const ws = wb.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    const filtered = (Array.isArray(json) ? json : []).filter(r => !shouldDropRow(r));
+
+    const newWb = XLSX.utils.book_new();
+    const newWs = XLSX.utils.json_to_sheet(filtered.length ? filtered : []);
+    XLSX.utils.book_append_sheet(newWb, newWs, sheetName);
+
+    const out = XLSX.write(newWb, { type: 'array', bookType: 'xlsx' });
+    const blob = new Blob([out], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    return new File([blob], inputFile.name, { type: blob.type });
+  }
+
+  return inputFile;
+}
+
 export default function ImportStock() {
   const { user } = useAuth();
   const { show, hide } = useLoading();
@@ -32,8 +206,17 @@ export default function ImportStock() {
   const [discountMessage, setDiscountMessage] = useState('');
 
   const branchId = user?.branch_id;
-  const canUpload = useMemo(() => !!file && !!branchId && !uploading && !!gender, [file, branchId, uploading, gender]);
-  const canUploadImages = useMemo(() => !!imageZip && !!branchId && !uploadingImages, [imageZip, branchId, uploadingImages]);
+
+  const canUpload = useMemo(
+    () => !!file && !!branchId && !uploading && !!gender,
+    [file, branchId, uploading, gender]
+  );
+
+  const canUploadImages = useMemo(
+    () => !!imageZip && !!branchId && !uploadingImages,
+    [imageZip, branchId, uploadingImages]
+  );
+
   const canSaveDiscounts = useMemo(
     () =>
       !!branchId &&
@@ -95,7 +278,9 @@ export default function ImportStock() {
     let start = 0;
     setProg({ jobId, state: 'Processing…', done: 0, total: null });
     for (;;) {
-      const r = await apiPost(`/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=200`);
+      const r = await apiPost(
+        `/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=200`
+      );
       const next = r.nextStart ?? (start + (r.processed || 0));
       const total = r.totalRows ?? null;
       const doneCount = Math.min(next, total ?? next);
@@ -120,8 +305,9 @@ export default function ImportStock() {
     setMessage('');
     show();
     try {
+      const cleaned = await cleanExcelOrCsvFile(file);
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', cleaned);
       fd.append('gender', gender);
       localStorage.setItem('import_gender', gender);
       const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd);
@@ -289,11 +475,7 @@ export default function ImportStock() {
               </div>
               <div className="import-filebox-admin">
                 <label className="label">Excel / CSV</label>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={e => setFile(e.target.files?.[0] || null)}
-                />
+                <input type="file" accept=".xlsx,.xls,.csv" onChange={e => setFile(e.target.files?.[0] || null)} />
                 {file ? (
                   <div className="import-filehint-admin">
                     {file.name} • {(file.size / 1024 / 1024).toFixed(2)} MB
@@ -307,8 +489,7 @@ export default function ImportStock() {
                 {message ? <div className="import-msg-admin">{message}</div> : null}
                 {progress ? (
                   <div className="import-msg-admin">
-                    {progress.state}{' '}
-                    {progress.total ? `${progress.done}/${progress.total}` : `${progress.done}+`} rows
+                    {progress.state} {progress.total ? `${progress.done}/${progress.total}` : `${progress.done}+`} rows
                   </div>
                 ) : null}
               </div>
@@ -330,11 +511,7 @@ export default function ImportStock() {
             <div className="zip-block">
               <div className="import-filebox-admin">
                 <label className="label">Images ZIP Folder</label>
-                <input
-                  type="file"
-                  accept=".zip"
-                  onChange={e => setImageZip(e.target.files?.[0] || null)}
-                />
+                <input type="file" accept=".zip" onChange={e => setImageZip(e.target.files?.[0] || null)} />
                 {imageZip ? (
                   <div className="import-filehint-admin">
                     {imageZip.name} • {(imageZip.size / 1024 / 1024).toFixed(2)} MB
@@ -342,14 +519,8 @@ export default function ImportStock() {
                 ) : (
                   <div className="import-filehint-admin">No ZIP selected</div>
                 )}
-                <button
-                  className="import-btn-admin"
-                  onClick={onUploadImages}
-                  disabled={!canUploadImages || uploadingImages}
-                >
-                  {uploadingImages
-                    ? `Uploading ${imageProgress.done}/${imageProgress.total}…`
-                    : 'Upload Images ZIP'}
+                <button className="import-btn-admin" onClick={onUploadImages} disabled={!canUploadImages || uploadingImages}>
+                  {uploadingImages ? `Uploading ${imageProgress.done}/${imageProgress.total}…` : 'Upload Images ZIP'}
                 </button>
                 {imageMessage ? <div className="import-msg-admin">{imageMessage}</div> : null}
                 <div className="image-stats">
@@ -408,11 +579,7 @@ export default function ImportStock() {
                   />
                 </div>
               </div>
-              <button
-                type="submit"
-                className="import-btn-admin"
-                disabled={!canSaveDiscounts}
-              >
+              <button type="submit" className="import-btn-admin" disabled={!canSaveDiscounts}>
                 {savingDiscounts ? 'Saving…' : 'Save Discounts'}
               </button>
               {discountMessage ? <div className="import-msg-admin">{discountMessage}</div> : null}
@@ -449,19 +616,13 @@ export default function ImportStock() {
                     <td data-label="File">{j.file_name || '-'}</td>
                     <td data-label="Gender">{j.gender || '-'}</td>
                     <td data-label="Status">
-                      <span className={`pill-admin ${String(j.status_enum || '').toLowerCase()}`}>
-                        {j.status_enum}
-                      </span>
+                      <span className={`pill-admin ${String(j.status_enum || '').toLowerCase()}`}>{j.status_enum}</span>
                     </td>
                     <td data-label="Total">{j.rows_total ?? 0}</td>
                     <td data-label="Success">{j.rows_success ?? 0}</td>
                     <td data-label="Error">{j.rows_error ?? 0}</td>
-                    <td data-label="Uploaded">
-                      {j.uploaded_at ? new Date(j.uploaded_at).toLocaleString() : '-'}
-                    </td>
-                    <td data-label="Completed">
-                      {j.completed_at ? new Date(j.completed_at).toLocaleString() : '-'}
-                    </td>
+                    <td data-label="Uploaded">{j.uploaded_at ? new Date(j.uploaded_at).toLocaleString() : '-'}</td>
+                    <td data-label="Completed">{j.completed_at ? new Date(j.completed_at).toLocaleString() : '-'}</td>
                   </tr>
                 ))}
                 {!jobs.length && (
