@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import './Transaction.css'
-import NavbarAdmin from './NavbarAdmin';
+import NavbarAdmin from './NavbarAdmin'
 
 const API_BASE =
   process.env.REACT_APP_API_BASE_URL ||
@@ -102,7 +102,7 @@ export default function Transaction() {
     localStorage.getItem('accessToken') ||
     ''
 
-  const fetchTx = async () => {
+  const fetchTx = useCallback(async () => {
     setLoading(true)
     setErr('')
     try {
@@ -127,11 +127,11 @@ export default function Transaction() {
       setErr('Failed to load transactions')
       setLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     fetchTx()
-  }, [])
+  }, [fetchTx])
 
   const enriched = useMemo(() => {
     return (rows || []).map(r => {

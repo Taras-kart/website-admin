@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './Stocks.css'
 import Navbar from './NavbarAdmin'
 import { useAuth } from './AdminAuth'
@@ -40,8 +40,17 @@ export default function Stocks() {
   const searchRef = useRef(null)
   const [csvUrl, setCsvUrl] = useState('')
 
-  const fetchStocks = async () => {
-    if (!branchId) return
+  useEffect(() => {
+    const g = localStorage.getItem('stocks_gender') || 'ALL'
+    setGender(g)
+  }, [])
+
+  const fetchStocks = useCallback(async () => {
+    if (!branchId) {
+      setRaw([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('admin_token') || ''
@@ -59,23 +68,11 @@ export default function Stocks() {
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    const g = localStorage.getItem('stocks_gender') || 'ALL'
-    setGender(g)
-  }, [])
-
-  useEffect(() => {
-    fetchStocks()
   }, [branchId, gender])
 
   useEffect(() => {
-    const h = setTimeout(() => {
-      fetchStocks()
-    }, 0)
-    return () => clearTimeout(h)
-  }, [])
+    fetchStocks()
+  }, [fetchStocks])
 
   const rows = useMemo(
     () =>
@@ -140,7 +137,10 @@ export default function Stocks() {
 
   useEffect(() => {
     if (!filtered.length) {
-      setCsvUrl('')
+      setCsvUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev)
+        return ''
+      })
       return
     }
     const header = ['Sl. No,Status,Brand,Product,Pattern,Fit,Mark,Size,Colour,EAN,MRP,Sale Price,Cost Price,Qty,Reserved']
@@ -170,7 +170,16 @@ export default function Stocks() {
       if (prev) URL.revokeObjectURL(prev)
       return url
     })
+    return () => {
+      URL.revokeObjectURL(url)
+    }
   }, [filtered])
+
+  useEffect(() => {
+    return () => {
+      if (csvUrl) URL.revokeObjectURL(csvUrl)
+    }
+  }, [csvUrl])
 
   const onGenderChange = (g) => {
     setGender(g)
