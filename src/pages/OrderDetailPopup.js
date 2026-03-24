@@ -80,10 +80,21 @@ export default function OrderDetailPopup({
   const shipmentId = latestShipment?.shipment_id || latestShipment?.shiprocket_shipment_id || null;
   const shiprocketOrderId = latestShipment?.shiprocket_order_id || latestShipment?.order_id || null;
 
-  const srData = courierData?.data?.data || courierData?.data || courierData || null;
-  const availableCouriers = Array.isArray(srData?.available_courier_companies) ? srData.available_courier_companies : [];
-  const recommendedCourierCompanyId = srData?.recommended_courier_company_id || srData?.shiprocket_recommended_courier_id || null;
-  const codValue = typeof srData?.cod === 'boolean' ? srData.cod : typeof courierData?.cod === 'boolean' ? courierData.cod : false;
+  const srData = useMemo(() => {
+    return courierData?.data?.data || courierData?.data || courierData || null;
+  }, [courierData]);
+
+  const availableCouriers = useMemo(() => {
+    return Array.isArray(srData?.available_courier_companies) ? srData.available_courier_companies : [];
+  }, [srData]);
+
+  const recommendedCourierCompanyId = useMemo(() => {
+    return srData?.recommended_courier_company_id || srData?.shiprocket_recommended_courier_id || null;
+  }, [srData]);
+
+  const codValue = useMemo(() => {
+    return typeof srData?.cod === 'boolean' ? srData.cod : typeof courierData?.cod === 'boolean' ? courierData.cod : false;
+  }, [srData, courierData]);
 
   useEffect(() => {
     if (!open) {
@@ -108,6 +119,7 @@ export default function OrderDetailPopup({
       selectedCourierId ||
       recommendedCourierCompanyId ||
       (availableCouriers.length ? availableCouriers[0]?.courier_company_id : null);
+
     if (initial) setSelectedCourierId(initial);
   }, [courierData, selectedCourierId, recommendedCourierCompanyId, availableCouriers]);
 
