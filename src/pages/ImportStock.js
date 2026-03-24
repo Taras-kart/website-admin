@@ -42,8 +42,7 @@ export default function OrderDetailPopup({
   const items = Array.isArray(detail?.items) ? detail.items : [];
   const shipments = Array.isArray(detail?.shipments) ? detail.shipments : [];
   const trackingSnapshot =
-    detail?.trackingSnapshot ||
-    {
+    detail?.trackingSnapshot || {
       status: '',
       eddText: null,
       lastEventText: null,
@@ -76,15 +75,25 @@ export default function OrderDetailPopup({
     return t.toLocaleString('en-IN');
   })();
 
-  const hasShipments = !!latestShipment;
   const hasAwb = !!latestShipment?.awb;
   const shipmentId = latestShipment?.shipment_id || latestShipment?.shiprocket_shipment_id || null;
   const shiprocketOrderId = latestShipment?.shiprocket_order_id || latestShipment?.order_id || null;
 
-  const srData = courierData?.data?.data || courierData?.data || courierData || null;
-  const availableCouriers = Array.isArray(srData?.available_courier_companies) ? srData.available_courier_companies : [];
-  const recommendedCourierCompanyId = srData?.recommended_courier_company_id || srData?.shiprocket_recommended_courier_id || null;
-  const codValue = typeof srData?.cod === 'boolean' ? srData.cod : typeof courierData?.cod === 'boolean' ? courierData.cod : false;
+  const srData = useMemo(() => {
+    return courierData?.data?.data || courierData?.data || courierData || null;
+  }, [courierData]);
+
+  const availableCouriers = useMemo(() => {
+    return Array.isArray(srData?.available_courier_companies) ? srData.available_courier_companies : [];
+  }, [srData]);
+
+  const recommendedCourierCompanyId = useMemo(() => {
+    return srData?.recommended_courier_company_id || srData?.shiprocket_recommended_courier_id || null;
+  }, [srData]);
+
+  const codValue = useMemo(() => {
+    return typeof srData?.cod === 'boolean' ? srData.cod : typeof courierData?.cod === 'boolean' ? courierData.cod : false;
+  }, [srData, courierData]);
 
   useEffect(() => {
     if (!open) {
@@ -105,9 +114,13 @@ export default function OrderDetailPopup({
 
   useEffect(() => {
     if (!courierData) return;
-    const initial = selectedCourierId || recommendedCourierCompanyId || (availableCouriers.length ? availableCouriers[0]?.courier_company_id : null);
+    const initial =
+      selectedCourierId ||
+      recommendedCourierCompanyId ||
+      (availableCouriers.length ? availableCouriers[0]?.courier_company_id : null);
+
     if (initial) setSelectedCourierId(initial);
-  }, [courierData]);
+  }, [courierData, selectedCourierId, recommendedCourierCompanyId, availableCouriers]);
 
   const tryFetchJson = async (url, options) => {
     const res = await fetch(url, options);
@@ -190,7 +203,7 @@ export default function OrderDetailPopup({
       '';
 
     const isWalletLow = statusCode === 350 || /recharge/i.test(String(msg)) || /recharge/i.test(String(errorFromSr));
-    const isSuccess = !!possibleAwb || (awbAssignStatus === 1) || statusCode === 200;
+    const isSuccess = !!possibleAwb || awbAssignStatus === 1 || statusCode === 200;
 
     return { statusCode, msg, isWalletLow, isSuccess, possibleAwb, errorFromSr };
   };
