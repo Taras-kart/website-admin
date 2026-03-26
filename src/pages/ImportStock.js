@@ -267,12 +267,14 @@ export default function ImportStock() {
     }
   }
 
-  useEffect(() => {
+useEffect(() => {
     fetchJobs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchId]);
 
   useEffect(() => {
     fetchDiscounts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchId]);
 
   async function processJob(jobId, setProg) {
