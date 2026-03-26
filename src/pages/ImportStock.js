@@ -231,6 +231,7 @@ export default function ImportStock() {
   useEffect(() => {
     const saved = localStorage.getItem('import_gender') || '';
     setGender(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchJobs() {
