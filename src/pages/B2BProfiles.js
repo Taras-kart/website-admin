@@ -14,6 +14,7 @@ const B2BProfiles = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
+  const [city, setCity] = useState(''); // NEW STATE FOR CITY
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [popupMessage, setPopupMessage] = useState('');
@@ -37,7 +38,8 @@ const B2BProfiles = () => {
       const res = await fetch(`${API_BASE}/api/b2b-customers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, mobile, password })
+        // ADDED CITY TO THE JSON PAYLOAD
+        body: JSON.stringify({ name, email, mobile, city, password }) 
       });
       const data = await res.json();
       if (res.ok) {
@@ -47,6 +49,7 @@ const B2BProfiles = () => {
         setName('');
         setEmail('');
         setMobile('');
+        setCity(''); // RESET CITY
         setPassword('');
         setConfirmPassword('');
         setTimeout(() => setPopupMessage(''), 2000);
@@ -84,6 +87,7 @@ const B2BProfiles = () => {
               <th className="table-th-b2b">Name</th>
               <th className="table-th-b2b">Email</th>
               <th className="table-th-b2b">Mobile</th>
+              <th className="table-th-b2b">City</th> {/* NEW COLUMN HEADER */}
               <th className="table-th-b2b">Actions</th>
             </tr>
           </thead>
@@ -93,6 +97,7 @@ const B2BProfiles = () => {
                 <td className="table-td-b2b">{customer.name}</td>
                 <td className="table-td-b2b">{customer.email}</td>
                 <td className="table-td-b2b">{customer.mobile}</td>
+                <td className="table-td-b2b">{customer.city || '-'}</td> {/* NEW COLUMN DATA */}
                 <td className="table-td-b2b">
                   <button className="action-btn-b2b">Change Password</button>
                   <button className="delete-btn-b2b">Delete</button>
@@ -101,7 +106,7 @@ const B2BProfiles = () => {
             ))}
             {b2bCustomers.length === 0 && (
               <tr>
-                <td className="table-td-b2b empty-b2b" colSpan="4">No customers yet</td>
+                <td className="table-td-b2b empty-b2b" colSpan="5">No customers yet</td>
               </tr>
             )}
           </tbody>
@@ -116,6 +121,10 @@ const B2BProfiles = () => {
             <input className="popup-input-b2b" type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
             <input className="popup-input-b2b" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <input className="popup-input-b2b" type="tel" placeholder="Mobile Number" maxLength="10" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+            
+            {/* NEW CITY INPUT FIELD */}
+            <input className="popup-input-b2b" type="text" placeholder="City / Location" value={city} onChange={(e) => setCity(e.target.value)} />
+            
             <input className="popup-input-b2b" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
             <input className="popup-input-b2b" type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
             <button className="submit-btn-b2b" onClick={handleAddCustomer}>Submit</button>

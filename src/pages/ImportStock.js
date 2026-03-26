@@ -1,796 +1,642 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import './OrderDetailPopup.css';
+import Navbar from './NavbarAdmin';
 import { useAuth } from './AdminAuth';
+import { useLoading } from './LoadingContext';
+import { apiGet, apiUpload, apiPost } from './api';
+import JSZip from 'jszip';
+import './ImportStock.css';
 
-export default function OrderDetailPopup({
-  open,
-  loading,
-  detail,
-  onClose,
-  apiBase,
-  orderSteps,
-  statusText,
-  computeStepFromLocal,
-  computeStepFromShiprocket,
-  computeStepFromShipment,
-  buildExpectedDeliveryText,
-  fmt
-}) {
-  const { token } = useAuth();
+const CLOUD_NAME = 'deymt9uyh';
+const UPLOAD_PRESET = 'unsigned_ean';
 
-  const authHeaders = useMemo(() => {
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }, [token]);
+function normalizeKey(k) {
+  return String(k || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  const [courierLoading, setCourierLoading] = useState(false);
-  const [courierError, setCourierError] = useState('');
-  const [courierData, setCourierData] = useState(null);
-  const [selectedCourierId, setSelectedCourierId] = useState(null);
+function pickValue(row, candidates) {
+  const keys = Object.keys(row || {});
+  for (const c of candidates) {
+    const ck = normalizeKey(c);
+    const found = keys.find(k => normalizeKey(k) === ck);
+    if (found !== undefined) return row[found];
+  }
+  for (const c of candidates) {
+    const ck = normalizeKey(c);
+    const found = keys.find(k => normalizeKey(k).includes(ck));
+    if (found !== undefined) return row[found];
+  }
+  return undefined;
+}
 
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState('');
-  const [actionOk, setActionOk] = useState('');
-  const [walletMessage, setWalletMessage] = useState('');
+function toNumber(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  const s = String(v)
+    .replace(/₹/g, '')
+    .replace(/,/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) return null;
+  const m = s.match(/-?\d+(\.\d+)?/);
+  if (!m) return null;
+  const n = parseFloat(m[0]);
+  return isFinite(n) ? n : null;
+}
 
-  const [localShipment, setLocalShipment] = useState(null);
+function rowHasBannedPhrases(row) {
+  const banned = [
+    'inclusive of all taxes',
+    'brand',
+    'new in',
+    'product',
+    '₹0.00'
+  ];
+  const values = Object.values(row || {})
+    .map(v => String(v ?? '').toLowerCase().trim())
+    .filter(Boolean);
+  return values.some(val => banned.some(b => val === b || val.includes(b)));
+}
 
-  const [trackingLoading, setTrackingLoading] = useState(false);
-  const [trackingError, setTrackingError] = useState('');
-  const [trackingData, setTrackingData] = useState(null);
+function isDefaultBrandOrProduct(s) {
+  const t = String(s ?? '').toLowerCase().trim();
+  if (!t) return true;
+  const defaults = ['brand', 'product', 'new in', 'inclusive of all taxes'];
+  return defaults.includes(t) || defaults.some(d => t.includes(d));
+}
 
-  const sale = detail?.sale || null;
-  const items = Array.isArray(detail?.items) ? detail.items : [];
-  const shipments = Array.isArray(detail?.shipments) ? detail.shipments : [];
-  const trackingSnapshot =
-    detail?.trackingSnapshot || {
-      status: '',
-      eddText: null,
-      lastEventText: null,
-      core: null
+function shouldDropRow(row) {
+  if (!row || typeof row !== 'object') return true;
+
+  const values = Object.values(row).map(v => String(v ?? '').trim());
+  const allEmpty = values.every(v => v === '');
+  if (allEmpty) return true;
+
+  const brand = pickValue(row, ['brand', 'brand name']);
+  const product = pickValue(row, ['product', 'product name', 'name', 'title']);
+
+  const priceVal = pickValue(row, ['price', 'selling price', 'sale price', 'our price', 'sp']);
+  const mrpVal = pickValue(row, ['mrp', 'm.r.p', 'list price', 'regular price']);
+
+  const price = toNumber(priceVal);
+  const mrp = toNumber(mrpVal);
+
+  const priceIsZero = price !== null && price === 0;
+  const mrpIsZero = mrp !== null && mrp === 0;
+
+  const defaultNames = isDefaultBrandOrProduct(brand) || isDefaultBrandOrProduct(product);
+
+  if (rowHasBannedPhrases(row) && (priceIsZero || mrpIsZero)) return true;
+  if (priceIsZero && mrpIsZero && defaultNames) return true;
+
+  return false;
+}
+
+async function cleanExcelOrCsvFile(inputFile) {
+  const name = inputFile?.name || '';
+  const lower = name.toLowerCase();
+
+  if (lower.endsWith('.csv')) {
+    const text = await inputFile.text();
+    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+    if (!lines.length) return inputFile;
+
+    const headerLine = lines[0];
+    const headers = headerLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line || !line.trim()) continue;
+
+      const cols = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let j = 0; j < line.length; j++) {
+        const ch = line[j];
+        if (ch === '"' && line[j + 1] === '"') {
+          cur += '"';
+          j++;
+          continue;
+        }
+        if (ch === '"') {
+          inQuotes = !inQuotes;
+          continue;
+        }
+        if (ch === ',' && !inQuotes) {
+          cols.push(cur);
+          cur = '';
+          continue;
+        }
+        cur += ch;
+      }
+      cols.push(cur);
+
+      const rowObj = {};
+      headers.forEach((h, idx) => {
+        rowObj[h] = cols[idx] ?? '';
+      });
+
+      if (!shouldDropRow(rowObj)) rows.push(rowObj);
+    }
+
+    const esc = v => {
+      const s = String(v ?? '');
+      if (s.includes('"') || s.includes(',') || s.includes('\n') || s.includes('\r')) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
     };
 
-  const latestShipmentFromDetail = detail?.latestShipment || (shipments.length ? shipments[shipments.length - 1] : null);
-  const latestShipment = localShipment || latestShipmentFromDetail;
+    const outLines = [];
+    outLines.push(headers.map(esc).join(','));
+    for (const r of rows) outLines.push(headers.map(h => esc(r[h])).join(','));
 
-  const localOrderStatus = sale ? statusText(sale.status || 'PLACED') : '';
-  const isCancelled = localOrderStatus === 'CANCELLED';
+    const blob = new Blob([outLines.join('\n')], { type: 'text/csv' });
+    return new File([blob], inputFile.name, { type: inputFile.type || 'text/csv' });
+  }
 
-  const shiprocketStatus = statusText(trackingSnapshot.status);
-  const shipmentStepIndex = computeStepFromShipment(latestShipment, trackingSnapshot.core);
-  const baseLocalStep = computeStepFromLocal(localOrderStatus);
-  const baseShiprocketStep = computeStepFromShiprocket(shiprocketStatus);
+  if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+    const XLSX = (await import('xlsx')).default || (await import('xlsx'));
+    const buf = await inputFile.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheetName = wb.SheetNames?.[0];
+    if (!sheetName) return inputFile;
 
-  const effectiveStepIndex = sale ? Math.max(baseLocalStep, baseShiprocketStep, shipmentStepIndex) : 0;
+    const ws = wb.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    const filtered = (Array.isArray(json) ? json : []).filter(r => !shouldDropRow(r));
 
-  const placedText = sale?.created_at ? new Date(sale.created_at).toLocaleString('en-IN') : '-';
-  const expectedDelivery = sale ? buildExpectedDeliveryText(trackingSnapshot, sale, latestShipment) : '-';
+    const newWb = XLSX.utils.book_new();
+    const newWs = XLSX.utils.json_to_sheet(filtered.length ? filtered : []);
+    XLSX.utils.book_append_sheet(newWb, newWs, sheetName);
 
-  const lastUpdateTime = (() => {
-    if (!detail) return '-';
-    if (trackingSnapshot.lastEventText) return trackingSnapshot.lastEventText;
-    const fallbackTime = latestShipment?.updated_at || latestShipment?.created_at || sale?.updated_at || sale?.created_at;
-    if (!fallbackTime) return '-';
-    const t = new Date(fallbackTime);
-    if (Number.isNaN(t.getTime())) return '-';
-    return t.toLocaleString('en-IN');
-  })();
+    const out = XLSX.write(newWb, { type: 'array', bookType: 'xlsx' });
+    const blob = new Blob([out], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    return new File([blob], inputFile.name, { type: blob.type });
+  }
 
-  const hasAwb = !!latestShipment?.awb;
-  const shipmentId = latestShipment?.shipment_id || latestShipment?.shiprocket_shipment_id || null;
-  const shiprocketOrderId = latestShipment?.shiprocket_order_id || latestShipment?.order_id || null;
+  return inputFile;
+}
 
-  const srData = useMemo(() => {
-    return courierData?.data?.data || courierData?.data || courierData || null;
-  }, [courierData]);
+export default function ImportStock() {
+  const { user } = useAuth();
+  const { show, hide } = useLoading();
+  const [file, setFile] = useState(null);
+  const [imageZip, setImageZip] = useState(null);
+  const [gender, setGender] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [message, setMessage] = useState('');
+  const [imageMessage, setImageMessage] = useState('');
+  const [jobs, setJobs] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [progress, setProgress] = useState(null);
+  const [imageProgress, setImageProgress] = useState({ done: 0, total: 0 });
+  const [eanSet, setEanSet] = useState(null);
+  const [matchStats, setMatchStats] = useState({ matched: 0, total: 0, skipped: 0 });
+  const [unmatchedList, setUnmatchedList] = useState([]);
+  const [b2cDiscount, setB2cDiscount] = useState('');
+  const [b2bDiscount, setB2bDiscount] = useState('');
+  const [savingDiscounts, setSavingDiscounts] = useState(false);
+  const [discountMessage, setDiscountMessage] = useState('');
 
-  const availableCouriers = useMemo(() => {
-    return Array.isArray(srData?.available_courier_companies) ? srData.available_courier_companies : [];
-  }, [srData]);
+  const branchId = user?.branch_id;
 
-  const recommendedCourierCompanyId = useMemo(() => {
-    return srData?.recommended_courier_company_id || srData?.shiprocket_recommended_courier_id || null;
-  }, [srData]);
+  const canUpload = useMemo(
+    () => !!file && !!branchId && !uploading && !!gender,
+    [file, branchId, uploading, gender]
+  );
 
-  const codValue = useMemo(() => {
-    return typeof srData?.cod === 'boolean' ? srData.cod : typeof courierData?.cod === 'boolean' ? courierData.cod : false;
-  }, [srData, courierData]);
+  const canUploadImages = useMemo(
+    () => !!imageZip && !!branchId && !uploadingImages,
+    [imageZip, branchId, uploadingImages]
+  );
+
+  const canSaveDiscounts = useMemo(
+    () =>
+      !!branchId &&
+      !savingDiscounts &&
+      b2cDiscount !== '' &&
+      b2bDiscount !== '' &&
+      !isNaN(parseFloat(b2cDiscount)) &&
+      !isNaN(parseFloat(b2bDiscount)),
+    [branchId, savingDiscounts, b2cDiscount, b2bDiscount]
+  );
 
   useEffect(() => {
-    if (!open) {
-      setCourierLoading(false);
-      setCourierError('');
-      setCourierData(null);
-      setSelectedCourierId(null);
-      setActionLoading(false);
-      setActionError('');
-      setActionOk('');
-      setWalletMessage('');
-      setLocalShipment(null);
-      setTrackingLoading(false);
-      setTrackingError('');
-      setTrackingData(null);
-    }
-  }, [open]);
+    const saved = localStorage.getItem('import_gender') || '';
+    setGender(saved);
+  }, []);
 
-  useEffect(() => {
-    if (!courierData) return;
-    const initial =
-      selectedCourierId ||
-      recommendedCourierCompanyId ||
-      (availableCouriers.length ? availableCouriers[0]?.courier_company_id : null);
-
-    if (initial) setSelectedCourierId(initial);
-  }, [courierData, selectedCourierId, recommendedCourierCompanyId, availableCouriers]);
-
-  const tryFetchJson = async (url, options) => {
-    const res = await fetch(url, options);
-    const txt = await res.text().catch(() => '');
-    let json = null;
+  async function fetchJobs() {
+    if (!branchId) return;
+    setRefreshing(true);
+    show();
     try {
-      json = txt ? JSON.parse(txt) : null;
+      const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/import-jobs`);
+      setJobs(Array.isArray(data) ? data : []);
     } catch {
-      json = null;
+      setJobs([]);
+    } finally {
+      setRefreshing(false);
+      hide();
     }
-    return { res, json, text: txt };
-  };
+  }
 
-  const loadServiceability = async () => {
-    if (!sale?.id) return;
-    setCourierLoading(true);
-    setCourierError('');
-    setCourierData(null);
-    setSelectedCourierId(null);
-    setActionOk('');
-    setActionError('');
-    setWalletMessage('');
+  async function fetchDiscounts() {
+    if (!branchId) return;
     try {
-      const candidates = [
-        { url: `${apiBase}/api/shiprocket/serviceability/by-sale/${sale.id}`, opts: { headers: { ...authHeaders } } },
-        { url: `${apiBase}/api/shiprocket/serviceability/sale/${sale.id}`, opts: { headers: { ...authHeaders } } },
-        { url: `${apiBase}/api/shiprocket/serviceability/${sale.id}`, opts: { headers: { ...authHeaders } } }
-      ];
-
-      let ok = false;
-      let payload = null;
-
-      for (const c of candidates) {
-        try {
-          const { res, json } = await tryFetchJson(c.url, c.opts);
-          if (res.ok && json) {
-            ok = true;
-            payload = json;
-            break;
-          }
-        } catch {
-          ok = false;
+      const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/discounts`);
+      if (data && typeof data === 'object') {
+        if (data.b2c_discount_pct !== undefined && data.b2c_discount_pct !== null) {
+          setB2cDiscount(String(data.b2c_discount_pct));
+        }
+        if (data.b2b_discount_pct !== undefined && data.b2b_discount_pct !== null) {
+          setB2bDiscount(String(data.b2b_discount_pct));
         }
       }
-
-      if (!ok) {
-        setCourierError('Could not fetch courier options for this order.');
-        return;
-      }
-
-      setCourierData(payload);
-    } finally {
-      setCourierLoading(false);
+    } catch {
+      setB2cDiscount('');
+      setB2bDiscount('');
     }
-  };
+  }
 
-  const shiprocketWalletUrl = 'https://app.shiprocket.in/dashboard/settings/wallet';
+  useEffect(() => {
+    fetchJobs();
+  }, [branchId]);
 
-  const parseAwbFromAssignResponse = (payload) => {
-    const data = payload?.data || payload?.result || payload || null;
-    const statusCode = Number(data?.status_code || payload?.status_code || 0);
-    const msg = data?.message || payload?.message || '';
-    const awbAssignStatus =
-      data?.awb_assign_status != null ? Number(data.awb_assign_status) : data?.response?.awb_assign_status != null ? Number(data.response.awb_assign_status) : null;
+  useEffect(() => {
+    fetchDiscounts();
+  }, [branchId]);
 
-    const possibleAwb =
-      payload?.awb ||
-      payload?.data?.awb ||
-      payload?.result?.awb ||
-      payload?.result?.data?.awb ||
-      payload?.data?.data?.awb ||
-      payload?.shipment?.awb ||
-      null;
+  async function processJob(jobId, setProg) {
+    let start = 0;
+    setProg({ jobId, state: 'Processing…', done: 0, total: null });
+    for (;;) {
+      const r = await apiPost(
+        `/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=200`
+      );
+      const next = r.nextStart ?? (start + (r.processed || 0));
+      const total = r.totalRows ?? null;
+      const doneCount = Math.min(next, total ?? next);
+      setProg({ jobId, state: r.done ? 'Completed' : 'Processing…', done: doneCount, total });
+      if (r.done) break;
+      start = next;
+    }
+  }
 
-    const errorFromSr =
-      data?.response?.data?.awb_assign_error ||
-      data?.response?.awb_assign_error ||
-      data?.awb_assign_error ||
-      payload?.awb_assign_error ||
-      '';
-
-    const isWalletLow = statusCode === 350 || /recharge/i.test(String(msg)) || /recharge/i.test(String(errorFromSr));
-    const isSuccess = !!possibleAwb || awbAssignStatus === 1 || statusCode === 200;
-
-    return { statusCode, msg, isWalletLow, isSuccess, possibleAwb, errorFromSr };
-  };
-
-  const assignCourierAndGenerateAwb = async () => {
-    if (!sale?.id) return;
-    if (!selectedCourierId) {
-      setActionError('Please select a courier partner.');
+  async function onUpload(e) {
+    e.preventDefault();
+    if (!file || !branchId || !gender) {
+      setMessage('Please select a category and choose a file.');
       return;
     }
-
-    setActionLoading(true);
-    setActionError('');
-    setActionOk('');
-    setWalletMessage('');
-
-    try {
-      const body = { sale_id: sale.id, courier_company_id: Number(selectedCourierId) };
-
-      const candidates = [
-        {
-          url: `${apiBase}/api/shiprocket/assign-courier`,
-          opts: { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify(body) }
-        },
-        {
-          url: `${apiBase}/api/shiprocket/assign-awb`,
-          opts: { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify(body) }
-        },
-        {
-          url: `${apiBase}/api/shiprocket/assign-courier/by-sale/${sale.id}`,
-          opts: { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify({ courier_company_id: Number(selectedCourierId) }) }
-        }
-      ];
-
-      let payload = null;
-      let lastJson = null;
-
-      for (const c of candidates) {
-        try {
-          const { res, json } = await tryFetchJson(c.url, c.opts);
-          lastJson = json;
-          if (json) {
-            payload = json;
-            if (res.ok) break;
-          }
-        } catch {
-          payload = null;
-        }
-      }
-
-      if (!payload) {
-        setActionError('Could not process Shiprocket request.');
-        return;
-      }
-
-      if (payload?.ok === false) {
-        const m = payload?.message || 'Shiprocket request failed.';
-        setActionError(m);
-        if (/recharge/i.test(m)) setWalletMessage(m);
-        return;
-      }
-
-      const parsed = parseAwbFromAssignResponse(payload);
-
-      if (parsed.isWalletLow) {
-        const m = parsed.errorFromSr || parsed.msg || 'Please recharge your Shiprocket wallet.';
-        setWalletMessage(m);
-        setActionError(m);
-        return;
-      }
-
-      if (!parsed.isSuccess) {
-        const m = parsed.errorFromSr || parsed.msg || lastJson?.message || 'Unable to generate AWB.';
-        setActionError(m);
-        return;
-      }
-
-      const nextShipment = {
-        ...(latestShipment || {}),
-        awb: parsed.possibleAwb || latestShipment?.awb,
-        courier_name:
-          payload?.courier_name ||
-          payload?.data?.courier_name ||
-          payload?.shipment?.courier_name ||
-          latestShipment?.courier_name,
-        courier_company_id:
-          payload?.courier_company_id ||
-          payload?.data?.courier_company_id ||
-          payload?.shipment?.courier_company_id ||
-          latestShipment?.courier_company_id,
-        shiprocket_order_id:
-          payload?.shiprocket_order_id ||
-          payload?.data?.shiprocket_order_id ||
-          payload?.shipment?.shiprocket_order_id ||
-          latestShipment?.shiprocket_order_id,
-        shipment_id:
-          payload?.shipment_id ||
-          payload?.data?.shipment_id ||
-          payload?.shipment?.shipment_id ||
-          latestShipment?.shipment_id,
-        shiprocket_shipment_id:
-          payload?.shiprocket_shipment_id ||
-          payload?.data?.shiprocket_shipment_id ||
-          payload?.shipment?.shiprocket_shipment_id ||
-          latestShipment?.shiprocket_shipment_id,
-        status: payload?.status || payload?.shipment_status || latestShipment?.status
-      };
-
-      setLocalShipment(nextShipment);
-      setActionOk('AWB generated successfully.');
-      setActionError('');
-      setWalletMessage('');
-    } finally {
-      setActionLoading(false);
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      setMessage('You are not logged in');
+      return;
     }
-  };
-
-  const fetchTracking = async () => {
-    if (!sale?.id) return;
-    setTrackingLoading(true);
-    setTrackingError('');
+    setUploading(true);
+    setMessage('');
+    show();
     try {
-      const { res, json } = await tryFetchJson(`${apiBase}/api/shiprocket/tracking/by-sale/${sale.id}`, { headers: { ...authHeaders } });
-      if (!res.ok || !json) {
-        setTrackingError(json?.message || 'Unable to fetch tracking.');
-        return;
-      }
-      if (json?.ok === false) {
-        setTrackingError(json?.message || 'Unable to fetch tracking.');
-        return;
-      }
-      setTrackingData(json);
+      const cleaned = await cleanExcelOrCsvFile(file);
+      const fd = new FormData();
+      fd.append('file', cleaned);
+      fd.append('gender', gender);
+      localStorage.setItem('import_gender', gender);
+      const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd);
+      setMessage('Uploaded. Starting processing…');
+      setFile(null);
+      await processJob(job.id, setProgress);
+      await fetchJobs();
+    } catch (err) {
+      setMessage(err?.payload?.message || err?.message || 'Upload failed');
     } finally {
-      setTrackingLoading(false);
+      setUploading(false);
+      hide();
+      setTimeout(() => setMessage(''), 3000);
     }
-  };
+  }
 
-  const stop = (e) => e.stopPropagation();
+  function baseNameNoExt(name) {
+    const n = name.split('/').pop() || name;
+    const i = n.lastIndexOf('.');
+    return i > 0 ? n.slice(0, i) : n;
+  }
 
-  if (!open) return null;
+  function isImagePath(p) {
+    const n = p.toLowerCase();
+    return n.endsWith('.jpg') || n.endsWith('.jpeg') || n.endsWith('.png') || n.endsWith('.webp');
+  }
 
-  const courierSummary = (c) => {
-    const price = c?.rate ?? c?.freight_charge ?? c?.cost ?? null;
-    const etd = c?.etd || null;
-    const days = c?.estimated_delivery_days || null;
-    const rating = c?.rating ?? null;
-    const mode = c?.is_surface ? 'Surface' : c?.mode === 0 ? 'Surface' : 'Air';
-    return { price, etd, days, rating, mode };
-  };
+  function extractEANFromPath(path) {
+    const base = baseNameNoExt(path);
+    const m = String(base).match(/(\d{12,14})/);
+    return m ? m[1] : '';
+  }
 
-  const selectedCourier = availableCouriers.find((c) => Number(c.courier_company_id) === Number(selectedCourierId)) || null;
-  const selectedCourierMeta = selectedCourier ? courierSummary(selectedCourier) : null;
+  async function uploadToCloudinary(blob, publicIdBase) {
+    const form = new FormData();
+    form.append('file', blob);
+    form.append('upload_preset', UPLOAD_PRESET);
+    form.append('folder', `products`);
+    form.append('public_id', publicIdBase);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+      method: 'POST',
+      body: form
+    });
+    if (!res.ok) throw new Error(`Cloudinary upload failed (${res.status})`);
+    return res.json();
+  }
 
-  const step1Done = !!selectedCourierId;
-  const step2Done = !!hasAwb;
-  const step3Done = step2Done;
+  async function ensureEanSet() {
+    if (eanSet) return eanSet;
+    try {
+      const list = await apiGet(`/api/products?limit=10000`);
+      const s = new Set(
+        (Array.isArray(list) ? list : [])
+          .map(p => String(p.ean_code || '').trim())
+          .filter(Boolean)
+      );
+      setEanSet(s);
+      return s;
+    } catch {
+      const s = new Set();
+      setEanSet(s);
+      return s;
+    }
+  }
 
-  const trackingCore = trackingData?.data || trackingData?.tracking || trackingData || null;
-  const trackingEvents = Array.isArray(trackingCore?.tracking_data?.shipment_track_activities)
-    ? trackingCore.tracking_data.shipment_track_activities
-    : Array.isArray(trackingCore?.tracking_data?.shipment_track?.activities)
-      ? trackingCore.tracking_data.shipment_track.activities
-      : Array.isArray(trackingCore?.tracking_data?.track_status)
-        ? trackingCore.tracking_data.track_status
-        : [];
+  async function onUploadImages(e) {
+    e.preventDefault();
+    if (!imageZip || !branchId) {
+      setImageMessage('Please choose a ZIP file.');
+      return;
+    }
+    setUploadingImages(true);
+    setImageMessage('');
+    setImageProgress({ done: 0, total: 0 });
+    setMatchStats({ matched: 0, total: 0, skipped: 0 });
+    setUnmatchedList([]);
+    show();
+    try {
+      const eans = await ensureEanSet();
+      const zip = await JSZip.loadAsync(imageZip);
+      const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name));
+      const total = entries.length;
+      let done = 0;
+      let matched = 0;
+      const unmatched = [];
+      for (const f of entries) {
+        const ean = extractEANFromPath(f.name).trim();
+        if (!ean || !eans.has(ean)) {
+          unmatched.push({ file: f.name, ean: ean || '(none)' });
+          done += 1;
+          setImageProgress({ done, total });
+          continue;
+        }
+        const blob = await f.async('blob');
+        await uploadToCloudinary(blob, ean);
+        matched += 1;
+        done += 1;
+        setImageProgress({ done, total });
+      }
+      setMatchStats({ matched, total, skipped: total - matched });
+      setUnmatchedList(unmatched);
+      setImageMessage(`Finished. Uploaded ${matched}/${total}. Unmatched ${unmatched.length}.`);
+      setImageZip(null);
+    } catch (err) {
+      setImageMessage(err?.message || 'Image upload failed');
+    } finally {
+      setUploadingImages(false);
+      hide();
+      setTimeout(() => setImageMessage(''), 5000);
+    }
+  }
 
-  const trackingHeader = (() => {
-    const td = trackingCore?.tracking_data || null;
-    const st = td?.shipment_track?.[0] || td?.shipment_track || null;
-    return {
-      courier: st?.courier_name || latestShipment?.courier_name || '-',
-      awb: st?.awb_code || latestShipment?.awb || '-',
-      current: td?.shipment_track?.[0]?.current_status || td?.shipment_track?.current_status || td?.track_status || '-',
-      pickupDate: td?.shipment_track?.[0]?.pickup_date || td?.shipment_track?.pickup_date || '-',
-      deliveredDate: td?.shipment_track?.[0]?.delivered_date || td?.shipment_track?.delivered_date || '-'
-    };
-  })();
+  async function onSaveDiscounts(e) {
+    e.preventDefault();
+    if (!branchId) {
+      setDiscountMessage('Branch not found');
+      return;
+    }
+    const b2c = parseFloat(b2cDiscount);
+    const b2b = parseFloat(b2bDiscount);
+    if (isNaN(b2c) || isNaN(b2b)) {
+      setDiscountMessage('Enter valid discount percentages');
+      return;
+    }
+    setSavingDiscounts(true);
+    setDiscountMessage('');
+    show();
+    try {
+      await apiPost(`/api/branch/${encodeURIComponent(branchId)}/discounts`, {
+        b2c_discount_pct: b2c,
+        b2b_discount_pct: b2b
+      });
+      setDiscountMessage('Discounts saved successfully');
+    } catch (err) {
+      setDiscountMessage(err?.payload?.message || err?.message || 'Failed to save discounts');
+    } finally {
+      setSavingDiscounts(false);
+      hide();
+      setTimeout(() => setDiscountMessage(''), 4000);
+    }
+  }
 
   return (
-    <div className="orders-modal-backdrop" onClick={onClose}>
-      <div className="orders-modal orders-modal-detail odp-modal odp-formal" onClick={stop}>
-        {loading ? (
-          <div className="orders-loader">
-            <div className="orders-spinner" />
-            <span className="orders-loader-text">Loading order details</span>
+    <div className="import-page-admin">
+      <Navbar />
+      <div className="import-wrap-admin">
+        <div className="import-card-admin">
+          <div className="import-title-admin">Import Stock (Excel)</div>
+          <div className="import-subtitle-admin">Upload your branch Excel file for a selected category.</div>
+          <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
+            <div className="excel-block">
+              <div className="select-wrap">
+                <label className="label">Category</label>
+                <select
+                  className={`audience-select ${gender ? '' : 'invalid'}`}
+                  value={gender}
+                  onChange={e => setGender(e.target.value)}
+                  required
+                >
+                  <option value="">Select Category</option>
+                  <option value="MEN">Men</option>
+                  <option value="WOMEN">Women</option>
+                  <option value="KIDS">Kids</option>
+                </select>
+              </div>
+              <div className="import-filebox-admin">
+                <label className="label">Excel / CSV</label>
+                <input type="file" accept=".xlsx,.xls,.csv" onChange={e => setFile(e.target.files?.[0] || null)} />
+                {file ? (
+                  <div className="import-filehint-admin">
+                    {file.name} • {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </div>
+                ) : (
+                  <div className="import-filehint-admin">No file selected</div>
+                )}
+                <button className="import-btn-admin" onClick={onUpload} disabled={!canUpload}>
+                  {uploading ? 'Uploading…' : 'Upload Excel'}
+                </button>
+                {message ? <div className="import-msg-admin">{message}</div> : null}
+                {progress ? (
+                  <div className="import-msg-admin">
+                    {progress.state} {progress.total ? `${progress.done}/${progress.total}` : `${progress.done}+`} rows
+                  </div>
+                ) : null}
+              </div>
+              <div className="inline-info">
+                <span className={`pill-mini ${gender ? 'ok' : 'warn'}`}>
+                  {gender ? `Category: ${gender}` : 'Select a category for Excel upload'}
+                </span>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div className="import-card-admin">
+          <div className="import-title-admin">Upload Product Images (ZIP by EAN)</div>
+          <div className="import-subtitle-admin">
+            Images will be matched by EAN across all categories. Only unmatched EANs will be listed below.
           </div>
-        ) : !detail || !sale ? (
-          <div className="orders-empty-state">
-            <div className="orders-empty-icon" />
-            <h3 className="orders-empty-title">Unable to load order</h3>
-            <p className="orders-empty-text">Please refresh and try again.</p>
-            <button className="orders-btn-small odp-btn-close" onClick={onClose}>
-              Close
+          <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
+            <div className="zip-block">
+              <div className="import-filebox-admin">
+                <label className="label">Images ZIP Folder</label>
+                <input type="file" accept=".zip" onChange={e => setImageZip(e.target.files?.[0] || null)} />
+                {imageZip ? (
+                  <div className="import-filehint-admin">
+                    {imageZip.name} • {(imageZip.size / 1024 / 1024).toFixed(2)} MB
+                  </div>
+                ) : (
+                  <div className="import-filehint-admin">No ZIP selected</div>
+                )}
+                <button className="import-btn-admin" onClick={onUploadImages} disabled={!canUploadImages || uploadingImages}>
+                  {uploadingImages ? `Uploading ${imageProgress.done}/${imageProgress.total}…` : 'Upload Images ZIP'}
+                </button>
+                {imageMessage ? <div className="import-msg-admin">{imageMessage}</div> : null}
+                <div className="image-stats">
+                  <span>Matched: {matchStats.matched}</span>
+                  <span>Unmatched: {matchStats.skipped}</span>
+                  <span>Total: {matchStats.total}</span>
+                </div>
+                {!!unmatchedList.length && (
+                  <div className="unmatched-wrap">
+                    <div className="unmatched-title">Unmatched EANs</div>
+                    <ul className="unmatched-list">
+                      {unmatchedList.map((u, i) => (
+                        <li key={`${u.file}-${i}`}>
+                          <span className="unmatched-ean">{u.ean}</span>
+                          <span className="unmatched-file">{u.file}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div className="import-card-admin">
+          <div className="import-title-admin">B2C / B2B Discounts</div>
+          <div className="import-subtitle-admin">
+            Set discount percentages for all products in this branch. These are kept separate from Excel and image uploads.
+          </div>
+          <form className="import-form-admin" onSubmit={onSaveDiscounts}>
+            <div className="discount-block">
+              <div className="discount-row">
+                <div className="discount-field">
+                  <label className="label">B2C Discount (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={b2cDiscount}
+                    onChange={e => setB2cDiscount(e.target.value)}
+                    className="discount-input"
+                  />
+                </div>
+                <div className="discount-field">
+                  <label className="label">B2B Discount (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={b2bDiscount}
+                    onChange={e => setB2bDiscount(e.target.value)}
+                    className="discount-input"
+                  />
+                </div>
+              </div>
+              <button type="submit" className="import-btn-admin" disabled={!canSaveDiscounts}>
+                {savingDiscounts ? 'Saving…' : 'Save Discounts'}
+              </button>
+              {discountMessage ? <div className="import-msg-admin">{discountMessage}</div> : null}
+            </div>
+          </form>
+        </div>
+
+        <div className="import-card-admin">
+          <div className="import-title-admin">Recent Imports</div>
+          <div className="import-actions-admin">
+            <button className="import-ghost-btn-admin" onClick={fetchJobs} disabled={refreshing}>
+              {refreshing ? 'Refreshing…' : 'Refresh'}
             </button>
           </div>
-        ) : (
-          <>
-            <div className="orders-modal-header">
-              <div>
-                <h3 className="orders-modal-title">Order #{sale?.id}</h3>
-                <p className="orders-modal-subtitle">Placed on {placedText}</p>
-              </div>
-              <div className="orders-modal-header-actions">
-                <span className={`orders-status-pill orders-status-${String(sale?.status || '').toLowerCase()} orders-status-pill-lg`}>
-                  {localOrderStatus || '-'}
-                </span>
-                <button className="orders-btn-small orders-btn-ghost" onClick={onClose}>
-                  Close
-                </button>
-              </div>
-            </div>
-
-            <div className="odp-top-card">
-              <div className="odp-top-left">
-                <div className="odp-top-title">Order summary</div>
-                <div className="odp-top-sub">
-                  {items.length} item{items.length === 1 ? '' : 's'} · {String(sale?.payment_status || 'COD').toUpperCase()} · {fmt(sale?.totals?.payable ?? sale?.total)}
-                </div>
-                <div className="odp-top-meta">
-                  <div className="odp-top-chip">
-                    <span className="odp-chip-k">Expected delivery</span>
-                    <span className="odp-chip-v">{expectedDelivery}</span>
-                  </div>
-                  <div className="odp-top-chip">
-                    <span className="odp-chip-k">Last update</span>
-                    <span className="odp-chip-v">{lastUpdateTime}</span>
-                  </div>
-                  <div className="odp-top-chip">
-                    <span className="odp-chip-k">COD</span>
-                    <span className="odp-chip-v">{codValue ? 'Yes' : 'No'}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="odp-top-right">
-                <div className="odp-stepper">
-                  <div className={`odp-step ${step1Done ? 'done' : 'active'}`}>
-                    <div className="odp-step-dot" />
-                    <div className="odp-step-text">
-                      <div className="odp-step-title">Step 1</div>
-                      <div className="odp-step-sub">Select courier partner</div>
-                    </div>
-                  </div>
-                  <div className={`odp-step ${step2Done ? 'done' : step1Done ? 'active' : ''}`}>
-                    <div className="odp-step-dot" />
-                    <div className="odp-step-text">
-                      <div className="odp-step-title">Step 2</div>
-                      <div className="odp-step-sub">Wallet payment and AWB</div>
-                    </div>
-                  </div>
-                  <div className={`odp-step ${step3Done ? 'done' : step2Done ? 'active' : ''}`}>
-                    <div className="odp-step-dot" />
-                    <div className="odp-step-text">
-                      <div className="odp-step-title">Step 3</div>
-                      <div className="odp-step-sub">Documents and tracking</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="orders-progress-card">
-              <div className="orders-progress-header">
-                <div className="orders-progress-header-main">
-                  <div className="orders-progress-title">Fulfilment progress</div>
-                  <div className="orders-progress-header-sub">Status across order, shipment, and Shiprocket</div>
-                </div>
-                <div className="orders-progress-status-pill">
-                  {isCancelled
-                    ? 'Order cancelled'
-                    : effectiveStepIndex === orderSteps.length - 1
-                      ? 'Delivered to customer'
-                      : `Currently ${orderSteps[effectiveStepIndex].toLowerCase()}`}
-                </div>
-              </div>
-
-              <div className={`orders-timeline ${isCancelled ? 'orders-timeline-cancelled' : ''}`}>
-                <div className="orders-timeline-line" />
-                <div className="orders-timeline-steps">
-                  {orderSteps.map((step, index) => {
-                    const stepState =
-                      isCancelled && step !== 'PLACED'
-                        ? 'upcoming'
-                        : index < effectiveStepIndex
-                          ? 'done'
-                          : index === effectiveStepIndex
-                            ? 'active'
-                            : 'upcoming';
-                    return (
-                      <div className="orders-timeline-step" key={step}>
-                        <div className={`orders-timeline-dot orders-timeline-dot-${stepState}`} />
-                        <div className="orders-timeline-label">{step}</div>
-                        <div className="orders-timeline-caption">
-                          {step === 'PLACED' && 'Order captured'}
-                          {step === 'CONFIRMED' && 'Verified'}
-                          {step === 'PACKED' && 'Packed'}
-                          {step === 'SHIPPED' && 'Out for delivery'}
-                          {step === 'DELIVERED' && 'Delivered'}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="orders-progress-footer">
-                <div className="orders-progress-meta">
-                  <span className="orders-progress-meta-label">AWB</span>
-                  <span className="orders-progress-meta-value">{latestShipment?.awb || '-'}</span>
-                </div>
-                <div className="orders-progress-meta">
-                  <span className="orders-progress-meta-label">Shipment id</span>
-                  <span className="orders-progress-meta-value">{shipmentId || '-'}</span>
-                </div>
-                <div className="orders-progress-meta">
-                  <span className="orders-progress-meta-label">Shiprocket order</span>
-                  <span className="orders-progress-meta-value">{shiprocketOrderId || '-'}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="odp-step-card">
-              <div className="odp-step-card-head">
-                <div>
-                  <div className="odp-step-card-title">Step 1: Select courier partner</div>
-                  <div className="odp-step-card-sub">Fetch courier options for the delivery pincode and choose one</div>
-                </div>
-                <div className="odp-step-card-actions">
-                  <button className="orders-btn-small" onClick={loadServiceability} disabled={courierLoading || actionLoading}>
-                    {courierLoading ? 'Loading…' : 'Get courier options'}
-                  </button>
-                </div>
-              </div>
-
-              {courierError ? <div className="odp-alert odp-alert-error">{courierError}</div> : null}
-
-              {courierData ? (
-                <>
-                  <div className="odp-courier-summary">
-                    <div className="odp-summary-pill">
-                      <span className="odp-summary-label">Recommended</span>
-                      <span className="odp-summary-value">{recommendedCourierCompanyId ? `#${recommendedCourierCompanyId}` : '-'}</span>
-                    </div>
-                    <div className="odp-summary-pill">
-                      <span className="odp-summary-label">Available</span>
-                      <span className="odp-summary-value">{availableCouriers.length}</span>
-                    </div>
-                    <div className="odp-summary-pill">
-                      <span className="odp-summary-label">COD</span>
-                      <span className="odp-summary-value">{codValue ? 'Yes' : 'No'}</span>
-                    </div>
-                  </div>
-
-                  <div className="odp-courier-list">
-                    {availableCouriers.length ? (
-                      availableCouriers.map((c) => {
-                        const meta = courierSummary(c);
-                        const isSelected = Number(selectedCourierId) === Number(c.courier_company_id);
-                        const isRecommended = recommendedCourierCompanyId && Number(recommendedCourierCompanyId) === Number(c.courier_company_id);
-                        return (
-                          <button
-                            key={String(c.id || c.courier_company_id)}
-                            type="button"
-                            className={`odp-courier-row ${isSelected ? 'odp-courier-row-selected' : ''}`}
-                            onClick={() => setSelectedCourierId(Number(c.courier_company_id))}
-                          >
-                            <div className="odp-courier-left">
-                              <div className="odp-courier-name">
-                                <span className="odp-courier-radio" aria-hidden="true">
-                                  <span className={`odp-courier-radio-dot ${isSelected ? 'on' : ''}`} />
-                                </span>
-                                <span>{c.courier_name || `Courier #${c.courier_company_id}`}</span>
-                                {isRecommended ? <span className="odp-tag">Recommended</span> : null}
-                                {c.blocked ? <span className="odp-tag odp-tag-danger">Blocked</span> : null}
-                              </div>
-                              <div className="odp-courier-meta">
-                                <span>{meta.mode}</span>
-                                {meta.days ? <span>· {meta.days} days</span> : null}
-                                {meta.etd ? <span>· ETD {meta.etd}</span> : null}
-                                {meta.rating ? <span>· ⭐ {meta.rating}</span> : null}
-                              </div>
-                            </div>
-                            <div className="odp-courier-right">
-                              <div className="odp-courier-price">{meta.price != null && meta.price !== '' ? fmt(meta.price) : '-'}</div>
-                              <div className="odp-courier-id">#{c.courier_company_id}</div>
-                            </div>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="odp-empty">No couriers returned for this order.</div>
-                    )}
-                  </div>
-                </>
-              ) : null}
-            </div>
-
-            <div className={`odp-step-card ${!step1Done ? 'odp-step-card-disabled' : ''}`}>
-              <div className="odp-step-card-head">
-                <div>
-                  <div className="odp-step-card-title">Step 2: Wallet payment and generate AWB</div>
-                  <div className="odp-step-card-sub">Shiprocket charges from wallet during AWB generation. Recharge if balance is low.</div>
-                </div>
-              </div>
-
-              {actionError ? <div className="odp-alert odp-alert-error">{actionError}</div> : null}
-              {walletMessage ? (
-                <div className="odp-wallet-row">
-                  <div className="odp-wallet-left">
-                    <div className="odp-wallet-title">Wallet attention needed</div>
-                    <div className="odp-wallet-sub">{walletMessage}</div>
-                  </div>
-                  <div className="odp-wallet-actions">
-                    <a className="orders-btn-small odp-primary-link" href={shiprocketWalletUrl} target="_blank" rel="noopener noreferrer">
-                      Recharge wallet
-                    </a>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="odp-payment-box">
-                <div className="odp-payment-line">
-                  <span className="odp-pay-k">Selected courier</span>
-                  <span className="odp-pay-v">{selectedCourier ? selectedCourier.courier_name : '-'}</span>
-                </div>
-                <div className="odp-payment-line">
-                  <span className="odp-pay-k">Estimated shipping charge</span>
-                  <span className="odp-pay-v">{selectedCourierMeta?.price != null && selectedCourierMeta?.price !== '' ? fmt(selectedCourierMeta.price) : '-'}</span>
-                </div>
-                <div className="odp-payment-line">
-                  <span className="odp-pay-k">Payment mode</span>
-                  <span className="odp-pay-v">Shiprocket wallet</span>
-                </div>
-
-                <div className="odp-payment-actions">
-                  <button
-                    className="orders-btn-small odp-primary-btn"
-                    onClick={assignCourierAndGenerateAwb}
-                    disabled={!step1Done || actionLoading || courierLoading}
-                  >
-                    {actionLoading ? 'Processing…' : 'Generate AWB'}
-                  </button>
-                  <a className="orders-btn-small orders-btn-ghost" href={shiprocketWalletUrl} target="_blank" rel="noopener noreferrer">
-                    Open wallet
-                  </a>
-                </div>
-
-                {actionOk ? <div className="odp-alert odp-alert-ok">{actionOk}</div> : null}
-              </div>
-            </div>
-
-            <div className={`odp-step-card ${!hasAwb ? 'odp-step-card-disabled' : ''}`}>
-              <div className="odp-step-card-head">
-                <div>
-                  <div className="odp-step-card-title">Step 3: Documents and tracking</div>
-                  <div className="odp-step-card-sub">Documents become available only after AWB is generated</div>
-                </div>
-                <div className="odp-step-card-actions">
-                  <button className="orders-btn-small" onClick={fetchTracking} disabled={!hasAwb || trackingLoading}>
-                    {trackingLoading ? 'Refreshing…' : 'Refresh tracking'}
-                  </button>
-                </div>
-              </div>
-
-              {!hasAwb ? (
-                <div className="odp-empty">Generate AWB to unlock label, invoice, manifest, and tracking.</div>
-              ) : (
-                <>
-                  <div className="odp-docs-row">
-                    <a href={`${apiBase}/api/shiprocket/label/${sale?.id}`} target="_blank" rel="noopener noreferrer" className="orders-btn-small">
-                      Download label
-                    </a>
-                    <a href={`${apiBase}/api/shiprocket/invoice/${sale?.id}`} target="_blank" rel="noopener noreferrer" className="orders-btn-small">
-                      Download tax invoice
-                    </a>
-                    <a href={`${apiBase}/api/shiprocket/manifest/${sale?.id}`} target="_blank" rel="noopener noreferrer" className="orders-btn-small">
-                      Download manifest
-                    </a>
-                  </div>
-
-                  {trackingError ? <div className="odp-alert odp-alert-error">{trackingError}</div> : null}
-
-                  <div className="odp-track-card">
-                    <div className="odp-track-head">
-                      <div className="odp-track-title">Live tracking (Shiprocket)</div>
-                      <div className="odp-track-sub">Pickup, in transit, and delivery updates from Shiprocket</div>
-                    </div>
-
-                    <div className="odp-track-grid">
-                      <div className="odp-track-item">
-                        <div className="odp-track-k">Courier</div>
-                        <div className="odp-track-v">{trackingHeader.courier}</div>
-                      </div>
-                      <div className="odp-track-item">
-                        <div className="odp-track-k">AWB</div>
-                        <div className="odp-track-v">{trackingHeader.awb}</div>
-                      </div>
-                      <div className="odp-track-item">
-                        <div className="odp-track-k">Pickup</div>
-                        <div className="odp-track-v">{trackingHeader.pickupDate}</div>
-                      </div>
-                      <div className="odp-track-item">
-                        <div className="odp-track-k">Delivered</div>
-                        <div className="odp-track-v">{trackingHeader.deliveredDate}</div>
-                      </div>
-                    </div>
-
-                    <div className="odp-track-events">
-                      {trackingEvents.length ? (
-                        trackingEvents.slice(0, 20).map((ev, idx) => (
-                          <div key={idx} className="odp-track-event">
-                            <div className="odp-track-ev-time">{ev?.date || ev?.activity_date_time || ev?.datetime || '-'}</div>
-                            <div className="odp-track-ev-text">{ev?.activity || ev?.status || ev?.remark || ev?.description || '-'}</div>
-                            <div className="odp-track-ev-loc">{ev?.location || ev?.city || ev?.pickup_location || '-'}</div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="odp-empty">No tracking events yet. Try refresh after pickup is requested.</div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {sale?.shipping_address ? (
-              <div className="orders-shipping-card">
-                <div className="orders-shipping-header">
-                  <h4 className="orders-shipping-title">Shipping address</h4>
-                  <span className="orders-shipping-tag">Delivery</span>
-                </div>
-                <div className="orders-shipping-body">
-                  <p>{sale.shipping_address.line1}</p>
-                  {sale.shipping_address.line2 ? <p>{sale.shipping_address.line2}</p> : null}
-                  <p>
-                    {sale.shipping_address.city} {sale.shipping_address.state} - {sale.shipping_address.pincode}
-                  </p>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="orders-items-header">
-              <div>
-                <p className="orders-items-title">Items in this order</p>
-                <p className="orders-items-subtitle">
-                  {items.length} item{items.length === 1 ? '' : 's'}
-                </p>
-              </div>
-            </div>
-
-            <div className="orders-items-grid">
-              {items.length ? (
-                items.map((it, i) => (
-                  <div className="orders-item-card" key={`${it.variant_id}-${i}`}>
-                    <div className="orders-item-media">{it.image_url ? <img src={it.image_url} alt="" /> : <div className="orders-item-placeholder" />}</div>
-                    <div className="orders-item-main">
-                      <div className="orders-item-top">
-                        <div className="orders-item-meta">
-                          <span className="orders-item-label">Variant</span>
-                          <span className="orders-item-value">#{it.variant_id}</span>
-                        </div>
-                        <div className="orders-item-meta">
-                          <span className="orders-item-label">Size</span>
-                          <span className="orders-item-value">{it.size || '-'}</span>
-                        </div>
-                        <div className="orders-item-meta">
-                          <span className="orders-item-label">Colour</span>
-                          <span className="orders-item-value">{it.colour || '-'}</span>
-                        </div>
-                        <div className="orders-item-meta">
-                          <span className="orders-item-label">EAN</span>
-                          <span className="orders-item-value orders-text-soft">{it.ean_code || '-'}</span>
-                        </div>
-                      </div>
-                      <div className="orders-item-pricing">
-                        <div className="orders-item-qty">x{it.qty}</div>
-                        <div className="orders-item-price">{fmt(it.price)}</div>
-                        {it.mrp != null && Number(it.mrp) > 0 ? <div className="orders-item-mrp">MRP {fmt(it.mrp)}</div> : null}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="orders-empty-inline">No items in this order</div>
-              )}
-            </div>
-          </>
-        )}
+          <div className="import-tablewrap-admin">
+            <table className="import-table-admin">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>File</th>
+                  <th>Gender</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Success</th>
+                  <th>Error</th>
+                  <th>Uploaded</th>
+                  <th>Completed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map(j => (
+                  <tr key={j.id} className="import-row-card">
+                    <td data-label="ID">{j.id}</td>
+                    <td data-label="File">{j.file_name || '-'}</td>
+                    <td data-label="Gender">{j.gender || '-'}</td>
+                    <td data-label="Status">
+                      <span className={`pill-admin ${String(j.status_enum || '').toLowerCase()}`}>{j.status_enum}</span>
+                    </td>
+                    <td data-label="Total">{j.rows_total ?? 0}</td>
+                    <td data-label="Success">{j.rows_success ?? 0}</td>
+                    <td data-label="Error">{j.rows_error ?? 0}</td>
+                    <td data-label="Uploaded">{j.uploaded_at ? new Date(j.uploaded_at).toLocaleString() : '-'}</td>
+                    <td data-label="Completed">{j.completed_at ? new Date(j.completed_at).toLocaleString() : '-'}</td>
+                  </tr>
+                ))}
+                {!jobs.length && (
+                  <tr>
+                    <td colSpan="9" className="import-empty-admin">
+                      No imports yet
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="import-note-admin">Each upload affects only your branch inventory.</div>
+        </div>
       </div>
     </div>
   );

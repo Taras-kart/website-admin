@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './pages/AdminAuth'
 import { LoadingProvider } from './pages/LoadingContext'
+import B2BOrders from './pages/B2BOrders'
 import HomePage from './pages/HomePage'
 import Transaction from './pages/Transaction'
 import Stocks from './pages/Stocks'
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/homepage-images" element={<RequireAuth><AdminHomepageImages /></RequireAuth>} />
             <Route path="/order-issues" element={<RequireAuth><OrderIssues /></RequireAuth>} />
             <Route path="/returns/:id" element={<RequireAuth><ReturnReview /></RequireAuth>} />
+            <Route path="/b2b-orders" element={<RequireAuth><B2BOrders /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>

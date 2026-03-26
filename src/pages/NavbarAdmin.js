@@ -24,11 +24,12 @@ const NavbarAdmin = () => {
     setIsMobileNavOpen(false)
   }
 
-  const navLinks = [
+const navLinks = [
     { name: 'Products', path: '/' },
     { name: 'Transactions', path: '/transactions' },
     { name: 'Stocks', path: '/stocks' },
     { name: 'Sales', path: '/sales' },
+    { name: 'B2B Orders', path: '/b2b-orders' },  
     { name: 'Customers', path: '/customers' },
     { name: 'POS', path: '/pos' },
     { name: 'Import', path: '/import' },
