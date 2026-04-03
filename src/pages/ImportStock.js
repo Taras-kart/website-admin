@@ -231,7 +231,6 @@ export default function ImportStock() {
   useEffect(() => {
     const saved = localStorage.getItem('import_gender') || '';
     setGender(saved);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchJobs() {
@@ -267,14 +266,12 @@ export default function ImportStock() {
     }
   }
 
-useEffect(() => {
+  useEffect(() => {
     fetchJobs();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchId]);
 
   useEffect(() => {
     fetchDiscounts();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchId]);
 
   async function processJob(jobId, setProg) {
