@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Navbar from './NavbarAdmin';
 import { useAuth } from './AdminAuth';
 import { useLoading } from './LoadingContext';
@@ -8,6 +8,7 @@ import './ImportStock.css';
 
 const CLOUD_NAME = 'deymt9uyh';
 const UPLOAD_PRESET = 'unsigned_ean';
+const PROCESS_LIMIT = 500;
 
 function normalizeKey(k) {
   return String(k || '')
@@ -94,6 +95,34 @@ function shouldDropRow(row) {
   return false;
 }
 
+function parseCsvLine(line) {
+  const cols = [];
+  let cur = '';
+  let inQuotes = false;
+
+  for (let j = 0; j < line.length; j++) {
+    const ch = line[j];
+    if (ch === '"' && line[j + 1] === '"') {
+      cur += '"';
+      j++;
+      continue;
+    }
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (ch === ',' && !inQuotes) {
+      cols.push(cur);
+      cur = '';
+      continue;
+    }
+    cur += ch;
+  }
+
+  cols.push(cur);
+  return cols;
+}
+
 async function cleanExcelOrCsvFile(inputFile) {
   const name = inputFile?.name || '';
   const lower = name.toLowerCase();
@@ -104,36 +133,14 @@ async function cleanExcelOrCsvFile(inputFile) {
     if (!lines.length) return inputFile;
 
     const headerLine = lines[0];
-    const headers = headerLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const headers = parseCsvLine(headerLine).map(h => h.trim().replace(/^"|"$/g, ''));
 
     const rows = [];
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       if (!line || !line.trim()) continue;
 
-      const cols = [];
-      let cur = '';
-      let inQuotes = false;
-      for (let j = 0; j < line.length; j++) {
-        const ch = line[j];
-        if (ch === '"' && line[j + 1] === '"') {
-          cur += '"';
-          j++;
-          continue;
-        }
-        if (ch === '"') {
-          inQuotes = !inQuotes;
-          continue;
-        }
-        if (ch === ',' && !inQuotes) {
-          cols.push(cur);
-          cur = '';
-          continue;
-        }
-        cur += ch;
-      }
-      cols.push(cur);
-
+      const cols = parseCsvLine(line);
       const rowObj = {};
       headers.forEach((h, idx) => {
         rowObj[h] = cols[idx] ?? '';
@@ -159,7 +166,8 @@ async function cleanExcelOrCsvFile(inputFile) {
   }
 
   if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
-    const XLSX = (await import('xlsx')).default || (await import('xlsx'));
+    const xlsxModule = await import('xlsx');
+    const XLSX = xlsxModule.default || xlsxModule;
     const buf = await inputFile.arrayBuffer();
     const wb = XLSX.read(buf, { type: 'array' });
     const sheetName = wb.SheetNames?.[0];
@@ -233,7 +241,7 @@ export default function ImportStock() {
     setGender(saved);
   }, []);
 
-  async function fetchJobs() {
+  const fetchJobs = useCallback(async () => {
     if (!branchId) return;
     setRefreshing(true);
     show();
@@ -246,9 +254,9 @@ export default function ImportStock() {
       setRefreshing(false);
       hide();
     }
-  }
+  }, [branchId, show, hide]);
 
-  async function fetchDiscounts() {
+  const fetchDiscounts = useCallback(async () => {
     if (!branchId) return;
     try {
       const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/discounts`);
@@ -264,65 +272,101 @@ export default function ImportStock() {
       setB2cDiscount('');
       setB2bDiscount('');
     }
-  }
+  }, [branchId]);
 
   useEffect(() => {
     fetchJobs();
-  }, [branchId]);
+  }, [fetchJobs]);
 
   useEffect(() => {
     fetchDiscounts();
-  }, [branchId]);
+  }, [fetchDiscounts]);
 
-  async function processJob(jobId, setProg) {
-    let start = 0;
-    setProg({ jobId, state: 'Processing…', done: 0, total: null });
-    for (;;) {
-      const r = await apiPost(
-        `/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=200`
-      );
-      const next = r.nextStart ?? (start + (r.processed || 0));
-      const total = r.totalRows ?? null;
-      const doneCount = Math.min(next, total ?? next);
-      setProg({ jobId, state: r.done ? 'Completed' : 'Processing…', done: doneCount, total });
-      if (r.done) break;
-      start = next;
-    }
-  }
+  const processJob = useCallback(
+    async (jobId, setProg) => {
+      let start = 0;
+      let finished = false;
 
-  async function onUpload(e) {
-    e.preventDefault();
-    if (!file || !branchId || !gender) {
-      setMessage('Please select a category and choose a file.');
-      return;
-    }
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      setMessage('You are not logged in');
-      return;
-    }
-    setUploading(true);
-    setMessage('');
-    show();
-    try {
-      const cleaned = await cleanExcelOrCsvFile(file);
-      const fd = new FormData();
-      fd.append('file', cleaned);
-      fd.append('gender', gender);
-      localStorage.setItem('import_gender', gender);
-      const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd);
-      setMessage('Uploaded. Starting processing…');
-      setFile(null);
-      await processJob(job.id, setProgress);
-      await fetchJobs();
-    } catch (err) {
-      setMessage(err?.payload?.message || err?.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-      hide();
-      setTimeout(() => setMessage(''), 3000);
-    }
-  }
+      setProg({ jobId, state: 'Processing…', done: 0, total: null });
+
+      while (!finished) {
+        const r = await apiPost(
+          `/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=${PROCESS_LIMIT}`
+        );
+
+        const processed = Number(r?.processed || 0);
+        const next =
+          r?.nextStart !== undefined && r?.nextStart !== null
+            ? Number(r.nextStart)
+            : start + processed;
+
+        const total =
+          r?.totalRows !== undefined && r?.totalRows !== null
+            ? Number(r.totalRows)
+            : null;
+
+        const safeNext = Number.isFinite(next) ? next : start + processed;
+        const doneCount = total !== null ? Math.min(safeNext, total) : safeNext;
+
+        setProg({
+          jobId,
+          state: r?.done ? 'Completed' : 'Processing…',
+          done: doneCount,
+          total
+        });
+
+        if (r?.done || processed <= 0 || safeNext <= start) {
+          finished = true;
+        } else {
+          start = safeNext;
+        }
+      }
+    },
+    [branchId]
+  );
+
+  const onUpload = useCallback(
+    async e => {
+      e.preventDefault();
+      if (!file || !branchId || !gender) {
+        setMessage('Please select a category and choose a file.');
+        return;
+      }
+
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setMessage('You are not logged in');
+        return;
+      }
+
+      setUploading(true);
+      setMessage('');
+      setProgress(null);
+      show();
+
+      try {
+        const cleaned = await cleanExcelOrCsvFile(file);
+        const fd = new FormData();
+        fd.append('file', cleaned);
+        fd.append('gender', gender);
+        localStorage.setItem('import_gender', gender);
+
+        const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd);
+        setMessage('Uploaded. Starting processing…');
+        setFile(null);
+
+        await processJob(job.id, setProgress);
+        await fetchJobs();
+      } catch (err) {
+        setMessage(err?.payload?.message || err?.message || 'Upload failed');
+      } finally {
+        setUploading(false);
+        hide();
+        setTimeout(() => setMessage(''), 3000);
+      }
+    },
+    [file, branchId, gender, show, hide, processJob, fetchJobs]
+  );
 
   function baseNameNoExt(name) {
     const n = name.split('/').pop() || name;
@@ -345,20 +389,23 @@ export default function ImportStock() {
     const form = new FormData();
     form.append('file', blob);
     form.append('upload_preset', UPLOAD_PRESET);
-    form.append('folder', `products`);
+    form.append('folder', 'products');
     form.append('public_id', publicIdBase);
+
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
       method: 'POST',
       body: form
     });
+
     if (!res.ok) throw new Error(`Cloudinary upload failed (${res.status})`);
     return res.json();
   }
 
-  async function ensureEanSet() {
+  const ensureEanSet = useCallback(async () => {
     if (eanSet) return eanSet;
+
     try {
-      const list = await apiGet(`/api/products?limit=10000`);
+      const list = await apiGet(`/api/products?limit=100000`);
       const s = new Set(
         (Array.isArray(list) ? list : [])
           .map(p => String(p.ean_code || '').trim())
@@ -371,84 +418,102 @@ export default function ImportStock() {
       setEanSet(s);
       return s;
     }
-  }
+  }, [eanSet]);
 
-  async function onUploadImages(e) {
-    e.preventDefault();
-    if (!imageZip || !branchId) {
-      setImageMessage('Please choose a ZIP file.');
-      return;
-    }
-    setUploadingImages(true);
-    setImageMessage('');
-    setImageProgress({ done: 0, total: 0 });
-    setMatchStats({ matched: 0, total: 0, skipped: 0 });
-    setUnmatchedList([]);
-    show();
-    try {
-      const eans = await ensureEanSet();
-      const zip = await JSZip.loadAsync(imageZip);
-      const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name));
-      const total = entries.length;
-      let done = 0;
-      let matched = 0;
-      const unmatched = [];
-      for (const f of entries) {
-        const ean = extractEANFromPath(f.name).trim();
-        if (!ean || !eans.has(ean)) {
-          unmatched.push({ file: f.name, ean: ean || '(none)' });
+  const onUploadImages = useCallback(
+    async e => {
+      e.preventDefault();
+
+      if (!imageZip || !branchId) {
+        setImageMessage('Please choose a ZIP file.');
+        return;
+      }
+
+      setUploadingImages(true);
+      setImageMessage('');
+      setImageProgress({ done: 0, total: 0 });
+      setMatchStats({ matched: 0, total: 0, skipped: 0 });
+      setUnmatchedList([]);
+      show();
+
+      try {
+        const eans = await ensureEanSet();
+        const zip = await JSZip.loadAsync(imageZip);
+        const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name));
+        const total = entries.length;
+        let done = 0;
+        let matched = 0;
+        const unmatched = [];
+
+        for (const f of entries) {
+          const ean = extractEANFromPath(f.name).trim();
+
+          if (!ean || !eans.has(ean)) {
+            unmatched.push({ file: f.name, ean: ean || '(none)' });
+            done += 1;
+            setImageProgress({ done, total });
+            continue;
+          }
+
+          const blob = await f.async('blob');
+          await uploadToCloudinary(blob, ean);
+          matched += 1;
           done += 1;
           setImageProgress({ done, total });
-          continue;
         }
-        const blob = await f.async('blob');
-        await uploadToCloudinary(blob, ean);
-        matched += 1;
-        done += 1;
-        setImageProgress({ done, total });
-      }
-      setMatchStats({ matched, total, skipped: total - matched });
-      setUnmatchedList(unmatched);
-      setImageMessage(`Finished. Uploaded ${matched}/${total}. Unmatched ${unmatched.length}.`);
-      setImageZip(null);
-    } catch (err) {
-      setImageMessage(err?.message || 'Image upload failed');
-    } finally {
-      setUploadingImages(false);
-      hide();
-      setTimeout(() => setImageMessage(''), 5000);
-    }
-  }
 
-  async function onSaveDiscounts(e) {
-    e.preventDefault();
-    if (!branchId) {
-      setDiscountMessage('Branch not found');
-      return;
-    }
-    const b2c = parseFloat(b2cDiscount);
-    const b2b = parseFloat(b2bDiscount);
-    if (isNaN(b2c) || isNaN(b2b)) {
-      setDiscountMessage('Enter valid discount percentages');
-      return;
-    }
-    setSavingDiscounts(true);
-    setDiscountMessage('');
-    show();
-    try {
-      await apiPost(`/api/branch/${encodeURIComponent(branchId)}/discounts`, {
-        b2c_discount_pct: b2c,
-        b2b_discount_pct: b2b
-      });
-      setDiscountMessage('Discounts saved successfully');
-    } catch (err) {
-      setDiscountMessage(err?.payload?.message || err?.message || 'Failed to save discounts');
-    } finally {
-      setSavingDiscounts(false);
-      hide();
-      setTimeout(() => setDiscountMessage(''), 4000);
-    }
-  }
+        setMatchStats({ matched, total, skipped: total - matched });
+        setUnmatchedList(unmatched);
+        setImageMessage(`Finished. Uploaded ${matched}/${total}. Unmatched ${unmatched.length}.`);
+        setImageZip(null);
+      } catch (err) {
+        setImageMessage(err?.message || 'Image upload failed');
+      } finally {
+        setUploadingImages(false);
+        hide();
+        setTimeout(() => setImageMessage(''), 5000);
+      }
+    },
+    [imageZip, branchId, show, hide, ensureEanSet]
+  );
+
+  const onSaveDiscounts = useCallback(
+    async e => {
+      e.preventDefault();
+
+      if (!branchId) {
+        setDiscountMessage('Branch not found');
+        return;
+      }
+
+      const b2c = parseFloat(b2cDiscount);
+      const b2b = parseFloat(b2bDiscount);
+
+      if (isNaN(b2c) || isNaN(b2b)) {
+        setDiscountMessage('Enter valid discount percentages');
+        return;
+      }
+
+      setSavingDiscounts(true);
+      setDiscountMessage('');
+      show();
+
+      try {
+        await apiPost(`/api/branch/${encodeURIComponent(branchId)}/discounts`, {
+          b2c_discount_pct: b2c,
+          b2b_discount_pct: b2b
+        });
+        setDiscountMessage('Discounts saved successfully');
+      } catch (err) {
+        setDiscountMessage(err?.payload?.message || err?.message || 'Failed to save discounts');
+      } finally {
+        setSavingDiscounts(false);
+        hide();
+        setTimeout(() => setDiscountMessage(''), 4000);
+      }
+    },
+    [branchId, b2cDiscount, b2bDiscount, show, hide]
+  );
 
   return (
     <div className="import-page-admin">
@@ -473,9 +538,15 @@ export default function ImportStock() {
                   <option value="KIDS">Kids</option>
                 </select>
               </div>
+
               <div className="import-filebox-admin">
                 <label className="label">Excel / CSV</label>
-                <input type="file" accept=".xlsx,.xls,.csv" onChange={e => setFile(e.target.files?.[0] || null)} />
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={e => setFile(e.target.files?.[0] || null)}
+                />
+
                 {file ? (
                   <div className="import-filehint-admin">
                     {file.name} • {(file.size / 1024 / 1024).toFixed(2)} MB
@@ -483,16 +554,20 @@ export default function ImportStock() {
                 ) : (
                   <div className="import-filehint-admin">No file selected</div>
                 )}
+
                 <button className="import-btn-admin" onClick={onUpload} disabled={!canUpload}>
                   {uploading ? 'Uploading…' : 'Upload Excel'}
                 </button>
+
                 {message ? <div className="import-msg-admin">{message}</div> : null}
+
                 {progress ? (
                   <div className="import-msg-admin">
                     {progress.state} {progress.total ? `${progress.done}/${progress.total}` : `${progress.done}+`} rows
                   </div>
                 ) : null}
               </div>
+
               <div className="inline-info">
                 <span className={`pill-mini ${gender ? 'ok' : 'warn'}`}>
                   {gender ? `Category: ${gender}` : 'Select a category for Excel upload'}
@@ -512,6 +587,7 @@ export default function ImportStock() {
               <div className="import-filebox-admin">
                 <label className="label">Images ZIP Folder</label>
                 <input type="file" accept=".zip" onChange={e => setImageZip(e.target.files?.[0] || null)} />
+
                 {imageZip ? (
                   <div className="import-filehint-admin">
                     {imageZip.name} • {(imageZip.size / 1024 / 1024).toFixed(2)} MB
@@ -519,15 +595,23 @@ export default function ImportStock() {
                 ) : (
                   <div className="import-filehint-admin">No ZIP selected</div>
                 )}
-                <button className="import-btn-admin" onClick={onUploadImages} disabled={!canUploadImages || uploadingImages}>
+
+                <button
+                  className="import-btn-admin"
+                  onClick={onUploadImages}
+                  disabled={!canUploadImages || uploadingImages}
+                >
                   {uploadingImages ? `Uploading ${imageProgress.done}/${imageProgress.total}…` : 'Upload Images ZIP'}
                 </button>
+
                 {imageMessage ? <div className="import-msg-admin">{imageMessage}</div> : null}
+
                 <div className="image-stats">
                   <span>Matched: {matchStats.matched}</span>
                   <span>Unmatched: {matchStats.skipped}</span>
                   <span>Total: {matchStats.total}</span>
                 </div>
+
                 {!!unmatchedList.length && (
                   <div className="unmatched-wrap">
                     <div className="unmatched-title">Unmatched EANs</div>
@@ -566,6 +650,7 @@ export default function ImportStock() {
                     className="discount-input"
                   />
                 </div>
+
                 <div className="discount-field">
                   <label className="label">B2B Discount (%)</label>
                   <input
@@ -579,9 +664,11 @@ export default function ImportStock() {
                   />
                 </div>
               </div>
+
               <button type="submit" className="import-btn-admin" disabled={!canSaveDiscounts}>
                 {savingDiscounts ? 'Saving…' : 'Save Discounts'}
               </button>
+
               {discountMessage ? <div className="import-msg-admin">{discountMessage}</div> : null}
             </div>
           </form>
@@ -594,6 +681,7 @@ export default function ImportStock() {
               {refreshing ? 'Refreshing…' : 'Refresh'}
             </button>
           </div>
+
           <div className="import-tablewrap-admin">
             <table className="import-table-admin">
               <thead>
@@ -625,6 +713,7 @@ export default function ImportStock() {
                     <td data-label="Completed">{j.completed_at ? new Date(j.completed_at).toLocaleString() : '-'}</td>
                   </tr>
                 ))}
+
                 {!jobs.length && (
                   <tr>
                     <td colSpan="9" className="import-empty-admin">
@@ -635,6 +724,7 @@ export default function ImportStock() {
               </tbody>
             </table>
           </div>
+
           <div className="import-note-admin">Each upload affects only your branch inventory.</div>
         </div>
       </div>
