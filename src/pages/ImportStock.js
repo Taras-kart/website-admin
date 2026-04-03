@@ -48,13 +48,7 @@ function toNumber(v) {
 }
 
 function rowHasBannedPhrases(row) {
-  const banned = [
-    'inclusive of all taxes',
-    'brand',
-    'new in',
-    'product',
-    '₹0.00'
-  ];
+  const banned = ['inclusive of all taxes', 'brand', 'new in', 'product', '₹0.00'];
   const values = Object.values(row || {})
     .map(v => String(v ?? '').toLowerCase().trim())
     .filter(Boolean);
@@ -121,6 +115,23 @@ function parseCsvLine(line) {
 
   cols.push(cur);
   return cols;
+}
+
+function baseNameNoExt(name) {
+  const n = name.split('/').pop() || name;
+  const i = n.lastIndexOf('.');
+  return i > 0 ? n.slice(0, i) : n;
+}
+
+function isImagePath(p) {
+  const n = String(p || '').toLowerCase();
+  return n.endsWith('.jpg') || n.endsWith('.jpeg') || n.endsWith('.png') || n.endsWith('.webp');
+}
+
+function extractEANFromPath(path) {
+  const base = baseNameNoExt(path);
+  const m = String(base).match(/(\d{12,14})/);
+  return m ? m[1] : '';
 }
 
 async function cleanExcelOrCsvFile(inputFile) {
@@ -215,26 +226,20 @@ export default function ImportStock() {
 
   const branchId = user?.branch_id;
 
-  const canUpload = useMemo(
-    () => !!file && !!branchId && !uploading && !!gender,
-    [file, branchId, uploading, gender]
-  );
+  const canUpload = useMemo(() => !!file && !!branchId && !uploading && !!gender, [file, branchId, uploading, gender]);
 
-  const canUploadImages = useMemo(
-    () => !!imageZip && !!branchId && !uploadingImages,
-    [imageZip, branchId, uploadingImages]
-  );
+  const canUploadImages = useMemo(() => !!imageZip && !!branchId && !uploadingImages, [imageZip, branchId, uploadingImages]);
 
-  const canSaveDiscounts = useMemo(
-    () =>
+  const canSaveDiscounts = useMemo(() => {
+    return (
       !!branchId &&
       !savingDiscounts &&
       b2cDiscount !== '' &&
       b2bDiscount !== '' &&
       !isNaN(parseFloat(b2cDiscount)) &&
-      !isNaN(parseFloat(b2bDiscount)),
-    [branchId, savingDiscounts, b2cDiscount, b2bDiscount]
-  );
+      !isNaN(parseFloat(b2bDiscount))
+    );
+  }, [branchId, savingDiscounts, b2cDiscount, b2bDiscount]);
 
   useEffect(() => {
     const saved = localStorage.getItem('import_gender') || '';
@@ -367,23 +372,6 @@ export default function ImportStock() {
     },
     [file, branchId, gender, show, hide, processJob, fetchJobs]
   );
-
-  function baseNameNoExt(name) {
-    const n = name.split('/').pop() || name;
-    const i = n.lastIndexOf('.');
-    return i > 0 ? n.slice(0, i) : n;
-  }
-
-  function isImagePath(p) {
-    const n = p.toLowerCase();
-    return n.endsWith('.jpg') || n.endsWith('.jpeg') || n.endsWith('.png') || n.endsWith('.webp');
-  }
-
-  function extractEANFromPath(path) {
-    const base = baseNameNoExt(path);
-    const m = String(base).match(/(\d{12,14})/);
-    return m ? m[1] : '';
-  }
 
   async function uploadToCloudinary(blob, publicIdBase) {
     const form = new FormData();
