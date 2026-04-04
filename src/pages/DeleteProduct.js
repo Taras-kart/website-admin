@@ -17,7 +17,6 @@ const ASSETS_BASE_RAW =
 const API_BASE = API_BASE_RAW.replace(/\/+$/, '');
 const ASSETS_BASE = ASSETS_BASE_RAW.replace(/\/+$/, '');
 
-const toArray = (x) => (Array.isArray(x) ? x : []);
 const coerceNumber = (v) => {
   const n = typeof v === 'number' ? v : parseFloat(String(v || '').trim());
   return Number.isFinite(n) ? n : 0;
