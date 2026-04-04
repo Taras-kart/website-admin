@@ -70,6 +70,117 @@ const computeFinal = (price, discount) => {
   return Number((p - (p * d) / 100).toFixed(2));
 };
 
+const getItemsFromResponse = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.products)) return data.products;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.rows)) return data.rows;
+  if (Array.isArray(data?.result)) return data.result;
+  return [];
+};
+
+const getHasMoreFromResponse = (data, itemsLength, limit, page) => {
+  if (typeof data?.hasMore === 'boolean') return data.hasMore;
+  if (typeof data?.has_next === 'boolean') return data.has_next;
+  if (typeof data?.nextPage === 'number') return data.nextPage > page;
+  if (typeof data?.next_page === 'number') return data.next_page > page;
+  if (typeof data?.totalPages === 'number') return page < data.totalPages;
+  if (typeof data?.total_pages === 'number') return page < data.total_pages;
+  if (typeof data?.total === 'number') return page * limit < data.total;
+  if (typeof data?.count === 'number') return page * limit < data.count;
+  return itemsLength === limit;
+};
+
+const fetchJson = async (url) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Request failed ${res.status}`);
+  return await res.json();
+};
+
+const fetchAllProducts = async () => {
+  const directUrls = [
+    `${API_BASE}/api/products?all=true`,
+    `${API_BASE}/api/products?limit=50000`,
+    `${API_BASE}/api/products`
+  ];
+
+  for (const url of directUrls) {
+    try {
+      const data = await fetchJson(url);
+      const items = getItemsFromResponse(data);
+      if (Array.isArray(items) && items.length > 200) {
+        return items.map(rowFromApi);
+      }
+    } catch {}
+  }
+
+  const pageSize = 1000;
+  let page = 1;
+  let hasMore = true;
+  const all = [];
+  const seen = new Set();
+
+  while (hasMore) {
+    const pageUrls = [
+      `${API_BASE}/api/products?page=${page}&limit=${pageSize}`,
+      `${API_BASE}/api/products?page=${page}&pageSize=${pageSize}`,
+      `${API_BASE}/api/products?page=${page}&per_page=${pageSize}`,
+      `${API_BASE}/api/products?offset=${(page - 1) * pageSize}&limit=${pageSize}`
+    ];
+
+    let pageItems = [];
+    let responseData = null;
+
+    for (const url of pageUrls) {
+      try {
+        const data = await fetchJson(url);
+        const items = getItemsFromResponse(data);
+        if (Array.isArray(items) && items.length > 0) {
+          pageItems = items;
+          responseData = data;
+          break;
+        }
+      } catch {}
+    }
+
+    if (!pageItems.length) break;
+
+    let addedThisRound = 0;
+
+    for (const item of pageItems) {
+      const mapped = rowFromApi(item);
+      const key = String(mapped.id ?? `${mapped.product_name}-${mapped.color}-${mapped.size}`);
+      if (!seen.has(key)) {
+        seen.add(key);
+        all.push(mapped);
+        addedThisRound += 1;
+      }
+    }
+
+    if (addedThisRound === 0) break;
+
+    hasMore = getHasMoreFromResponse(responseData, pageItems.length, pageSize, page);
+    page += 1;
+
+    if (page > 100000) break;
+  }
+
+  if (all.length > 0) return all;
+
+  for (const url of directUrls) {
+    try {
+      const data = await fetchJson(url);
+      const items = getItemsFromResponse(data);
+      if (Array.isArray(items) && items.length > 0) {
+        return items.map(rowFromApi);
+      }
+    } catch {}
+  }
+
+  return [];
+};
+
 const UpdateProduct = () => {
   const [rows, setRows] = useState([]);
   const [popupMessage, setPopupMessage] = useState('');
@@ -84,13 +195,9 @@ const UpdateProduct = () => {
   const fetchAll = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/products`);
-      if (!res.ok) throw new Error(`Fetch failed ${res.status}`);
-      const data = await res.json();
-      const mapped = Array.isArray(data) ? data.map(rowFromApi) : [];
+      const mapped = await fetchAllProducts();
       setRows(mapped);
-    } catch (err) {
-      console.error('Fetch products error:', err);
+    } catch {
       setRows([]);
     } finally {
       setIsLoading(false);
@@ -252,11 +359,7 @@ const UpdateProduct = () => {
     const formData = new FormData();
     formData.append('image', r.newImageFile);
     const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: formData });
-    if (!res.ok) {
-      const text = await res.text();
-      console.error('Upload failed:', res.status, text);
-      throw new Error(`Upload failed ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`Upload failed ${res.status}`);
     const data = await res.json();
     return normalizeAssetUrl(data.imageUrl || data.url || data.path);
   };
@@ -285,11 +388,7 @@ const UpdateProduct = () => {
       body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      const text = await res.text();
-      console.error('Update API failed:', res.status, text);
-      throw new Error(`Update failed ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`Update failed ${res.status}`);
 
     const updated = await res.json().catch(() => payload);
 
@@ -324,8 +423,7 @@ const UpdateProduct = () => {
       setPopupMessage('Changes saved successfully');
       setPopupType('success');
       setTimeout(() => setPopupMessage(''), 2200);
-    } catch (err) {
-      console.error('Save error:', err);
+    } catch {
       setPopupMessage('Error saving changes');
       setPopupType('error');
       setTimeout(() => setPopupMessage(''), 2600);
