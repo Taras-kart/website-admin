@@ -9,6 +9,8 @@ const AddProduct = () => {
   const { show, hide } = useLoading();
   const branchId = user?.branch_id;
 
+  const [identifierMode, setIdentifierMode] = useState('ean') // 'ean' or 'pattern'
+  const [patternCode, setPatternCode] = useState('')
   const [brandList, setBrandList] = useState([]);
   const [productList, setProductList] = useState([]);
   const [colorList, setColorList] = useState([]);
@@ -192,6 +194,8 @@ const AddProduct = () => {
     setTotalCount('');
     setUploadedImage('');
     setEanCode('');
+    setPatternCode('');
+    setIdentifierMode('ean');
   };
 
   const processJob = async (branchIdValue, jobId) => {
@@ -208,17 +212,23 @@ const AddProduct = () => {
   };
 
   const handleAddProduct = async () => {
-    const ean = eanCode.trim();
-    if (!/^[0-9]{13}$/.test(ean)) {
-      setPopupMessage('EAN code must be exactly 13 digits.');
-      setPopupType('error');
-      setTimeout(() => {
-        setPopupMessage('');
-        setPopupType('');
-      }, 3000);
-      return;
-    }
+const ean = identifierMode === 'ean' ? eanCode.trim() : patternCode.trim()
 
+if (identifierMode === 'ean') {
+  if (!/^[0-9]{12,14}$/.test(ean)) {
+    setPopupMessage('EAN code must be 12–14 digits.')
+    setPopupType('error')
+    setTimeout(() => { setPopupMessage(''); setPopupType('') }, 3000)
+    return
+  }
+} else {
+  if (!ean) {
+    setPopupMessage('Pattern code cannot be empty.')
+    setPopupType('error')
+    setTimeout(() => { setPopupMessage(''); setPopupType('') }, 3000)
+    return
+  }
+}
     if (
       !selectedCategory ||
       !brandInput.trim() ||
@@ -536,17 +546,57 @@ const AddProduct = () => {
         </div>
 
         <div className="grid-two">
-          <div className="field-group">
-            <label className="field-label">EAN Code</label>
-            <input
-              type="text"
-              className="text-input"
-              placeholder="13 digit EAN code"
-              value={eanCode}
-              onChange={e => setEanCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))}
-            />
-            <span className="hint">Must be exactly 13 digits</span>
-          </div>
+<div className="field-group">
+  {/* Mode toggle */}
+  <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+      <input
+        type="radio"
+        name="identifierMode"
+        value="ean"
+        checked={identifierMode === 'ean'}
+        onChange={() => setIdentifierMode('ean')}
+      />
+      EAN Code
+    </label>
+    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+      <input
+        type="radio"
+        name="identifierMode"
+        value="pattern"
+        checked={identifierMode === 'pattern'}
+        onChange={() => setIdentifierMode('pattern')}
+      />
+      Pattern Code
+    </label>
+  </div>
+
+  {identifierMode === 'ean' ? (
+    <>
+      <label className="field-label">EAN Code</label>
+      <input
+        type="text"
+        className="text-input"
+        placeholder="13 digit EAN code"
+        value={eanCode}
+        onChange={e => setEanCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))}
+      />
+      <span className="hint">Must be exactly 13 digits</span>
+    </>
+  ) : (
+    <>
+      <label className="field-label">Pattern Code</label>
+      <input
+        type="text"
+        className="text-input"
+        placeholder="Any pattern/style code e.g. CA01, DEFM, F909"
+        value={patternCode}
+        onChange={e => setPatternCode(e.target.value)}
+      />
+      <span className="hint">Any format — letters, numbers, no length restriction</span>
+    </>
+  )}
+</div>
 
           <div className="field-group">
             <label className="field-label">Color</label>

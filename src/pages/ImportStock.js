@@ -89,6 +89,8 @@ function shouldDropRow(row) {
   return false;
 }
 
+
+
 function parseCsvLine(line) {
   const cols = [];
   let cur = '';
@@ -128,10 +130,14 @@ function isImagePath(p) {
   return n.endsWith('.jpg') || n.endsWith('.jpeg') || n.endsWith('.png') || n.endsWith('.webp');
 }
 
-function extractEANFromPath(path) {
-  const base = baseNameNoExt(path);
-  const m = String(base).match(/(\d{12,14})/);
-  return m ? m[1] : '';
+function extractIdentifierFromPath(path, mode) {
+  const base = baseNameNoExt(path)
+  if (mode === 'ean') {
+    const m = String(base).match(/(\d{12,14})/)
+    return m ? m[1] : ''
+  }
+  // Pattern mode — use full filename (no extension) as-is
+  return String(base).trim()
 }
 
 async function cleanExcelOrCsvFile(inputFile) {
@@ -223,6 +229,7 @@ export default function ImportStock() {
   const [b2bDiscount, setB2bDiscount] = useState('');
   const [savingDiscounts, setSavingDiscounts] = useState(false);
   const [discountMessage, setDiscountMessage] = useState('');
+  const [imageMode, setImageMode] = useState('ean') // 'ean' or 'pattern'
 
   const branchId = user?.branch_id;
 
@@ -408,62 +415,77 @@ export default function ImportStock() {
     }
   }, [eanSet]);
 
-  const onUploadImages = useCallback(
-    async e => {
-      e.preventDefault();
+const onUploadImages = useCallback(
+  async e => {
+    e.preventDefault()
+    if (!imageZip || !branchId) {
+      setImageMessage('Please choose a ZIP file.')
+      return
+    }
 
-      if (!imageZip || !branchId) {
-        setImageMessage('Please choose a ZIP file.');
-        return;
+    setUploadingImages(true)
+    setImageMessage('')
+    setImageProgress({ done: 0, total: 0 })
+    setMatchStats({ matched: 0, total: 0, skipped: 0 })
+    setUnmatchedList([])
+    show()
+
+    try {
+      // Fetch product identifiers based on mode
+      let identifierSet = new Set()
+      try {
+        const list = await apiGet(`/api/products?limit=100000`)
+        identifierSet = new Set(
+          (Array.isArray(list) ? list : [])
+            .map(p => {
+              if (imageMode === 'ean') return String(p.ean_code || '').trim()
+              // Pattern mode — ean_code column stores the pattern too
+              return String(p.ean_code || '').trim()
+            })
+            .filter(Boolean)
+        )
+      } catch {
+        identifierSet = new Set()
       }
 
-      setUploadingImages(true);
-      setImageMessage('');
-      setImageProgress({ done: 0, total: 0 });
-      setMatchStats({ matched: 0, total: 0, skipped: 0 });
-      setUnmatchedList([]);
-      show();
+      const zip = await JSZip.loadAsync(imageZip)
+      const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name))
+      const total = entries.length
+      let done = 0
+      let matched = 0
+      const unmatched = []
 
-      try {
-        const eans = await ensureEanSet();
-        const zip = await JSZip.loadAsync(imageZip);
-        const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name));
-        const total = entries.length;
-        let done = 0;
-        let matched = 0;
-        const unmatched = [];
+      for (const f of entries) {
+        const identifier = extractIdentifierFromPath(f.name, imageMode).trim()
 
-        for (const f of entries) {
-          const ean = extractEANFromPath(f.name).trim();
-
-          if (!ean || !eans.has(ean)) {
-            unmatched.push({ file: f.name, ean: ean || '(none)' });
-            done += 1;
-            setImageProgress({ done, total });
-            continue;
-          }
-
-          const blob = await f.async('blob');
-          await uploadToCloudinary(blob, ean);
-          matched += 1;
-          done += 1;
-          setImageProgress({ done, total });
+        if (!identifier || !identifierSet.has(identifier)) {
+          unmatched.push({ file: f.name, ean: identifier || '(none)' })
+          done += 1
+          setImageProgress({ done, total })
+          continue
         }
 
-        setMatchStats({ matched, total, skipped: total - matched });
-        setUnmatchedList(unmatched);
-        setImageMessage(`Finished. Uploaded ${matched}/${total}. Unmatched ${unmatched.length}.`);
-        setImageZip(null);
-      } catch (err) {
-        setImageMessage(err?.message || 'Image upload failed');
-      } finally {
-        setUploadingImages(false);
-        hide();
-        setTimeout(() => setImageMessage(''), 5000);
+        const blob = await f.async('blob')
+        await uploadToCloudinary(blob, identifier)
+        matched += 1
+        done += 1
+        setImageProgress({ done, total })
       }
-    },
-    [imageZip, branchId, show, hide, ensureEanSet]
-  );
+
+      setMatchStats({ matched, total, skipped: total - matched })
+      setUnmatchedList(unmatched)
+      setImageMessage(`Finished. Uploaded ${matched}/${total}. Unmatched ${unmatched.length}.`)
+      setImageZip(null)
+    } catch (err) {
+      setImageMessage(err?.message || 'Image upload failed')
+    } finally {
+      setUploadingImages(false)
+      hide()
+      setTimeout(() => setImageMessage(''), 5000)
+    }
+  },
+  [imageZip, branchId, imageMode, show, hide]  // ← imageMode added to deps here
+)
 
   const onSaveDiscounts = useCallback(
     async e => {
@@ -574,6 +596,29 @@ export default function ImportStock() {
             <div className="zip-block">
               <div className="import-filebox-admin">
                 <label className="label">Images ZIP Folder</label>
+
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '10px' }}>
+  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+    <input
+      type="radio"
+      name="imageMode"
+      value="ean"
+      checked={imageMode === 'ean'}
+      onChange={() => setImageMode('ean')}
+    />
+    Match by EAN
+  </label>
+  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+    <input
+      type="radio"
+      name="imageMode"
+      value="pattern"
+      checked={imageMode === 'pattern'}
+      onChange={() => setImageMode('pattern')}
+    />
+    Match by Pattern
+  </label>
+</div>
                 <input type="file" accept=".zip" onChange={e => setImageZip(e.target.files?.[0] || null)} />
 
                 {imageZip ? (
