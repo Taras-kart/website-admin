@@ -222,7 +222,6 @@ export default function ImportStock() {
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState(null);
   const [imageProgress, setImageProgress] = useState({ done: 0, total: 0 });
-  const [eanSet, setEanSet] = useState(null);
   const [matchStats, setMatchStats] = useState({ matched: 0, total: 0, skipped: 0 });
   const [unmatchedList, setUnmatchedList] = useState([]);
   const [b2cDiscount, setB2cDiscount] = useState('');
@@ -396,24 +395,6 @@ export default function ImportStock() {
     return res.json();
   }
 
-  const ensureEanSet = useCallback(async () => {
-    if (eanSet) return eanSet;
-
-    try {
-      const list = await apiGet(`/api/products?limit=100000`);
-      const s = new Set(
-        (Array.isArray(list) ? list : [])
-          .map(p => String(p.ean_code || '').trim())
-          .filter(Boolean)
-      );
-      setEanSet(s);
-      return s;
-    } catch {
-      const s = new Set();
-      setEanSet(s);
-      return s;
-    }
-  }, [eanSet]);
 
 const onUploadImages = useCallback(
   async e => {
