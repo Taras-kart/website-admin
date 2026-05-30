@@ -92,7 +92,7 @@ const fetchAllProducts = async () => {
     try {
       const data = await fetchJson(url);
       const items = getItemsFromResponse(data);
-      if (Array.isArray(items) && items.length > 1000) {
+      if (Array.isArray(items) && items.length > 200) {
         return items.map(mapRow);
       }
     } catch {}
@@ -146,21 +146,10 @@ const fetchAllProducts = async () => {
     hasMore = getHasMoreFromResponse(responseData, pageItems.length, pageSize, page);
     page += 1;
 
-    if (page > 1000) break;
+    if (page > 100) break;
   }
 
   if (all.length > 0) return all;
-
-  for (const url of directUrls) {
-    try {
-      const data = await fetchJson(url);
-      const items = getItemsFromResponse(data);
-      if (Array.isArray(items) && items.length > 0) {
-        return items.map(mapRow);
-      }
-    } catch {}
-  }
-
   return [];
 };
 
@@ -176,11 +165,16 @@ const DeleteProduct = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
   const fetchAll = async () => {
     setIsLoading(true);
     try {
       const allRows = await fetchAllProducts();
       setRows(allRows);
+      setCurrentPage(1); // Reset page on fetch
     } catch {
       setRows([]);
     } finally {
@@ -195,9 +189,9 @@ const DeleteProduct = () => {
   const filteredSortedRows = useMemo(() => {
     let list = rows;
 
-    if (filter === 'Men') list = list.filter((r) => r.category.toLowerCase() === 'men');
-    else if (filter === 'Women') list = list.filter((r) => r.category.toLowerCase() === 'women');
-    else if (filter === 'Kids') list = list.filter((r) => r.category.toLowerCase().startsWith('kids'));
+    if (filter === 'Men') list = list.filter((r) => String(r.category).toLowerCase() === 'men');
+    else if (filter === 'Women') list = list.filter((r) => String(r.category).toLowerCase() === 'women');
+    else if (filter === 'Kids') list = list.filter((r) => String(r.category).toLowerCase().startsWith('kids'));
 
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -234,6 +228,18 @@ const DeleteProduct = () => {
 
     return sorted;
   }, [rows, filter, search, sortBy]);
+
+  // Reset pagination on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, search, sortBy]);
+
+  // Sliced rows for current page
+  const totalPages = Math.ceil(filteredSortedRows.length / itemsPerPage);
+  const paginatedRows = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredSortedRows.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredSortedRows, currentPage]);
 
   const askDelete = (ids) => {
     if (!ids.length) {
@@ -281,7 +287,7 @@ const DeleteProduct = () => {
   };
 
   const toggleSelectAllVisible = () => {
-    const visibleIds = filteredSortedRows.map((r) => r.id);
+    const visibleIds = paginatedRows.map((r) => r.id);
     const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
 
     setSelectedIds((prev) => {
@@ -343,8 +349,8 @@ const DeleteProduct = () => {
                     type="checkbox"
                     onChange={toggleSelectAllVisible}
                     checked={
-                      filteredSortedRows.length > 0 &&
-                      filteredSortedRows.every((r) => selectedIds.has(r.id))
+                      paginatedRows.length > 0 &&
+                      paginatedRows.every((r) => selectedIds.has(r.id))
                     }
                     aria-label="Select all visible"
                   />
@@ -364,38 +370,41 @@ const DeleteProduct = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredSortedRows.map((p, idx) => (
-                <tr key={p.id || idx}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(p.id)}
-                      onChange={() => toggleSelect(p.id)}
-                      aria-label={`Select ${p.product_name}`}
-                    />
-                  </td>
-                  <td>{idx + 1}</td>
-                  <td>{p.category}</td>
-                  <td>{p.brand}</td>
-                  <td>{p.product_name}</td>
-                  <td>{p.color}</td>
-                  <td>{p.size}</td>
-                  <td>{p.original_price_b2c}</td>
-                  <td>{p.discount_b2c}</td>
-                  <td>{computeFinal(p.original_price_b2c, p.discount_b2c).toFixed(2)}</td>
-                  <td>{p.total_count}</td>
-                  <td>
-                    <img src={p.image_url} alt="product" className="table-image" />
-                  </td>
-                  <td>
-                    <button className="delete-btn" onClick={() => askDelete([p.id])}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {paginatedRows.map((p, idx) => {
+                const serialNum = (currentPage - 1) * itemsPerPage + idx + 1;
+                return (
+                  <tr key={p.id || idx}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(p.id)}
+                        onChange={() => toggleSelect(p.id)}
+                        aria-label={`Select ${p.product_name}`}
+                      />
+                    </td>
+                    <td>{serialNum}</td>
+                    <td>{p.category}</td>
+                    <td>{p.brand}</td>
+                    <td>{p.product_name}</td>
+                    <td>{p.color}</td>
+                    <td>{p.size}</td>
+                    <td>{p.original_price_b2c}</td>
+                    <td>{p.discount_b2c}</td>
+                    <td>{computeFinal(p.original_price_b2c, p.discount_b2c).toFixed(2)}</td>
+                    <td>{p.total_count}</td>
+                    <td>
+                      <img src={p.image_url} alt="product" className="table-image" />
+                    </td>
+                    <td>
+                      <button className="delete-btn" onClick={() => askDelete([p.id])}>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
 
-              {!filteredSortedRows.length && (
+              {!paginatedRows.length && (
                 <tr>
                   <td colSpan="13" style={{ padding: 16, color: 'gold' }}>
                     No products found
@@ -405,6 +414,31 @@ const DeleteProduct = () => {
             </tbody>
           </table>
         </div>
+
+       {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="pagination-controls">
+            <button 
+              className="refresh-btn" 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              style={{ minWidth: '100px' }}
+            >
+              Previous
+            </button>
+            <span className="pagination-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button 
+              className="refresh-btn" 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              style={{ minWidth: '100px' }}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {popupMessage && <div className={`popup-card ${popupType}`}>{popupMessage}</div>}

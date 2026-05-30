@@ -163,21 +163,10 @@ const fetchAllProducts = async () => {
     hasMore = getHasMoreFromResponse(responseData, pageItems.length, pageSize, page);
     page += 1;
 
-    if (page > 100000) break;
+    if (page > 100) break; // Safety limit
   }
 
   if (all.length > 0) return all;
-
-  for (const url of directUrls) {
-    try {
-      const data = await fetchJson(url);
-      const items = getItemsFromResponse(data);
-      if (Array.isArray(items) && items.length > 0) {
-        return items.map(rowFromApi);
-      }
-    } catch {}
-  }
-
   return [];
 };
 
@@ -192,11 +181,16 @@ const UpdateProduct = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
   const fetchAll = async () => {
     setIsLoading(true);
     try {
       const mapped = await fetchAllProducts();
       setRows(mapped);
+      setCurrentPage(1); // Reset page on fetch
     } catch {
       setRows([]);
     } finally {
@@ -299,6 +293,18 @@ const UpdateProduct = () => {
     return sorted;
   }, [rows, filter, search, sortBy]);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, search, sortBy]);
+
+  // Sliced rows for the current page
+  const totalPages = Math.ceil(filteredSortedRows.length / itemsPerPage);
+  const paginatedRows = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredSortedRows.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredSortedRows, currentPage]);
+
   const dirtyRows = useMemo(() => rows.filter((r) => r.dirty), [rows]);
 
   const validationErrors = useMemo(() => {
@@ -364,62 +370,41 @@ const UpdateProduct = () => {
     return normalizeAssetUrl(data.imageUrl || data.url || data.path);
   };
 
-  const persistRow = async (r) => {
-    const image_url = await uploadImageIfNeeded(r);
-    const payload = {
-      category: r.category,
-      brand: r.brand,
-      product_name: r.product_name,
-      color: r.color,
-      size: r.size,
-      original_price_b2b: coerceNumber(r.original_price_b2b),
-      discount_b2b: coerceNumber(r.discount_b2b),
-      final_price_b2b: computeFinal(r.original_price_b2b, r.discount_b2b),
-      original_price_b2c: coerceNumber(r.original_price_b2c),
-      discount_b2c: coerceNumber(r.discount_b2c),
-      final_price_b2c: computeFinal(r.original_price_b2c, r.discount_b2c),
-      total_count: Math.max(0, Math.floor(coerceNumber(r.total_count))),
-      image_url
-    };
-
-    const res = await fetch(`${API_BASE}/api/products/${encodeURIComponent(r.id)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) throw new Error(`Update failed ${res.status}`);
-
-    const updated = await res.json().catch(() => payload);
-
-    return {
-      ...r,
-      ...updated,
-      category: toCategoryLabel(updated.category || updated.gender || r.category),
-      total_count: coerceNumber(updated.total_count ?? updated.available_qty ?? payload.total_count),
-      image_url,
-      newImageFile: null,
-      preview_url: '',
-      dirty: false
-    };
-  };
-
   const confirmUpdate = async (confirmed) => {
     setPopupConfirm(false);
     if (!confirmed) return;
 
     setIsSaving(true);
     try {
-      const updatedMap = new Map();
+      // 1. Upload any new images in parallel
+      const updatesPayload = await Promise.all(
+        dirtyRows.map(async (r) => {
+          const uploaded_url = await uploadImageIfNeeded(r);
+          return {
+            ...r,
+            image_url: uploaded_url
+          };
+        })
+      );
 
-      for (const r of rows) {
-        if (!r.dirty) continue;
-        const u = await persistRow(r);
-        updatedMap.set(r.id, u);
-      }
+      // 2. Send the bulk update request
+      const res = await fetch(`${API_BASE}/api/products/bulk-update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: updatesPayload })
+      });
 
-      const next = rows.map((r) => updatedMap.get(r.id) || r);
-      setRows(next);
+      if (!res.ok) throw new Error(`Update failed ${res.status}`);
+
+      // 3. Mark rows as clean locally
+      setRows((prev) => prev.map(r => {
+        const updated = updatesPayload.find(u => u.id === r.id);
+        if (updated) {
+          return { ...r, ...updated, dirty: false, newImageFile: null, preview_url: '' };
+        }
+        return r;
+      }));
+
       setPopupMessage('Changes saved successfully');
       setPopupType('success');
       setTimeout(() => setPopupMessage(''), 2200);
@@ -525,11 +510,13 @@ const UpdateProduct = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredSortedRows.map((product, idx) => {
+              {paginatedRows.map((product, idx) => {
                 const rowIndex = rowIndexById.get(product.id);
+                // Calculate absolute serial number based on pagination
+                const serialNum = (currentPage - 1) * itemsPerPage + idx + 1;
                 return (
                   <tr key={product.id || idx} className={product.dirty ? 'dirty-row' : ''}>
-                    <td className="serial-cell">{idx + 1}</td>
+                    <td className="serial-cell">{serialNum}</td>
 
                     <td>
                       <select
@@ -652,7 +639,7 @@ const UpdateProduct = () => {
                 );
               })}
 
-              {!filteredSortedRows.length && (
+              {!paginatedRows.length && (
                 <tr>
                   <td colSpan="15" className="empty-state-cell">No products found</td>
                 </tr>
@@ -660,6 +647,27 @@ const UpdateProduct = () => {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="pagination-controls">
+            <button 
+              className="ghost-btn" 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+            <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+            <button 
+              className="ghost-btn" 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="floating-savebar">

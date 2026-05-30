@@ -233,7 +233,7 @@ export default function POS() {
             type="text"
             placeholder="Scan EAN or type manually"
             value={ean}
-            onChange={(e) => setEan(e.target.value.replace(/[^\d]/g, ''))}
+           onChange={(e) => setEan(e.target.value.replace(/[^A-Za-z0-9-]/g, '').toUpperCase())}
             onKeyDown={onKeyDown}
           />
           <button className="btn gold" onClick={handleManualAdd} disabled={searching || !ean}>

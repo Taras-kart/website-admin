@@ -228,3 +228,21 @@ th {
 .popup-actions button:last-child:hover {
   background-color: #666;
 }
+
+/* Pagination Controls */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  background-color: #111;
+  border-top: 1px solid gold;
+  border-radius: 0 0 12px 12px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: white;
+  font-weight: bold;
+}

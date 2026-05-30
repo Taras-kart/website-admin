@@ -602,3 +602,21 @@ tbody tr.dirty-row {
     padding: 12px;
   }
 }
+
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  border-top: 1px solid var(--stroke);
+  background: rgba(16, 20, 28, 0.94);
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
