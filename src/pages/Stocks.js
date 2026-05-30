@@ -39,6 +39,8 @@ export default function Stocks() {
   const [gender, setGender] = useState('ALL')
   const searchRef = useRef(null)
   const [csvUrl, setCsvUrl] = useState('')
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   useEffect(() => {
     const g = localStorage.getItem('stocks_gender') || 'ALL'
@@ -135,6 +137,13 @@ export default function Stocks() {
     return sorted
   }, [rows, chip, brand, search, sortBy])
 
+
+const totalPages = Math.ceil(filtered.length / itemsPerPage);
+const paginatedRows = useMemo(() => {
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  return filtered.slice(startIndex, startIndex + itemsPerPage);
+}, [filtered, currentPage]);
+
   useEffect(() => {
     if (!filtered.length) {
       setCsvUrl((prev) => {
@@ -144,7 +153,7 @@ export default function Stocks() {
       return
     }
     const header = ['Sl. No,Status,Brand,Product,Pattern,Fit,Mark,Size,Colour,EAN,MRP,Sale Price,Cost Price,Qty,Reserved']
-    const lines = filtered.map((s, i) =>
+    const lines = paginatedRows.map((s, i) =>
       [
         i + 1,
         s.status.toUpperCase(),
@@ -295,12 +304,15 @@ export default function Stocks() {
         </div>
       </div>
 
+      
+
       <div className="section-table">
         <h3>Live Stock Overview</h3>
         {loading ? (
           <p>Loading stocks...</p>
         ) : (
           <div className="table-container">
+            
             <table className="stock-table">
               <colgroup>
                 <col style={{ width: '70px' }} />
@@ -339,8 +351,8 @@ export default function Stocks() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((s, index) => (
-                  <tr key={s.id} className={`row-${s.status}`}>
+{paginatedRows.map((s, index) => (
+  <tr key={s.id} className={`row-${s.status}`}>
                     <td className="mono">{index + 1}</td>
                     <td>
                       <span className={`status ${s.status}`}>
@@ -369,6 +381,25 @@ export default function Stocks() {
                 )}
               </tbody>
             </table>
+            {totalPages > 1 && (
+  <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: '16px', background: '#111' }}>
+    <button 
+      className="refresh" 
+      onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+      disabled={currentPage === 1}
+    >
+      Previous
+    </button>
+    <span style={{ color: 'white', fontWeight: 'bold' }}>Page {currentPage} of {totalPages}</span>
+    <button 
+      className="refresh" 
+      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+      disabled={currentPage === totalPages}
+    >
+      Next
+    </button>
+  </div>
+)}
           </div>
         )}
       </div>

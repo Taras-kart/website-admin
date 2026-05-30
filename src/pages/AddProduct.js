@@ -647,6 +647,16 @@ if (identifierMode === 'ean') {
               ))}
             </div>
           </div>
+          <div className="field-group">
+    <label className="field-label">Initial Stock</label>
+    <input
+      type="number"
+      className="text-input"
+      placeholder="Enter quantity"
+      value={totalCount}
+      onChange={(e) => setTotalCount(e.target.value)}
+    />
+  </div>
         </div>
 
         <div className="price-table-wrap">
