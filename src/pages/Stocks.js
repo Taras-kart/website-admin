@@ -182,7 +182,7 @@ const paginatedRows = useMemo(() => {
     return () => {
       URL.revokeObjectURL(url)
     }
-  }, [filtered])
+  }, [filtered, paginatedRows])
 
   useEffect(() => {
     return () => {
