@@ -82,20 +82,6 @@ export default function LoginAdmin() {
 
           {err ? <div className="login-error-admin-admin-login">{err}</div> : null}
 
-          <div className="login-actions-row-admin-admin-login">
-            <label className="login-remember-admin-admin-login">
-              <input type="checkbox" />
-              <span>Remember me</span>
-            </label>
-            <button
-              type="button"
-              className="login-alt-admin-admin-login login-link-btn-admin-admin-login"
-              onClick={() => nav('/forgot-password')}
-            >
-              Forgot password?
-            </button>
-          </div>
-
           <button className="login-button-admin-admin-login" type="submit" disabled={busy || !username || !password}>
             {busy ? 'Signing in...' : 'Sign in'}
           </button>

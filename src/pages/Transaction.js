@@ -3,8 +3,8 @@ import './Transaction.css'
 import NavbarAdmin from './NavbarAdmin'
 
 const API_BASE =
-  process.env.REACT_APP_API_BASE_URL ||
-  'https://taras-kart-backend.vercel.app/api'
+  process.env.REACT_APP_API_BASE ||
+  'https://taras-kart-backend.vercel.app'
 
 function asNum(v) {
   const n = Number(v)
@@ -96,17 +96,13 @@ export default function Transaction() {
     dateTo: ''
   })
 
-  const token =
-    localStorage.getItem('token') ||
-    localStorage.getItem('adminToken') ||
-    localStorage.getItem('accessToken') ||
-    ''
+  const token = localStorage.getItem('auth_token') || ''
 
   const fetchTx = useCallback(async () => {
     setLoading(true)
     setErr('')
     try {
-      const res = await fetch(`${API_BASE}/orders`, {
+      const res = await fetch(`${API_BASE}/api/orders`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: token ? `Bearer ${token}` : ''
@@ -199,7 +195,7 @@ export default function Transaction() {
           rowEmail.includes(q) ||
           rowName.includes(q) ||
           rowMobile.includes(q) ||
-          rowId.includes(filters.q)
+          safeUpper(rowId).includes(q)
         if (!hit) return false
       }
 
