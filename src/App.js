@@ -5,6 +5,7 @@ import { LoadingProvider } from './pages/LoadingContext'
 import B2BOrders from './pages/B2BOrders'
 import HomePage from './pages/HomePage'
 import Transaction from './pages/Transaction'
+import B2BStock from './pages/B2BStock'
 import Stocks from './pages/Stocks'
 import Sales from './pages/Sales'
 import Customers from './pages/Customers'
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/order-issues" element={<RequireAuth><OrderIssues /></RequireAuth>} />
             <Route path="/returns/:id" element={<RequireAuth><ReturnReview /></RequireAuth>} />
             <Route path="/b2b-orders" element={<RequireAuth><B2BOrders /></RequireAuth>} />
+            <Route path="/b2b-stock" element={<RequireAuth><B2BStock /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>

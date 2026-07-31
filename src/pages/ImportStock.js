@@ -229,6 +229,9 @@ export default function ImportStock() {
   const [savingDiscounts, setSavingDiscounts] = useState(false);
   const [discountMessage, setDiscountMessage] = useState('');
   const [imageMode, setImageMode] = useState('ean') // 'ean' or 'pattern'
+  const [importType, setImportType] = useState('B2C') // 'B2C' or 'B2B'
+  const [b2bMessage, setB2bMessage] = useState('')
+  const [b2bUploading, setB2bUploading] = useState(false)
 
   const branchId = user?.branch_id;
 
@@ -251,6 +254,40 @@ export default function ImportStock() {
     const saved = localStorage.getItem('import_gender') || '';
     setGender(saved);
   }, []);
+
+  const onB2BUpload = useCallback(async () => {
+    if (!file || !gender || b2bUploading) return
+    setB2bUploading(true)
+    setB2bMessage('')
+    show()
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('gender', gender)
+      const token = localStorage.getItem('auth_token') || ''
+      const API_BASE_RAW = process.env.REACT_APP_API_BASE || 'https://taras-kart-backend.vercel.app'
+      const API_BASE = API_BASE_RAW.replace(/\/+$/, '')
+      const res = await fetch(`${API_BASE}/api/b2b/import`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setB2bMessage(data.message || 'B2B import complete')
+        if (data.errors?.length) {
+          setB2bMessage(prev => prev + ' | Errors: ' + data.errors.slice(0, 3).join('; '))
+        }
+      } else {
+        setB2bMessage(data.message || 'B2B import failed')
+      }
+    } catch (e) {
+      setB2bMessage('Network error: ' + e.message)
+    } finally {
+      setB2bUploading(false)
+      hide()
+    }
+  }, [file, gender, b2bUploading, show, hide])
 
   const fetchJobs = useCallback(async () => {
     if (!branchId) return;
@@ -513,6 +550,34 @@ const onUploadImages = useCallback(
         <div className="import-card-admin">
           <div className="import-title-admin">Import Stock (Excel)</div>
           <div className="import-subtitle-admin">Upload your branch Excel file for a selected category.</div>
+
+          {/* B2C / B2B Toggle */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <button
+              type="button"
+              onClick={() => { setImportType('B2C'); setB2bMessage(''); }}
+              style={{
+                padding: '8px 24px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                fontWeight: 700, fontSize: 13,
+                background: importType === 'B2C' ? '#ca8a04' : '#1f2937',
+                color: importType === 'B2C' ? '#000' : '#fff'
+              }}
+            >
+              B2C Import
+            </button>
+            <button
+              type="button"
+              onClick={() => { setImportType('B2B'); setMessage(''); }}
+              style={{
+                padding: '8px 24px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                fontWeight: 700, fontSize: 13,
+                background: importType === 'B2B' ? '#ca8a04' : '#1f2937',
+                color: importType === 'B2B' ? '#000' : '#fff'
+              }}
+            >
+              B2B Import
+            </button>
+          </div>
           <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
             <div className="excel-block">
               <div className="select-wrap">
@@ -546,11 +611,25 @@ const onUploadImages = useCallback(
                   <div className="import-filehint-admin">No file selected</div>
                 )}
 
-                <button className="import-btn-admin" onClick={onUpload} disabled={!canUpload}>
-                  {uploading ? 'Uploading…' : 'Upload Excel'}
-                </button>
-
-                {message ? <div className="import-msg-admin">{message}</div> : null}
+                {importType === 'B2C' ? (
+                  <>
+                    <button className="import-btn-admin" onClick={onUpload} disabled={!canUpload}>
+                      {uploading ? 'Uploading…' : 'Upload B2C Excel'}
+                    </button>
+                    {message ? <div className="import-msg-admin">{message}</div> : null}
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="import-btn-admin"
+                      onClick={onB2BUpload}
+                      disabled={!file || !gender || b2bUploading}
+                    >
+                      {b2bUploading ? 'Uploading…' : 'Upload B2B Excel'}
+                    </button>
+                    {b2bMessage ? <div className="import-msg-admin">{b2bMessage}</div> : null}
+                  </>
+                )}
 
                 {progress ? (
                   <div className="import-msg-admin">
