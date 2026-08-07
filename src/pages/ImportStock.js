@@ -19,61 +19,115 @@ function normalizeKey(k) {
 
 function pickValue(row, candidates) {
   const keys = Object.keys(row || {});
+
   for (const c of candidates) {
     const ck = normalizeKey(c);
     const found = keys.find(k => normalizeKey(k) === ck);
     if (found !== undefined) return row[found];
   }
+
   for (const c of candidates) {
     const ck = normalizeKey(c);
     const found = keys.find(k => normalizeKey(k).includes(ck));
     if (found !== undefined) return row[found];
   }
+
   return undefined;
 }
 
 function toNumber(v) {
   if (v === null || v === undefined) return null;
   if (typeof v === 'number') return isFinite(v) ? v : null;
+
   const s = String(v)
     .replace(/₹/g, '')
     .replace(/,/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+
   if (!s) return null;
+
   const m = s.match(/-?\d+(\.\d+)?/);
+
   if (!m) return null;
+
   const n = parseFloat(m[0]);
+
   return isFinite(n) ? n : null;
 }
 
 function rowHasBannedPhrases(row) {
-  const banned = ['inclusive of all taxes', 'brand', 'new in', 'product', '₹0.00'];
+  const banned = [
+    'inclusive of all taxes',
+    'brand',
+    'new in',
+    'product',
+    '₹0.00'
+  ];
+
   const values = Object.values(row || {})
     .map(v => String(v ?? '').toLowerCase().trim())
     .filter(Boolean);
-  return values.some(val => banned.some(b => val === b || val.includes(b)));
+
+  return values.some(val =>
+    banned.some(b => val === b || val.includes(b))
+  );
 }
 
 function isDefaultBrandOrProduct(s) {
-  const t = String(s ?? '').toLowerCase().trim();
+  const t = String(s ?? '')
+    .toLowerCase()
+    .trim();
+
   if (!t) return true;
-  const defaults = ['brand', 'product', 'new in', 'inclusive of all taxes'];
+
+  const defaults = [
+    'brand',
+    'product',
+    'new in',
+    'inclusive of all taxes'
+  ];
+
   return defaults.includes(t) || defaults.some(d => t.includes(d));
 }
 
 function shouldDropRow(row) {
   if (!row || typeof row !== 'object') return true;
 
-  const values = Object.values(row).map(v => String(v ?? '').trim());
+  const values = Object.values(row).map(v =>
+    String(v ?? '').trim()
+  );
+
   const allEmpty = values.every(v => v === '');
+
   if (allEmpty) return true;
 
-  const brand = pickValue(row, ['brand', 'brand name']);
-  const product = pickValue(row, ['product', 'product name', 'name', 'title']);
+  const brand = pickValue(row, [
+    'brand',
+    'brand name'
+  ]);
 
-  const priceVal = pickValue(row, ['price', 'selling price', 'sale price', 'our price', 'sp']);
-  const mrpVal = pickValue(row, ['mrp', 'm.r.p', 'list price', 'regular price']);
+  const product = pickValue(row, [
+    'product',
+    'product name',
+    'name',
+    'title'
+  ]);
+
+  const priceVal = pickValue(row, [
+    'price',
+    'selling price',
+    'sale price',
+    'our price',
+    'sp'
+  ]);
+
+  const mrpVal = pickValue(row, [
+    'mrp',
+    'm.r.p',
+    'list price',
+    'regular price'
+  ]);
 
   const price = toNumber(priceVal);
   const mrp = toNumber(mrpVal);
@@ -81,15 +135,27 @@ function shouldDropRow(row) {
   const priceIsZero = price !== null && price === 0;
   const mrpIsZero = mrp !== null && mrp === 0;
 
-  const defaultNames = isDefaultBrandOrProduct(brand) || isDefaultBrandOrProduct(product);
+  const defaultNames =
+    isDefaultBrandOrProduct(brand) ||
+    isDefaultBrandOrProduct(product);
 
-  if (rowHasBannedPhrases(row) && (priceIsZero || mrpIsZero)) return true;
-  if (priceIsZero && mrpIsZero && defaultNames) return true;
+  if (
+    rowHasBannedPhrases(row) &&
+    (priceIsZero || mrpIsZero)
+  ) {
+    return true;
+  }
+
+  if (
+    priceIsZero &&
+    mrpIsZero &&
+    defaultNames
+  ) {
+    return true;
+  }
 
   return false;
 }
-
-
 
 function parseCsvLine(line) {
   const cols = [];
@@ -98,46 +164,204 @@ function parseCsvLine(line) {
 
   for (let j = 0; j < line.length; j++) {
     const ch = line[j];
-    if (ch === '"' && line[j + 1] === '"') {
+
+    if (
+      ch === '"' &&
+      line[j + 1] === '"'
+    ) {
       cur += '"';
       j++;
       continue;
     }
+
     if (ch === '"') {
       inQuotes = !inQuotes;
       continue;
     }
-    if (ch === ',' && !inQuotes) {
+
+    if (
+      ch === ',' &&
+      !inQuotes
+    ) {
       cols.push(cur);
       cur = '';
       continue;
     }
+
     cur += ch;
   }
 
   cols.push(cur);
+
   return cols;
 }
 
 function baseNameNoExt(name) {
-  const n = name.split('/').pop() || name;
+  const n =
+    name.split('/').pop() ||
+    name;
+
   const i = n.lastIndexOf('.');
-  return i > 0 ? n.slice(0, i) : n;
+
+  return i > 0
+    ? n.slice(0, i)
+    : n;
 }
 
 function isImagePath(p) {
   const n = String(p || '').toLowerCase();
-  return n.endsWith('.jpg') || n.endsWith('.jpeg') || n.endsWith('.png') || n.endsWith('.webp');
+
+  return (
+    n.endsWith('.jpg') ||
+    n.endsWith('.jpeg') ||
+    n.endsWith('.png') ||
+    n.endsWith('.webp')
+  );
 }
 
 function extractIdentifierFromPath(path, mode) {
-  const base = baseNameNoExt(path)
+  const base = baseNameNoExt(path);
+
   if (mode === 'ean') {
-    const m = String(base).match(/(\d{6,14})/)
-    return m ? m[1] : ''
+    const m = String(base).match(/(\d{6,14})/);
+
+    return m
+      ? m[1]
+      : '';
   }
-  // Pattern mode — use full filename (no extension) as-is
-  return String(base).trim()
+
+  return String(base).trim();
+}
+
+function normalizeImageKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '|')
+    .replace(/^\|+|\|+$/g, '');
+}
+
+function safePublicIdPart(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function addSharedAlias(
+  map,
+  collisions,
+  alias,
+  value
+) {
+  const key = normalizeImageKey(alias);
+
+  if (!key) return;
+
+  if (collisions.has(key)) return;
+
+  const existing = map.get(key);
+
+  if (!existing) {
+    map.set(key, value);
+    return;
+  }
+
+  if (
+    Number(existing.product_id) !==
+      Number(value.product_id) ||
+    normalizeImageKey(existing.colour) !==
+      normalizeImageKey(value.colour)
+  ) {
+    map.delete(key);
+    collisions.add(key);
+  }
+}
+
+function buildImageLookups(products) {
+  const eanMap = new Map();
+  const sharedMap = new Map();
+  const sharedCollisions = new Set();
+
+  for (
+    const item of Array.isArray(products)
+      ? products
+      : []
+  ) {
+    const ean = String(
+      item?.ean_code || ''
+    ).trim();
+
+    if (ean) {
+      eanMap.set(ean, item);
+    }
+
+    const productId = Number(
+      item?.product_id || 0
+    );
+
+    const colour = String(
+      item?.color ??
+      item?.colour ??
+      ''
+    ).trim();
+
+    const pattern = String(
+      item?.pattern_code || ''
+    ).trim();
+
+    if (
+      !productId ||
+      !colour
+    ) {
+      continue;
+    }
+
+    const value = {
+      product_id: productId,
+      colour,
+      pattern_code: pattern,
+      product_name: String(
+        item?.product_name || ''
+      ).trim(),
+      brand: String(
+        item?.brand ??
+        item?.brand_name ??
+        ''
+      ).trim()
+    };
+
+    const aliases = [
+      `${productId} ${colour}`,
+      `${productId}__${colour}`,
+      `${productId}-${colour}`,
+      `${productId}_${colour}`
+    ];
+
+    if (pattern) {
+      aliases.push(
+        `${pattern} ${colour}`,
+        `${pattern}__${colour}`,
+        `${pattern}-${colour}`,
+        `${pattern}_${colour}`
+      );
+    }
+
+    for (const alias of aliases) {
+      addSharedAlias(
+        sharedMap,
+        sharedCollisions,
+        alias,
+        value
+      );
+    }
+  }
+
+  return {
+    eanMap,
+    sharedMap,
+    sharedCollisions
+  };
 }
 
 async function cleanExcelOrCsvFile(inputFile) {
@@ -146,63 +370,194 @@ async function cleanExcelOrCsvFile(inputFile) {
 
   if (lower.endsWith('.csv')) {
     const text = await inputFile.text();
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    if (!lines.length) return inputFile;
+
+    const lines = text
+      .split(/\r?\n/)
+      .filter(l => l.trim() !== '');
+
+    if (!lines.length) {
+      return inputFile;
+    }
 
     const headerLine = lines[0];
-    const headers = parseCsvLine(headerLine).map(h => h.trim().replace(/^"|"$/g, ''));
+
+    const headers = parseCsvLine(
+      headerLine
+    ).map(h =>
+      h
+        .trim()
+        .replace(/^"|"$/g, '')
+    );
 
     const rows = [];
-    for (let i = 1; i < lines.length; i++) {
+
+    for (
+      let i = 1;
+      i < lines.length;
+      i++
+    ) {
       const line = lines[i];
-      if (!line || !line.trim()) continue;
+
+      if (
+        !line ||
+        !line.trim()
+      ) {
+        continue;
+      }
 
       const cols = parseCsvLine(line);
       const rowObj = {};
+
       headers.forEach((h, idx) => {
-        rowObj[h] = cols[idx] ?? '';
+        rowObj[h] =
+          cols[idx] ?? '';
       });
 
-      if (!shouldDropRow(rowObj)) rows.push(rowObj);
+      if (!shouldDropRow(rowObj)) {
+        rows.push(rowObj);
+      }
     }
 
     const esc = v => {
       const s = String(v ?? '');
-      if (s.includes('"') || s.includes(',') || s.includes('\n') || s.includes('\r')) {
-        return `"${s.replace(/"/g, '""')}"`;
+
+      if (
+        s.includes('"') ||
+        s.includes(',') ||
+        s.includes('\n') ||
+        s.includes('\r')
+      ) {
+        return `"${s.replace(
+          /"/g,
+          '""'
+        )}"`;
       }
+
       return s;
     };
 
     const outLines = [];
-    outLines.push(headers.map(esc).join(','));
-    for (const r of rows) outLines.push(headers.map(h => esc(r[h])).join(','));
 
-    const blob = new Blob([outLines.join('\n')], { type: 'text/csv' });
-    return new File([blob], inputFile.name, { type: inputFile.type || 'text/csv' });
+    outLines.push(
+      headers
+        .map(esc)
+        .join(',')
+    );
+
+    for (const r of rows) {
+      outLines.push(
+        headers
+          .map(h => esc(r[h]))
+          .join(',')
+      );
+    }
+
+    const blob = new Blob(
+      [outLines.join('\n')],
+      {
+        type: 'text/csv'
+      }
+    );
+
+    return new File(
+      [blob],
+      inputFile.name,
+      {
+        type:
+          inputFile.type ||
+          'text/csv'
+      }
+    );
   }
 
-  if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
-    const xlsxModule = await import('xlsx');
-    const XLSX = xlsxModule.default || xlsxModule;
-    const buf = await inputFile.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
-    const sheetName = wb.SheetNames?.[0];
-    if (!sheetName) return inputFile;
+  if (
+    lower.endsWith('.xlsx') ||
+    lower.endsWith('.xls')
+  ) {
+    const xlsxModule =
+      await import('xlsx');
 
-    const ws = wb.Sheets[sheetName];
-    const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
-    const filtered = (Array.isArray(json) ? json : []).filter(r => !shouldDropRow(r));
+    const XLSX =
+      xlsxModule.default ||
+      xlsxModule;
 
-    const newWb = XLSX.utils.book_new();
-    const newWs = XLSX.utils.json_to_sheet(filtered.length ? filtered : []);
-    XLSX.utils.book_append_sheet(newWb, newWs, sheetName);
+    const buf =
+      await inputFile.arrayBuffer();
 
-    const out = XLSX.write(newWb, { type: 'array', bookType: 'xlsx' });
-    const blob = new Blob([out], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-    return new File([blob], inputFile.name, { type: blob.type });
+    const wb = XLSX.read(
+      buf,
+      {
+        type: 'array'
+      }
+    );
+
+    const sheetName =
+      wb.SheetNames?.[0];
+
+    if (!sheetName) {
+      return inputFile;
+    }
+
+    const ws =
+      wb.Sheets[sheetName];
+
+    const json =
+      XLSX.utils.sheet_to_json(
+        ws,
+        {
+          defval: ''
+        }
+      );
+
+    const filtered = (
+      Array.isArray(json)
+        ? json
+        : []
+    ).filter(
+      r =>
+        !shouldDropRow(r)
+    );
+
+    const newWb =
+      XLSX.utils.book_new();
+
+    const newWs =
+      XLSX.utils.json_to_sheet(
+        filtered.length
+          ? filtered
+          : []
+      );
+
+    XLSX.utils.book_append_sheet(
+      newWb,
+      newWs,
+      sheetName
+    );
+
+    const out =
+      XLSX.write(
+        newWb,
+        {
+          type: 'array',
+          bookType: 'xlsx'
+        }
+      );
+
+    const blob = new Blob(
+      [out],
+      {
+        type:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
+    );
+
+    return new File(
+      [blob],
+      inputFile.name,
+      {
+        type: blob.type
+      }
+    );
   }
 
   return inputFile;
@@ -211,116 +566,376 @@ async function cleanExcelOrCsvFile(inputFile) {
 export default function ImportStock() {
   const { user } = useAuth();
   const { show, hide } = useLoading();
-  const [file, setFile] = useState(null);
-  const [imageZip, setImageZip] = useState(null);
-  const [gender, setGender] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const [uploadingImages, setUploadingImages] = useState(false);
-  const [message, setMessage] = useState('');
-  const [imageMessage, setImageMessage] = useState('');
-  const [jobs, setJobs] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [progress, setProgress] = useState(null);
-  const [imageProgress, setImageProgress] = useState({ done: 0, total: 0 });
-  const [matchStats, setMatchStats] = useState({ matched: 0, total: 0, skipped: 0 });
-  const [unmatchedList, setUnmatchedList] = useState([]);
-  const [b2cDiscount, setB2cDiscount] = useState('');
-  const [b2bDiscount, setB2bDiscount] = useState('');
-  const [savingDiscounts, setSavingDiscounts] = useState(false);
-  const [discountMessage, setDiscountMessage] = useState('');
-  const [imageMode, setImageMode] = useState('ean') // 'ean' or 'pattern'
-  const [importType, setImportType] = useState('B2C') // 'B2C' or 'B2B'
-  const [b2bMessage, setB2bMessage] = useState('')
-  const [b2bUploading, setB2bUploading] = useState(false)
 
-  const branchId = user?.branch_id;
+  const [file, setFile] =
+    useState(null);
 
-  const canUpload = useMemo(() => !!file && !!branchId && !uploading && !!gender, [file, branchId, uploading, gender]);
+  const [
+    imageZip,
+    setImageZip
+  ] = useState(null);
 
-  const canUploadImages = useMemo(() => !!imageZip && !!branchId && !uploadingImages, [imageZip, branchId, uploadingImages]);
+  const [
+    gender,
+    setGender
+  ] = useState('');
 
-  const canSaveDiscounts = useMemo(() => {
-    return (
-      !!branchId &&
-      !savingDiscounts &&
-      b2cDiscount !== '' &&
-      b2bDiscount !== '' &&
-      !isNaN(parseFloat(b2cDiscount)) &&
-      !isNaN(parseFloat(b2bDiscount))
+  const [
+    uploading,
+    setUploading
+  ] = useState(false);
+
+  const [
+    uploadingImages,
+    setUploadingImages
+  ] = useState(false);
+
+  const [
+    message,
+    setMessage
+  ] = useState('');
+
+  const [
+    imageMessage,
+    setImageMessage
+  ] = useState('');
+
+  const [
+    jobs,
+    setJobs
+  ] = useState([]);
+
+  const [
+    refreshing,
+    setRefreshing
+  ] = useState(false);
+
+  const [
+    progress,
+    setProgress
+  ] = useState(null);
+
+  const [
+    imageProgress,
+    setImageProgress
+  ] = useState({
+    done: 0,
+    total: 0
+  });
+
+  const [
+    matchStats,
+    setMatchStats
+  ] = useState({
+    matched: 0,
+    total: 0,
+    skipped: 0
+  });
+
+  const [
+    unmatchedList,
+    setUnmatchedList
+  ] = useState([]);
+
+  const [
+    b2cDiscount,
+    setB2cDiscount
+  ] = useState('');
+
+  const [
+    b2bDiscount,
+    setB2bDiscount
+  ] = useState('');
+
+  const [
+    savingDiscounts,
+    setSavingDiscounts
+  ] = useState(false);
+
+  const [
+    discountMessage,
+    setDiscountMessage
+  ] = useState('');
+
+  const [
+    imageMode,
+    setImageMode
+  ] = useState('ean');
+
+  const [
+    importType,
+    setImportType
+  ] = useState('B2C');
+
+  const [
+    b2bMessage,
+    setB2bMessage
+  ] = useState('');
+
+  const [
+    b2bUploading,
+    setB2bUploading
+  ] = useState(false);
+
+  const branchId =
+    user?.branch_id;
+
+  const canUpload =
+    useMemo(
+      () =>
+        !!file &&
+        !!branchId &&
+        !uploading &&
+        !!gender,
+      [
+        file,
+        branchId,
+        uploading,
+        gender
+      ]
     );
-  }, [branchId, savingDiscounts, b2cDiscount, b2bDiscount]);
+
+  const canUploadImages =
+    useMemo(
+      () =>
+        !!imageZip &&
+        !!branchId &&
+        !uploadingImages,
+      [
+        imageZip,
+        branchId,
+        uploadingImages
+      ]
+    );
+
+  const canSaveDiscounts =
+    useMemo(
+      () => {
+        return (
+          !!branchId &&
+          !savingDiscounts &&
+          b2cDiscount !== '' &&
+          b2bDiscount !== '' &&
+          !isNaN(
+            parseFloat(
+              b2cDiscount
+            )
+          ) &&
+          !isNaN(
+            parseFloat(
+              b2bDiscount
+            )
+          )
+        );
+      },
+      [
+        branchId,
+        savingDiscounts,
+        b2cDiscount,
+        b2bDiscount
+      ]
+    );
 
   useEffect(() => {
-    const saved = localStorage.getItem('import_gender') || '';
+    const saved =
+      localStorage.getItem(
+        'import_gender'
+      ) || '';
+
     setGender(saved);
   }, []);
 
-  const onB2BUpload = useCallback(async () => {
-    if (!file || !gender || b2bUploading) return
-    setB2bUploading(true)
-    setB2bMessage('')
-    show()
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('gender', gender)
-      const token = localStorage.getItem('auth_token') || ''
-      const API_BASE_RAW = process.env.REACT_APP_API_BASE || 'https://taras-kart-backend.vercel.app'
-      const API_BASE = API_BASE_RAW.replace(/\/+$/, '')
-      const res = await fetch(`${API_BASE}/api/b2b/import`, {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: fd
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setB2bMessage(data.message || 'B2B import complete')
-        if (data.errors?.length) {
-          setB2bMessage(prev => prev + ' | Errors: ' + data.errors.slice(0, 3).join('; '))
+  const onB2BUpload =
+    useCallback(
+      async () => {
+        if (
+          !file ||
+          !gender ||
+          b2bUploading
+        ) {
+          return;
         }
-      } else {
-        setB2bMessage(data.message || 'B2B import failed')
-      }
-    } catch (e) {
-      setB2bMessage('Network error: ' + e.message)
-    } finally {
-      setB2bUploading(false)
-      hide()
-    }
-  }, [file, gender, b2bUploading, show, hide])
 
-  const fetchJobs = useCallback(async () => {
-    if (!branchId) return;
-    setRefreshing(true);
-    show();
-    try {
-      const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/import-jobs`);
-      setJobs(Array.isArray(data) ? data : []);
-    } catch {
-      setJobs([]);
-    } finally {
-      setRefreshing(false);
-      hide();
-    }
-  }, [branchId, show, hide]);
+        setB2bUploading(true);
+        setB2bMessage('');
+        show();
 
-  const fetchDiscounts = useCallback(async () => {
-    if (!branchId) return;
-    try {
-      const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/discounts`);
-      if (data && typeof data === 'object') {
-        if (data.b2c_discount_pct !== undefined && data.b2c_discount_pct !== null) {
-          setB2cDiscount(String(data.b2c_discount_pct));
+        try {
+          const fd =
+            new FormData();
+
+          fd.append(
+            'file',
+            file
+          );
+
+          fd.append(
+            'gender',
+            gender
+          );
+
+          const token =
+            localStorage.getItem(
+              'auth_token'
+            ) || '';
+
+          const API_BASE_RAW =
+            process.env.REACT_APP_API_BASE ||
+            'https://taras-kart-backend.vercel.app';
+
+          const API_BASE =
+            API_BASE_RAW.replace(
+              /\/+$/,
+              ''
+            );
+
+          const res =
+            await fetch(
+              `${API_BASE}/api/b2b/import`,
+              {
+                method: 'POST',
+                headers: token
+                  ? {
+                      Authorization:
+                        `Bearer ${token}`
+                    }
+                  : {},
+                body: fd
+              }
+            );
+
+          const data =
+            await res.json();
+
+          if (res.ok) {
+            setB2bMessage(
+              data.message ||
+              'B2B import complete'
+            );
+
+            if (
+              data.errors?.length
+            ) {
+              setB2bMessage(
+                prev =>
+                  prev +
+                  ' | Errors: ' +
+                  data.errors
+                    .slice(0, 3)
+                    .join('; ')
+              );
+            }
+          } else {
+            setB2bMessage(
+              data.message ||
+              'B2B import failed'
+            );
+          }
+        } catch (e) {
+          setB2bMessage(
+            'Network error: ' +
+            e.message
+          );
+        } finally {
+          setB2bUploading(false);
+          hide();
         }
-        if (data.b2b_discount_pct !== undefined && data.b2b_discount_pct !== null) {
-          setB2bDiscount(String(data.b2b_discount_pct));
+      },
+      [
+        file,
+        gender,
+        b2bUploading,
+        show,
+        hide
+      ]
+    );
+
+  const fetchJobs =
+    useCallback(
+      async () => {
+        if (!branchId) return;
+
+        setRefreshing(true);
+        show();
+
+        try {
+          const data =
+            await apiGet(
+              `/api/branch/${encodeURIComponent(
+                branchId
+              )}/import-jobs`
+            );
+
+          setJobs(
+            Array.isArray(data)
+              ? data
+              : []
+          );
+        } catch {
+          setJobs([]);
+        } finally {
+          setRefreshing(false);
+          hide();
         }
-      }
-    } catch {
-      setB2cDiscount('');
-      setB2bDiscount('');
-    }
-  }, [branchId]);
+      },
+      [
+        branchId,
+        show,
+        hide
+      ]
+    );
+
+  const fetchDiscounts =
+    useCallback(
+      async () => {
+        if (!branchId) return;
+
+        try {
+          const data =
+            await apiGet(
+              `/api/branch/${encodeURIComponent(
+                branchId
+              )}/discounts`
+            );
+
+          if (
+            data &&
+            typeof data ===
+              'object'
+          ) {
+            if (
+              data.b2c_discount_pct !==
+                undefined &&
+              data.b2c_discount_pct !==
+                null
+            ) {
+              setB2cDiscount(
+                String(
+                  data.b2c_discount_pct
+                )
+              );
+            }
+
+            if (
+              data.b2b_discount_pct !==
+                undefined &&
+              data.b2b_discount_pct !==
+                null
+            ) {
+              setB2bDiscount(
+                String(
+                  data.b2b_discount_pct
+                )
+              );
+            }
+          }
+        } catch {
+          setB2cDiscount('');
+          setB2bDiscount('');
+        }
+      },
+      [branchId]
+    );
 
   useEffect(() => {
     fetchJobs();
@@ -330,317 +945,1007 @@ export default function ImportStock() {
     fetchDiscounts();
   }, [fetchDiscounts]);
 
-  const processJob = useCallback(
-    async (jobId, setProg) => {
-      let start = 0;
-      let finished = false;
-
-      setProg({ jobId, state: 'Processing…', done: 0, total: null });
-
-      while (!finished) {
-        const r = await apiPost(
-          `/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=${PROCESS_LIMIT}`
-        );
-
-        const processed = Number(r?.processed || 0);
-        const next =
-          r?.nextStart !== undefined && r?.nextStart !== null
-            ? Number(r.nextStart)
-            : start + processed;
-
-        const total =
-          r?.totalRows !== undefined && r?.totalRows !== null
-            ? Number(r.totalRows)
-            : null;
-
-        const safeNext = Number.isFinite(next) ? next : start + processed;
-        const doneCount = total !== null ? Math.min(safeNext, total) : safeNext;
+  const processJob =
+    useCallback(
+      async (
+        jobId,
+        setProg
+      ) => {
+        let start = 0;
+        let finished = false;
 
         setProg({
           jobId,
-          state: r?.done ? 'Completed' : 'Processing…',
-          done: doneCount,
-          total
+          state: 'Processing…',
+          done: 0,
+          total: null
         });
 
-        if (r?.done || processed <= 0 || safeNext <= start) {
-          finished = true;
-        } else {
-          start = safeNext;
+        while (!finished) {
+          const r =
+            await apiPost(
+              `/api/branch/${encodeURIComponent(
+                branchId
+              )}/import/process/${jobId}?start=${start}&limit=${PROCESS_LIMIT}`
+            );
+
+          const processed =
+            Number(
+              r?.processed ||
+              0
+            );
+
+          const next =
+            r?.nextStart !==
+              undefined &&
+            r?.nextStart !==
+              null
+              ? Number(
+                  r.nextStart
+                )
+              : start +
+                processed;
+
+          const total =
+            r?.totalRows !==
+              undefined &&
+            r?.totalRows !==
+              null
+              ? Number(
+                  r.totalRows
+                )
+              : null;
+
+          const safeNext =
+            Number.isFinite(
+              next
+            )
+              ? next
+              : start +
+                processed;
+
+          const doneCount =
+            total !== null
+              ? Math.min(
+                  safeNext,
+                  total
+                )
+              : safeNext;
+
+          setProg({
+            jobId,
+            state:
+              r?.done
+                ? 'Completed'
+                : 'Processing…',
+            done: doneCount,
+            total
+          });
+
+          if (
+            r?.done ||
+            processed <= 0 ||
+            safeNext <= start
+          ) {
+            finished = true;
+          } else {
+            start =
+              safeNext;
+          }
         }
-      }
-    },
-    [branchId]
-  );
+      },
+      [branchId]
+    );
 
-  const onUpload = useCallback(
-    async e => {
-      e.preventDefault();
-      if (!file || !branchId || !gender) {
-        setMessage('Please select a category and choose a file.');
-        return;
-      }
+  const onUpload =
+    useCallback(
+      async e => {
+        e.preventDefault();
 
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        setMessage('You are not logged in');
-        return;
-      }
+        if (
+          !file ||
+          !branchId ||
+          !gender
+        ) {
+          setMessage(
+            'Please select a category and choose a file.'
+          );
+          return;
+        }
 
-      setUploading(true);
-      setMessage('');
-      setProgress(null);
-      show();
+        const token =
+          localStorage.getItem(
+            'auth_token'
+          );
 
-      try {
-        const cleaned = await cleanExcelOrCsvFile(file);
-        const fd = new FormData();
-        fd.append('file', cleaned);
-        fd.append('gender', gender);
-        localStorage.setItem('import_gender', gender);
+        if (!token) {
+          setMessage(
+            'You are not logged in'
+          );
+          return;
+        }
 
-        const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd);
-        setMessage('Uploaded. Starting processing…');
-        setFile(null);
+        setUploading(true);
+        setMessage('');
+        setProgress(null);
+        show();
 
-        await processJob(job.id, setProgress);
-        await fetchJobs();
-      } catch (err) {
-        setMessage(err?.payload?.message || err?.message || 'Upload failed');
-      } finally {
-        setUploading(false);
-        hide();
-        setTimeout(() => setMessage(''), 3000);
-      }
-    },
-    [file, branchId, gender, show, hide, processJob, fetchJobs]
-  );
+        try {
+          const cleaned =
+            await cleanExcelOrCsvFile(
+              file
+            );
 
-  async function uploadToCloudinary(blob, publicIdBase) {
-    const form = new FormData();
-    form.append('file', blob);
-    form.append('upload_preset', UPLOAD_PRESET);
-    form.append('folder', 'products');
-    form.append('public_id', publicIdBase);
+          const fd =
+            new FormData();
 
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-      method: 'POST',
-      body: form
-    });
+          fd.append(
+            'file',
+            cleaned
+          );
 
-    if (!res.ok) throw new Error(`Cloudinary upload failed (${res.status})`);
+          fd.append(
+            'gender',
+            gender
+          );
+
+          localStorage.setItem(
+            'import_gender',
+            gender
+          );
+
+          const job =
+            await apiUpload(
+              `/api/branch/${encodeURIComponent(
+                branchId
+              )}/import`,
+              fd
+            );
+
+          setMessage(
+            'Uploaded. Starting processing…'
+          );
+
+          setFile(null);
+
+          await processJob(
+            job.id,
+            setProgress
+          );
+
+          await fetchJobs();
+        } catch (err) {
+          setMessage(
+            err?.payload
+              ?.message ||
+            err?.message ||
+            'Upload failed'
+          );
+        } finally {
+          setUploading(false);
+          hide();
+
+          setTimeout(
+            () =>
+              setMessage(''),
+            3000
+          );
+        }
+      },
+      [
+        file,
+        branchId,
+        gender,
+        show,
+        hide,
+        processJob,
+        fetchJobs
+      ]
+    );
+
+  async function uploadToCloudinary(
+    blob,
+    publicIdBase
+  ) {
+    const form =
+      new FormData();
+
+    form.append(
+      'file',
+      blob
+    );
+
+    form.append(
+      'upload_preset',
+      UPLOAD_PRESET
+    );
+
+    form.append(
+      'folder',
+      'products'
+    );
+
+    form.append(
+      'public_id',
+      publicIdBase
+    );
+
+    const res =
+      await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        {
+          method: 'POST',
+          body: form
+        }
+      );
+
+    if (!res.ok) {
+      throw new Error(
+        `Cloudinary upload failed (${res.status})`
+      );
+    }
+
     return res.json();
   }
 
+  const onUploadImages =
+    useCallback(
+      async e => {
+        e.preventDefault();
 
-const onUploadImages = useCallback(
-  async e => {
-    e.preventDefault()
-    if (!imageZip || !branchId) {
-      setImageMessage('Please choose a ZIP file.')
-      return
-    }
-
-    setUploadingImages(true)
-    setImageMessage('')
-    setImageProgress({ done: 0, total: 0 })
-    setMatchStats({ matched: 0, total: 0, skipped: 0 })
-    setUnmatchedList([])
-    show()
-
-    try {
-      // Fetch product identifiers based on mode
-      let identifierSet = new Set()
-      try {
-        const list = await apiGet(`/api/products?limit=100000`)
-        identifierSet = new Set(
-          (Array.isArray(list) ? list : [])
-            .map(p => {
-              if (imageMode === 'ean') return String(p.ean_code || '').trim()
-              // Pattern mode — ean_code column stores the pattern too
-              return String(p.ean_code || '').trim()
-            })
-            .filter(Boolean)
-        )
-      } catch {
-        identifierSet = new Set()
-      }
-
-      const zip = await JSZip.loadAsync(imageZip)
-      const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name))
-      const total = entries.length
-      let done = 0
-      let matched = 0
-      const unmatched = []
-
-      for (const f of entries) {
-        const identifier = extractIdentifierFromPath(f.name, imageMode).trim()
-
-        if (!identifier || !identifierSet.has(identifier)) {
-          unmatched.push({ file: f.name, ean: identifier || '(none)' })
-          done += 1
-          setImageProgress({ done, total })
-          continue
+        if (
+          !imageZip ||
+          !branchId
+        ) {
+          setImageMessage(
+            'Please choose a ZIP file.'
+          );
+          return;
         }
 
-        const blob = await f.async('blob')
-        await uploadToCloudinary(blob, identifier)
-        matched += 1
-        done += 1
-        setImageProgress({ done, total })
-      }
+        setUploadingImages(
+          true
+        );
 
-      setMatchStats({ matched, total, skipped: total - matched })
-      setUnmatchedList(unmatched)
-      setImageMessage(`Finished. Uploaded ${matched}/${total}. Unmatched ${unmatched.length}.`)
-      setImageZip(null)
-    } catch (err) {
-      setImageMessage(err?.message || 'Image upload failed')
-    } finally {
-      setUploadingImages(false)
-      hide()
-      setTimeout(() => setImageMessage(''), 5000)
-    }
-  },
-  [imageZip, branchId, imageMode, show, hide]  // ← imageMode added to deps here
-)
+        setImageMessage('');
 
-  const onSaveDiscounts = useCallback(
-    async e => {
-      e.preventDefault();
-
-      if (!branchId) {
-        setDiscountMessage('Branch not found');
-        return;
-      }
-
-      const b2c = parseFloat(b2cDiscount);
-      const b2b = parseFloat(b2bDiscount);
-
-      if (isNaN(b2c) || isNaN(b2b)) {
-        setDiscountMessage('Enter valid discount percentages');
-        return;
-      }
-
-      setSavingDiscounts(true);
-      setDiscountMessage('');
-      show();
-
-      try {
-        await apiPost(`/api/branch/${encodeURIComponent(branchId)}/discounts`, {
-          b2c_discount_pct: b2c,
-          b2b_discount_pct: b2b
+        setImageProgress({
+          done: 0,
+          total: 0
         });
-        setDiscountMessage('Discounts saved successfully');
-      } catch (err) {
-        setDiscountMessage(err?.payload?.message || err?.message || 'Failed to save discounts');
-      } finally {
-        setSavingDiscounts(false);
-        hide();
-        setTimeout(() => setDiscountMessage(''), 4000);
-      }
-    },
-    [branchId, b2cDiscount, b2bDiscount, show, hide]
-  );
+
+        setMatchStats({
+          matched: 0,
+          total: 0,
+          skipped: 0
+        });
+
+        setUnmatchedList([]);
+
+        show();
+
+        try {
+          const products =
+            await apiGet(
+              '/api/products?limit=100000'
+            );
+
+          const {
+            eanMap,
+            sharedMap,
+            sharedCollisions
+          } =
+            buildImageLookups(
+              products
+            );
+
+          const zip =
+            await JSZip.loadAsync(
+              imageZip
+            );
+
+          const entries =
+            Object.values(
+              zip.files
+            ).filter(
+              f =>
+                !f.dir &&
+                isImagePath(
+                  f.name
+                )
+            );
+
+          const total =
+            entries.length;
+
+          let done = 0;
+          let matched = 0;
+
+          const unmatched =
+            [];
+
+          const confirmations =
+            [];
+
+          const seen =
+            new Set();
+
+          for (
+            const f of entries
+          ) {
+            const identifier =
+              extractIdentifierFromPath(
+                f.name,
+                imageMode
+              ).trim();
+
+            if (
+              imageMode ===
+              'ean'
+            ) {
+              if (
+                !identifier ||
+                !eanMap.has(
+                  identifier
+                )
+              ) {
+                unmatched.push({
+                  file: f.name,
+                  identifier:
+                    identifier ||
+                    '(none)',
+                  reason:
+                    'EAN not found'
+                });
+
+                done += 1;
+
+                setImageProgress({
+                  done,
+                  total
+                });
+
+                continue;
+              }
+
+              if (
+                seen.has(
+                  identifier
+                )
+              ) {
+                unmatched.push({
+                  file: f.name,
+                  identifier,
+                  reason:
+                    'Duplicate EAN in ZIP'
+                });
+
+                done += 1;
+
+                setImageProgress({
+                  done,
+                  total
+                });
+
+                continue;
+              }
+
+              seen.add(
+                identifier
+              );
+
+              const blob =
+                await f.async(
+                  'blob'
+                );
+
+              const uploaded =
+                await uploadToCloudinary(
+                  blob,
+                  identifier
+                );
+
+              const secureUrl =
+                String(
+                  uploaded
+                    ?.secure_url ||
+                  uploaded?.url ||
+                  ''
+                ).trim();
+
+              if (!secureUrl) {
+                unmatched.push({
+                  file: f.name,
+                  identifier,
+                  reason:
+                    'Upload returned no URL'
+                });
+
+                done += 1;
+
+                setImageProgress({
+                  done,
+                  total
+                });
+
+                continue;
+              }
+
+              confirmations.push({
+                ean:
+                  identifier,
+                secure_url:
+                  secureUrl,
+                cloudinary_public_id:
+                  uploaded
+                    ?.public_id ||
+                  null
+              });
+
+              matched += 1;
+              done += 1;
+
+              setImageProgress({
+                done,
+                total
+              });
+
+              continue;
+            }
+
+            const key =
+              normalizeImageKey(
+                identifier
+              );
+
+            const shared =
+              key
+                ? sharedMap.get(
+                    key
+                  )
+                : null;
+
+            if (
+              !identifier ||
+              !key ||
+              sharedCollisions.has(
+                key
+              )
+            ) {
+              unmatched.push({
+                file: f.name,
+                identifier:
+                  identifier ||
+                  '(none)',
+                reason:
+                  sharedCollisions.has(
+                    key
+                  )
+                    ? 'Pattern + colour is ambiguous; use Product ID + colour'
+                    : 'Invalid shared filename'
+              });
+
+              done += 1;
+
+              setImageProgress({
+                done,
+                total
+              });
+
+              continue;
+            }
+
+            if (!shared) {
+              unmatched.push({
+                file: f.name,
+                identifier,
+                reason:
+                  'Product + colour not found'
+              });
+
+              done += 1;
+
+              setImageProgress({
+                done,
+                total
+              });
+
+              continue;
+            }
+
+            const groupKey =
+              `${shared.product_id}|${normalizeImageKey(
+                shared.colour
+              )}`;
+
+            if (
+              seen.has(
+                groupKey
+              )
+            ) {
+              unmatched.push({
+                file: f.name,
+                identifier,
+                reason:
+                  'Duplicate product + colour in ZIP'
+              });
+
+              done += 1;
+
+              setImageProgress({
+                done,
+                total
+              });
+
+              continue;
+            }
+
+            seen.add(
+              groupKey
+            );
+
+            const publicId =
+              `shared_${shared.product_id}_${safePublicIdPart(
+                shared.colour
+              ) || 'colour'}`;
+
+            const blob =
+              await f.async(
+                'blob'
+              );
+
+            const uploaded =
+              await uploadToCloudinary(
+                blob,
+                publicId
+              );
+
+            const secureUrl =
+              String(
+                uploaded
+                  ?.secure_url ||
+                uploaded?.url ||
+                ''
+              ).trim();
+
+            if (!secureUrl) {
+              unmatched.push({
+                file: f.name,
+                identifier,
+                reason:
+                  'Upload returned no URL'
+              });
+
+              done += 1;
+
+              setImageProgress({
+                done,
+                total
+              });
+
+              continue;
+            }
+
+            confirmations.push({
+              product_id:
+                shared.product_id,
+              colour:
+                shared.colour,
+              secure_url:
+                secureUrl,
+              cloudinary_public_id:
+                uploaded
+                  ?.public_id ||
+                null
+            });
+
+            matched += 1;
+            done += 1;
+
+            setImageProgress({
+              done,
+              total
+            });
+          }
+
+          if (
+            confirmations.length
+          ) {
+            await apiPost(
+              `/api/branch/${encodeURIComponent(
+                branchId
+              )}/images/confirm`,
+              {
+                scope:
+                  imageMode ===
+                  'ean'
+                    ? 'legacy'
+                    : 'shared',
+                images:
+                  confirmations
+              }
+            );
+          }
+
+          setMatchStats({
+            matched,
+            total,
+            skipped:
+              total - matched
+          });
+
+          setUnmatchedList(
+            unmatched
+          );
+
+          setImageMessage(
+            imageMode ===
+              'ean'
+              ? `Finished. Confirmed ${matched}/${total} EAN images. Unmatched ${unmatched.length}.`
+              : `Finished. Confirmed ${matched}/${total} shared product-colour images. Unmatched ${unmatched.length}.`
+          );
+
+          setImageZip(null);
+        } catch (err) {
+          setImageMessage(
+            err?.payload
+              ?.message ||
+            err?.message ||
+            'Image upload failed'
+          );
+        } finally {
+          setUploadingImages(
+            false
+          );
+
+          hide();
+        }
+      },
+      [
+        imageZip,
+        branchId,
+        imageMode,
+        show,
+        hide
+      ]
+    );
+
+  const onSaveDiscounts =
+    useCallback(
+      async e => {
+        e.preventDefault();
+
+        if (!branchId) {
+          setDiscountMessage(
+            'Branch not found'
+          );
+
+          return;
+        }
+
+        const b2c =
+          parseFloat(
+            b2cDiscount
+          );
+
+        const b2b =
+          parseFloat(
+            b2bDiscount
+          );
+
+        if (
+          isNaN(b2c) ||
+          isNaN(b2b)
+        ) {
+          setDiscountMessage(
+            'Enter valid discount percentages'
+          );
+
+          return;
+        }
+
+        setSavingDiscounts(
+          true
+        );
+
+        setDiscountMessage('');
+
+        show();
+
+        try {
+          await apiPost(
+            `/api/branch/${encodeURIComponent(
+              branchId
+            )}/discounts`,
+            {
+              b2c_discount_pct:
+                b2c,
+              b2b_discount_pct:
+                b2b
+            }
+          );
+
+          setDiscountMessage(
+            'Discounts saved successfully'
+          );
+        } catch (err) {
+          setDiscountMessage(
+            err?.payload
+              ?.message ||
+            err?.message ||
+            'Failed to save discounts'
+          );
+        } finally {
+          setSavingDiscounts(
+            false
+          );
+
+          hide();
+
+          setTimeout(
+            () =>
+              setDiscountMessage(
+                ''
+              ),
+            4000
+          );
+        }
+      },
+      [
+        branchId,
+        b2cDiscount,
+        b2bDiscount,
+        show,
+        hide
+      ]
+    );
 
   return (
     <div className="import-page-admin">
       <Navbar />
+
       <div className="import-wrap-admin">
         <div className="import-card-admin">
-          <div className="import-title-admin">Import Stock (Excel)</div>
-          <div className="import-subtitle-admin">Upload your branch Excel file for a selected category.</div>
+          <div className="import-title-admin">
+            Import Stock (Excel)
+          </div>
 
-          {/* B2C / B2B Toggle */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          <div className="import-subtitle-admin">
+            Upload your branch Excel file for a selected category.
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              marginBottom: 16
+            }}
+          >
             <button
               type="button"
-              onClick={() => { setImportType('B2C'); setB2bMessage(''); }}
+              onClick={() => {
+                setImportType(
+                  'B2C'
+                );
+
+                setB2bMessage(
+                  ''
+                );
+              }}
               style={{
-                padding: '8px 24px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                fontWeight: 700, fontSize: 13,
-                background: importType === 'B2C' ? '#ca8a04' : '#1f2937',
-                color: importType === 'B2C' ? '#000' : '#fff'
+                padding:
+                  '8px 24px',
+                borderRadius: 6,
+                border: 'none',
+                cursor:
+                  'pointer',
+                fontWeight: 700,
+                fontSize: 13,
+                background:
+                  importType ===
+                  'B2C'
+                    ? '#ca8a04'
+                    : '#1f2937',
+                color:
+                  importType ===
+                  'B2C'
+                    ? '#000'
+                    : '#fff'
               }}
             >
               B2C Import
             </button>
+
             <button
               type="button"
-              onClick={() => { setImportType('B2B'); setMessage(''); }}
+              onClick={() => {
+                setImportType(
+                  'B2B'
+                );
+
+                setMessage(
+                  ''
+                );
+              }}
               style={{
-                padding: '8px 24px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                fontWeight: 700, fontSize: 13,
-                background: importType === 'B2B' ? '#ca8a04' : '#1f2937',
-                color: importType === 'B2B' ? '#000' : '#fff'
+                padding:
+                  '8px 24px',
+                borderRadius: 6,
+                border: 'none',
+                cursor:
+                  'pointer',
+                fontWeight: 700,
+                fontSize: 13,
+                background:
+                  importType ===
+                  'B2B'
+                    ? '#ca8a04'
+                    : '#1f2937',
+                color:
+                  importType ===
+                  'B2B'
+                    ? '#000'
+                    : '#fff'
               }}
             >
               B2B Import
             </button>
           </div>
-          <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
+
+          <form
+            className="import-form-admin"
+            onSubmit={
+              e =>
+                e.preventDefault()
+            }
+          >
             <div className="excel-block">
               <div className="select-wrap">
-                <label className="label">Category</label>
+                <label className="label">
+                  Category
+                </label>
+
                 <select
-                  className={`audience-select ${gender ? '' : 'invalid'}`}
+                  className={`audience-select ${
+                    gender
+                      ? ''
+                      : 'invalid'
+                  }`}
                   value={gender}
-                  onChange={e => setGender(e.target.value)}
+                  onChange={
+                    e =>
+                      setGender(
+                        e.target
+                          .value
+                      )
+                  }
                   required
                 >
-                  <option value="">Select Category</option>
-                  <option value="MEN">Men</option>
-                  <option value="WOMEN">Women</option>
-                  <option value="KIDS">Kids</option>
+                  <option value="">
+                    Select Category
+                  </option>
+
+                  <option value="MEN">
+                    Men
+                  </option>
+
+                  <option value="WOMEN">
+                    Women
+                  </option>
+
+                  <option value="KIDS">
+                    Kids
+                  </option>
                 </select>
               </div>
 
               <div className="import-filebox-admin">
-                <label className="label">Excel / CSV</label>
+                <label className="label">
+                  Excel / CSV
+                </label>
+
                 <input
                   type="file"
                   accept=".xlsx,.xls,.csv"
-                  onChange={e => setFile(e.target.files?.[0] || null)}
+                  onChange={
+                    e =>
+                      setFile(
+                        e.target
+                          .files?.[0] ||
+                          null
+                      )
+                  }
                 />
 
                 {file ? (
                   <div className="import-filehint-admin">
-                    {file.name} • {(file.size / 1024 / 1024).toFixed(2)} MB
+                    {file.name}
+                    {' • '}
+                    {(
+                      file.size /
+                      1024 /
+                      1024
+                    ).toFixed(2)}
+                    {' MB'}
                   </div>
                 ) : (
-                  <div className="import-filehint-admin">No file selected</div>
+                  <div className="import-filehint-admin">
+                    No file selected
+                  </div>
                 )}
 
-                {importType === 'B2C' ? (
+                {importType ===
+                'B2C' ? (
                   <>
-                    <button className="import-btn-admin" onClick={onUpload} disabled={!canUpload}>
-                      {uploading ? 'Uploading…' : 'Upload B2C Excel'}
+                    <button
+                      className="import-btn-admin"
+                      onClick={
+                        onUpload
+                      }
+                      disabled={
+                        !canUpload
+                      }
+                    >
+                      {uploading
+                        ? 'Uploading…'
+                        : 'Upload B2C Excel'}
                     </button>
-                    {message ? <div className="import-msg-admin">{message}</div> : null}
+
+                    {message ? (
+                      <div className="import-msg-admin">
+                        {message}
+                      </div>
+                    ) : null}
                   </>
                 ) : (
                   <>
                     <button
                       className="import-btn-admin"
-                      onClick={onB2BUpload}
-                      disabled={!file || !gender || b2bUploading}
+                      onClick={
+                        onB2BUpload
+                      }
+                      disabled={
+                        !file ||
+                        !gender ||
+                        b2bUploading
+                      }
                     >
-                      {b2bUploading ? 'Uploading…' : 'Upload B2B Excel'}
+                      {b2bUploading
+                        ? 'Uploading…'
+                        : 'Upload B2B Excel'}
                     </button>
-                    {b2bMessage ? <div className="import-msg-admin">{b2bMessage}</div> : null}
+
+                    {b2bMessage ? (
+                      <div className="import-msg-admin">
+                        {b2bMessage}
+                      </div>
+                    ) : null}
                   </>
                 )}
 
                 {progress ? (
                   <div className="import-msg-admin">
-                    {progress.state} {progress.total ? `${progress.done}/${progress.total}` : `${progress.done}+`} rows
+                    {progress.state}
+                    {' '}
+                    {progress.total
+                      ? `${progress.done}/${progress.total}`
+                      : `${progress.done}+`}
+                    {' rows'}
                   </div>
                 ) : null}
               </div>
 
               <div className="inline-info">
-                <span className={`pill-mini ${gender ? 'ok' : 'warn'}`}>
-                  {gender ? `Category: ${gender}` : 'Select a category for Excel upload'}
+                <span
+                  className={`pill-mini ${
+                    gender
+                      ? 'ok'
+                      : 'warn'
+                  }`}
+                >
+                  {gender
+                    ? `Category: ${gender}`
+                    : 'Select a category for Excel upload'}
                 </span>
               </div>
             </div>
@@ -648,73 +1953,218 @@ const onUploadImages = useCallback(
         </div>
 
         <div className="import-card-admin">
-          <div className="import-title-admin">Upload Product Images (ZIP by EAN)</div>
-          <div className="import-subtitle-admin">
-            Images will be matched by EAN across all categories. Only unmatched EANs will be listed below.
+          <div className="import-title-admin">
+            Upload Product Images
           </div>
-          <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
+
+          <div className="import-subtitle-admin">
+            Use EAN mode for legacy per-variant images, or Shared mode to upload one image for every size of the same product and colour.
+          </div>
+
+          <form
+            className="import-form-admin"
+            onSubmit={
+              e =>
+                e.preventDefault()
+            }
+          >
             <div className="zip-block">
               <div className="import-filebox-admin">
-                <label className="label">Images ZIP Folder</label>
+                <label className="label">
+                  Images ZIP Folder
+                </label>
 
-                <div style={{ display: 'flex', gap: '16px', marginBottom: '10px' }}>
-  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-    <input
-      type="radio"
-      name="imageMode"
-      value="ean"
-      checked={imageMode === 'ean'}
-      onChange={() => setImageMode('ean')}
-    />
-    Match by EAN
-  </label>
-  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-    <input
-      type="radio"
-      name="imageMode"
-      value="pattern"
-      checked={imageMode === 'pattern'}
-      onChange={() => setImageMode('pattern')}
-    />
-    Match by Pattern
-  </label>
-</div>
-                <input type="file" accept=".zip" onChange={e => setImageZip(e.target.files?.[0] || null)} />
+                <div
+                  style={{
+                    display:
+                      'flex',
+                    gap: '16px',
+                    marginBottom:
+                      '10px',
+                    flexWrap:
+                      'wrap'
+                  }}
+                >
+                  <label
+                    style={{
+                      display:
+                        'flex',
+                      alignItems:
+                        'center',
+                      gap: '6px',
+                      cursor:
+                        'pointer'
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="imageMode"
+                      value="ean"
+                      checked={
+                        imageMode ===
+                        'ean'
+                      }
+                      onChange={() =>
+                        setImageMode(
+                          'ean'
+                        )
+                      }
+                    />
+
+                    EAN Image
+                  </label>
+
+                  <label
+                    style={{
+                      display:
+                        'flex',
+                      alignItems:
+                        'center',
+                      gap: '6px',
+                      cursor:
+                        'pointer'
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="imageMode"
+                      value="shared"
+                      checked={
+                        imageMode ===
+                        'shared'
+                      }
+                      onChange={() =>
+                        setImageMode(
+                          'shared'
+                        )
+                      }
+                    />
+
+                    Shared Product + Colour Image
+                  </label>
+                </div>
+
+                <div
+                  className="import-filehint-admin"
+                  style={{
+                    marginBottom:
+                      '10px'
+                  }}
+                >
+                  {imageMode ===
+                  'ean'
+                    ? 'EAN mode filename example: 8903289347502.jpg'
+                    : 'Shared mode filename examples: 1508__JUNGLE GREEN.jpg or 1737__JUNGLE GREEN.jpg. Product ID + colour is safest; Pattern + colour also works when unique.'}
+                </div>
+
+                <input
+                  type="file"
+                  accept=".zip"
+                  onChange={
+                    e =>
+                      setImageZip(
+                        e.target
+                          .files?.[0] ||
+                          null
+                      )
+                  }
+                />
 
                 {imageZip ? (
                   <div className="import-filehint-admin">
-                    {imageZip.name} • {(imageZip.size / 1024 / 1024).toFixed(2)} MB
+                    {
+                      imageZip.name
+                    }
+                    {' • '}
+                    {(
+                      imageZip.size /
+                      1024 /
+                      1024
+                    ).toFixed(2)}
+                    {' MB'}
                   </div>
                 ) : (
-                  <div className="import-filehint-admin">No ZIP selected</div>
+                  <div className="import-filehint-admin">
+                    No ZIP selected
+                  </div>
                 )}
 
                 <button
                   className="import-btn-admin"
-                  onClick={onUploadImages}
-                  disabled={!canUploadImages || uploadingImages}
+                  onClick={
+                    onUploadImages
+                  }
+                  disabled={
+                    !canUploadImages ||
+                    uploadingImages
+                  }
                 >
-                  {uploadingImages ? `Uploading ${imageProgress.done}/${imageProgress.total}…` : 'Upload Images ZIP'}
+                  {uploadingImages
+                    ? `Uploading ${imageProgress.done}/${imageProgress.total}…`
+                    : 'Upload Images ZIP'}
                 </button>
 
-                {imageMessage ? <div className="import-msg-admin">{imageMessage}</div> : null}
+                {imageMessage ? (
+                  <div className="import-msg-admin">
+                    {imageMessage}
+                  </div>
+                ) : null}
 
                 <div className="image-stats">
-                  <span>Matched: {matchStats.matched}</span>
-                  <span>Unmatched: {matchStats.skipped}</span>
-                  <span>Total: {matchStats.total}</span>
+                  <span>
+                    Matched:{' '}
+                    {
+                      matchStats.matched
+                    }
+                  </span>
+
+                  <span>
+                    Unmatched:{' '}
+                    {
+                      matchStats.skipped
+                    }
+                  </span>
+
+                  <span>
+                    Total:{' '}
+                    {
+                      matchStats.total
+                    }
+                  </span>
                 </div>
 
                 {!!unmatchedList.length && (
                   <div className="unmatched-wrap">
-                    <div className="unmatched-title">Unmatched EANs</div>
+                    <div className="unmatched-title">
+                      Unmatched Images
+                    </div>
+
                     <ul className="unmatched-list">
-                      {unmatchedList.map((u, i) => (
-                        <li key={`${u.file}-${i}`}>
-                          <span className="unmatched-ean">{u.ean}</span>
-                          <span className="unmatched-file">{u.file}</span>
-                        </li>
-                      ))}
+                      {unmatchedList.map(
+                        (
+                          u,
+                          i
+                        ) => (
+                          <li
+                            key={`${u.file}-${i}`}
+                          >
+                            <span className="unmatched-ean">
+                              {
+                                u.identifier
+                              }
+                            </span>
+
+                            <span className="unmatched-file">
+                              {
+                                u.file
+                              }
+                              {u.reason
+                                ? ` — ${u.reason}`
+                                : ''}
+                            </span>
+                          </li>
+                        )
+                      )}
                     </ul>
                   </div>
                 )}
@@ -724,54 +2174,112 @@ const onUploadImages = useCallback(
         </div>
 
         <div className="import-card-admin">
-          <div className="import-title-admin">B2C / B2B Discounts</div>
+          <div className="import-title-admin">
+            B2C / B2B Discounts
+          </div>
+
           <div className="import-subtitle-admin">
             Set discount percentages for all products in this branch. These are kept separate from Excel and image uploads.
           </div>
-          <form className="import-form-admin" onSubmit={onSaveDiscounts}>
+
+          <form
+            className="import-form-admin"
+            onSubmit={
+              onSaveDiscounts
+            }
+          >
             <div className="discount-block">
               <div className="discount-row">
                 <div className="discount-field">
-                  <label className="label">B2C Discount (%)</label>
+                  <label className="label">
+                    B2C Discount (%)
+                  </label>
+
                   <input
                     type="number"
                     min="0"
                     max="100"
                     step="0.01"
-                    value={b2cDiscount}
-                    onChange={e => setB2cDiscount(e.target.value)}
+                    value={
+                      b2cDiscount
+                    }
+                    onChange={
+                      e =>
+                        setB2cDiscount(
+                          e.target
+                            .value
+                        )
+                    }
                     className="discount-input"
                   />
                 </div>
 
                 <div className="discount-field">
-                  <label className="label">B2B Discount (%)</label>
+                  <label className="label">
+                    B2B Discount (%)
+                  </label>
+
                   <input
                     type="number"
                     min="0"
                     max="100"
                     step="0.01"
-                    value={b2bDiscount}
-                    onChange={e => setB2bDiscount(e.target.value)}
+                    value={
+                      b2bDiscount
+                    }
+                    onChange={
+                      e =>
+                        setB2bDiscount(
+                          e.target
+                            .value
+                        )
+                    }
                     className="discount-input"
                   />
                 </div>
               </div>
 
-              <button type="submit" className="import-btn-admin" disabled={!canSaveDiscounts}>
-                {savingDiscounts ? 'Saving…' : 'Save Discounts'}
+              <button
+                type="submit"
+                className="import-btn-admin"
+                disabled={
+                  !canSaveDiscounts
+                }
+              >
+                {savingDiscounts
+                  ? 'Saving…'
+                  : 'Save Discounts'}
               </button>
 
-              {discountMessage ? <div className="import-msg-admin">{discountMessage}</div> : null}
+              {discountMessage ? (
+                <div className="import-msg-admin">
+                  {
+                    discountMessage
+                  }
+                </div>
+              ) : null}
             </div>
           </form>
         </div>
 
         <div className="import-card-admin">
-          <div className="import-title-admin">Recent Imports</div>
+          <div className="import-title-admin">
+            Recent Imports
+          </div>
+
           <div className="import-actions-admin">
-            <button className="import-ghost-btn-admin" onClick={fetchJobs} disabled={refreshing}>
-              {refreshing ? 'Refreshing…' : 'Refresh'}
+            <button
+              className="import-ghost-btn-admin"
+              onClick={
+                fetchJobs
+              }
+              disabled={
+                refreshing
+              }
+            >
+              {refreshing
+                ? 'Refreshing…'
+                : 'Refresh'}
             </button>
           </div>
 
@@ -779,37 +2287,118 @@ const onUploadImages = useCallback(
             <table className="import-table-admin">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>File</th>
-                  <th>Gender</th>
-                  <th>Status</th>
-                  <th>Total</th>
-                  <th>Success</th>
-                  <th>Error</th>
-                  <th>Uploaded</th>
-                  <th>Completed</th>
+                  <th>
+                    ID
+                  </th>
+
+                  <th>
+                    File
+                  </th>
+
+                  <th>
+                    Gender
+                  </th>
+
+                  <th>
+                    Status
+                  </th>
+
+                  <th>
+                    Total
+                  </th>
+
+                  <th>
+                    Success
+                  </th>
+
+                  <th>
+                    Error
+                  </th>
+
+                  <th>
+                    Uploaded
+                  </th>
+
+                  <th>
+                    Completed
+                  </th>
                 </tr>
               </thead>
+
               <tbody>
-                {jobs.map(j => (
-                  <tr key={j.id} className="import-row-card">
-                    <td data-label="ID">{j.id}</td>
-                    <td data-label="File">{j.file_name || '-'}</td>
-                    <td data-label="Gender">{j.gender || '-'}</td>
-                    <td data-label="Status">
-                      <span className={`pill-admin ${String(j.status_enum || '').toLowerCase()}`}>{j.status_enum}</span>
-                    </td>
-                    <td data-label="Total">{j.rows_total ?? 0}</td>
-                    <td data-label="Success">{j.rows_success ?? 0}</td>
-                    <td data-label="Error">{j.rows_error ?? 0}</td>
-                    <td data-label="Uploaded">{j.uploaded_at ? new Date(j.uploaded_at).toLocaleString() : '-'}</td>
-                    <td data-label="Completed">{j.completed_at ? new Date(j.completed_at).toLocaleString() : '-'}</td>
-                  </tr>
-                ))}
+                {jobs.map(
+                  j => (
+                    <tr
+                      key={j.id}
+                      className="import-row-card"
+                    >
+                      <td data-label="ID">
+                        {j.id}
+                      </td>
+
+                      <td data-label="File">
+                        {j.file_name ||
+                          '-'}
+                      </td>
+
+                      <td data-label="Gender">
+                        {j.gender ||
+                          '-'}
+                      </td>
+
+                      <td data-label="Status">
+                        <span
+                          className={`pill-admin ${String(
+                            j.status_enum ||
+                              ''
+                          ).toLowerCase()}`}
+                        >
+                          {
+                            j.status_enum
+                          }
+                        </span>
+                      </td>
+
+                      <td data-label="Total">
+                        {j.rows_total ??
+                          0}
+                      </td>
+
+                      <td data-label="Success">
+                        {j.rows_success ??
+                          0}
+                      </td>
+
+                      <td data-label="Error">
+                        {j.rows_error ??
+                          0}
+                      </td>
+
+                      <td data-label="Uploaded">
+                        {j.uploaded_at
+                          ? new Date(
+                              j.uploaded_at
+                            ).toLocaleString()
+                          : '-'}
+                      </td>
+
+                      <td data-label="Completed">
+                        {j.completed_at
+                          ? new Date(
+                              j.completed_at
+                            ).toLocaleString()
+                          : '-'}
+                      </td>
+                    </tr>
+                  )
+                )}
 
                 {!jobs.length && (
                   <tr>
-                    <td colSpan="9" className="import-empty-admin">
+                    <td
+                      colSpan="9"
+                      className="import-empty-admin"
+                    >
                       No imports yet
                     </td>
                   </tr>
@@ -818,7 +2407,9 @@ const onUploadImages = useCallback(
             </table>
           </div>
 
-          <div className="import-note-admin">Each upload affects only your branch inventory.</div>
+          <div className="import-note-admin">
+            Each upload affects only your branch inventory.
+          </div>
         </div>
       </div>
     </div>
