@@ -248,6 +248,15 @@ function safePublicIdPart(value) {
     .replace(/^_+|_+$/g, '');
 }
 
+// FIT-aware alias key. When fit is empty, this collapses to the same key
+// as the old 2-part alias — brands with no FIT distinction are unaffected.
+function buildAliasKey(...parts) {
+  return parts
+    .map(p => String(p ?? '').trim())
+    .filter(Boolean)
+    .join('__');
+}
+
 function addSharedAlias(
   map,
   collisions,
@@ -271,7 +280,9 @@ function addSharedAlias(
     Number(existing.product_id) !==
       Number(value.product_id) ||
     normalizeImageKey(existing.colour) !==
-      normalizeImageKey(value.colour)
+      normalizeImageKey(value.colour) ||
+    normalizeImageKey(existing.fit) !==
+      normalizeImageKey(value.fit)
   ) {
     map.delete(key);
     collisions.add(key);
@@ -310,6 +321,12 @@ function buildImageLookups(products) {
       item?.pattern_code || ''
     ).trim();
 
+    // FIT is now a variant-level attribute, same source as colour/size.
+    // Empty string for brands that don't distinguish by fit.
+    const fit = String(
+      item?.fit || ''
+    ).trim();
+
     if (
       !productId ||
       !colour
@@ -320,6 +337,7 @@ function buildImageLookups(products) {
     const value = {
       product_id: productId,
       colour,
+      fit,
       pattern_code: pattern,
       product_name: String(
         item?.product_name || ''
@@ -331,20 +349,45 @@ function buildImageLookups(products) {
       ).trim()
     };
 
+    // Aliases now come in two flavours per key type:
+    //  - WITH fit (when fit is non-empty): PRODUCTID__COLOUR__FIT / PATTERN__COLOUR__FIT
+    //  - WITHOUT fit (always added too, for backward compatibility with
+    //    brands that never had a fit distinction): PRODUCTID__COLOUR / PATTERN__COLOUR
+    // A filename with only colour (no fit) still matches correctly for
+    // single-fit brands. A filename with fit included only matches the
+    // fit-specific alias, correctly disambiguating GOKUL-style RN vs RNS.
     const aliases = [
+      buildAliasKey(productId, colour),
       `${productId} ${colour}`,
-      `${productId}__${colour}`,
       `${productId}-${colour}`,
       `${productId}_${colour}`
     ];
 
+    if (fit) {
+      aliases.push(
+        buildAliasKey(productId, colour, fit),
+        `${productId} ${colour} ${fit}`,
+        `${productId}-${colour}-${fit}`,
+        `${productId}_${colour}_${fit}`
+      );
+    }
+
     if (pattern) {
       aliases.push(
+        buildAliasKey(pattern, colour),
         `${pattern} ${colour}`,
-        `${pattern}__${colour}`,
         `${pattern}-${colour}`,
         `${pattern}_${colour}`
       );
+
+      if (fit) {
+        aliases.push(
+          buildAliasKey(pattern, colour, fit),
+          `${pattern} ${colour} ${fit}`,
+          `${pattern}-${colour}-${fit}`,
+          `${pattern}_${colour}_${fit}`
+        );
+      }
     }
 
     for (const alias of aliases) {
@@ -1421,7 +1464,7 @@ export default function ImportStock() {
                   sharedCollisions.has(
                     key
                   )
-                    ? 'Pattern + colour is ambiguous; use Product ID + colour'
+                    ? 'Pattern/Product + colour (+fit) is ambiguous; use Product ID + colour + fit'
                     : 'Invalid shared filename'
               });
 
@@ -1440,7 +1483,7 @@ export default function ImportStock() {
                 file: f.name,
                 identifier,
                 reason:
-                  'Product + colour not found'
+                  'Product + colour (+fit) not found'
               });
 
               done += 1;
@@ -1456,6 +1499,8 @@ export default function ImportStock() {
             const groupKey =
               `${shared.product_id}|${normalizeImageKey(
                 shared.colour
+              )}|${normalizeImageKey(
+                shared.fit
               )}`;
 
             if (
@@ -1467,7 +1512,7 @@ export default function ImportStock() {
                 file: f.name,
                 identifier,
                 reason:
-                  'Duplicate product + colour in ZIP'
+                  'Duplicate product + colour + fit in ZIP'
               });
 
               done += 1;
@@ -1487,7 +1532,11 @@ export default function ImportStock() {
             const publicId =
               `shared_${shared.product_id}_${safePublicIdPart(
                 shared.colour
-              ) || 'colour'}`;
+              ) || 'colour'}${
+                shared.fit
+                  ? `_${safePublicIdPart(shared.fit)}`
+                  : ''
+              }`;
 
             const blob =
               await f.async(
@@ -1531,6 +1580,8 @@ export default function ImportStock() {
                 shared.product_id,
               colour:
                 shared.colour,
+              fit:
+                shared.fit,
               secure_url:
                 secureUrl,
               cloudinary_public_id:
@@ -1582,7 +1633,7 @@ export default function ImportStock() {
             imageMode ===
               'ean'
               ? `Finished. Confirmed ${matched}/${total} EAN images. Unmatched ${unmatched.length}.`
-              : `Finished. Confirmed ${matched}/${total} shared product-colour images. Unmatched ${unmatched.length}.`
+              : `Finished. Confirmed ${matched}/${total} shared product-colour(-fit) images. Unmatched ${unmatched.length}.`
           );
 
           setImageZip(null);
@@ -1958,7 +2009,7 @@ export default function ImportStock() {
           </div>
 
           <div className="import-subtitle-admin">
-            Use EAN mode for legacy per-variant images, or Shared mode to upload one image for every size of the same product and colour.
+            Use EAN mode for legacy per-variant images, or Shared mode to upload one image for every size of the same product, colour, and fit.
           </div>
 
           <form
@@ -2040,7 +2091,7 @@ export default function ImportStock() {
                       }
                     />
 
-                    Shared Product + Colour Image
+                    Shared Product + Colour (+Fit) Image
                   </label>
                 </div>
 
@@ -2054,7 +2105,7 @@ export default function ImportStock() {
                   {imageMode ===
                   'ean'
                     ? 'EAN mode filename example: 8903289347502.jpg'
-                    : 'Shared mode filename examples: 1508__JUNGLE GREEN.jpg or 1737__JUNGLE GREEN.jpg. Product ID + colour is safest; Pattern + colour also works when unique.'}
+                    : 'Shared mode filename examples: 1508__JUNGLE GREEN.jpg (no fit distinction) or 1508__JUNGLE GREEN__RN.jpg / 1508__JUNGLE GREEN__RNS.jpg (when the same product+colour has different looks per fit, like GOKUL vests). Product ID + colour + fit is safest; Pattern + colour(+fit) also works when unique.'}
                 </div>
 
                 <input
