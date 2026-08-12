@@ -48,6 +48,10 @@ const AddProduct = () => {
 
   const [eanCode, setEanCode] = useState('');
 
+  // Custom colour input — declared here at the top level of the component,
+  // alongside the other useState calls. This is the ONLY correct place for it.
+  const [customColorInput, setCustomColorInput] = useState('');
+
   const [popupMessage, setPopupMessage] = useState('');
   const [popupType, setPopupType] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -212,23 +216,23 @@ const AddProduct = () => {
   };
 
   const handleAddProduct = async () => {
-const ean = identifierMode === 'ean' ? eanCode.trim() : patternCode.trim()
+    const ean = identifierMode === 'ean' ? eanCode.trim() : patternCode.trim()
 
-if (identifierMode === 'ean') {
-  if (!/^[0-9]{12,14}$/.test(ean)) {
-    setPopupMessage('EAN code must be 12–14 digits.')
-    setPopupType('error')
-    setTimeout(() => { setPopupMessage(''); setPopupType('') }, 3000)
-    return
-  }
-} else {
-  if (!ean) {
-    setPopupMessage('Pattern code cannot be empty.')
-    setPopupType('error')
-    setTimeout(() => { setPopupMessage(''); setPopupType('') }, 3000)
-    return
-  }
-}
+    if (identifierMode === 'ean') {
+      if (!/^[0-9]{12,14}$/.test(ean)) {
+        setPopupMessage('EAN code must be 12–14 digits.')
+        setPopupType('error')
+        setTimeout(() => { setPopupMessage(''); setPopupType('') }, 3000)
+        return
+      }
+    } else {
+      if (!ean) {
+        setPopupMessage('Pattern code cannot be empty.')
+        setPopupType('error')
+        setTimeout(() => { setPopupMessage(''); setPopupType('') }, 3000)
+        return
+      }
+    }
     if (
       !selectedCategory ||
       !brandInput.trim() ||
@@ -375,6 +379,18 @@ if (identifierMode === 'ean') {
     setNewBrand('');
     setShowPopupBrand(false);
     setShowDropdownBrand(false);
+  };
+
+  const handleAddCustomColor = () => {
+    const value = customColorInput.trim();
+    if (value && !colorList.includes(value)) {
+      const updated = [...colorList, value].sort();
+      setColorList(updated);
+      setSelectedColor(value);
+    } else if (value) {
+      setSelectedColor(value);
+    }
+    setCustomColorInput('');
   };
 
   const handleProductSearch = e => {
@@ -546,60 +562,83 @@ if (identifierMode === 'ean') {
         </div>
 
         <div className="grid-two">
-<div className="field-group">
-  {/* Mode toggle */}
-  <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
-    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-      <input
-        type="radio"
-        name="identifierMode"
-        value="ean"
-        checked={identifierMode === 'ean'}
-        onChange={() => setIdentifierMode('ean')}
-      />
-      EAN Code
-    </label>
-    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-      <input
-        type="radio"
-        name="identifierMode"
-        value="pattern"
-        checked={identifierMode === 'pattern'}
-        onChange={() => setIdentifierMode('pattern')}
-      />
-      Pattern Code
-    </label>
-  </div>
+          <div className="field-group">
+            {/* Mode toggle */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="identifierMode"
+                  value="ean"
+                  checked={identifierMode === 'ean'}
+                  onChange={() => setIdentifierMode('ean')}
+                />
+                EAN Code
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="identifierMode"
+                  value="pattern"
+                  checked={identifierMode === 'pattern'}
+                  onChange={() => setIdentifierMode('pattern')}
+                />
+                Pattern Code
+              </label>
+            </div>
 
-  {identifierMode === 'ean' ? (
-    <>
-      <label className="field-label">EAN Code</label>
-      <input
-        type="text"
-        className="text-input"
-        placeholder="13 digit EAN code"
-        value={eanCode}
-        onChange={e => setEanCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))}
-      />
-      <span className="hint">Must be exactly 13 digits</span>
-    </>
-  ) : (
-    <>
-      <label className="field-label">Pattern Code</label>
-      <input
-        type="text"
-        className="text-input"
-        placeholder="Any pattern/style code e.g. CA01, DEFM, F909"
-        value={patternCode}
-        onChange={e => setPatternCode(e.target.value)}
-      />
-      <span className="hint">Any format — letters, numbers, no length restriction</span>
-    </>
-  )}
-</div>
+            {identifierMode === 'ean' ? (
+              <>
+                <label className="field-label">EAN Code</label>
+                <input
+                  type="text"
+                  className="text-input"
+                  placeholder="13 digit EAN code"
+                  value={eanCode}
+                  onChange={e => setEanCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))}
+                />
+                <span className="hint">Must be exactly 13 digits</span>
+              </>
+            ) : (
+              <>
+                <label className="field-label">Pattern Code</label>
+                <input
+                  type="text"
+                  className="text-input"
+                  placeholder="Any pattern/style code e.g. CA01, DEFM, F909"
+                  value={patternCode}
+                  onChange={e => setPatternCode(e.target.value)}
+                />
+                <span className="hint">Any format — letters, numbers, no length restriction</span>
+              </>
+            )}
+          </div>
 
+          {/* Color field — the ONLY Color section in this file */}
           <div className="field-group">
             <label className="field-label">Color</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              <input
+                type="text"
+                className="text-input"
+                placeholder="Type a colour name"
+                value={customColorInput}
+                onChange={e => setCustomColorInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomColor();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="pill-button"
+                onClick={handleAddCustomColor}
+              >
+                Add
+              </button>
+            </div>
             <div className="pill-grid">
               {colorList.map(color => (
                 <button
@@ -648,15 +687,15 @@ if (identifierMode === 'ean') {
             </div>
           </div>
           <div className="field-group">
-    <label className="field-label">Initial Stock</label>
-    <input
-      type="number"
-      className="text-input"
-      placeholder="Enter quantity"
-      value={totalCount}
-      onChange={(e) => setTotalCount(e.target.value)}
-    />
-  </div>
+            <label className="field-label">Initial Stock</label>
+            <input
+              type="number"
+              className="text-input"
+              placeholder="Enter quantity"
+              value={totalCount}
+              onChange={(e) => setTotalCount(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="price-table-wrap">
