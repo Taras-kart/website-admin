@@ -248,8 +248,6 @@ function safePublicIdPart(value) {
     .replace(/^_+|_+$/g, '');
 }
 
-// FIT-aware alias key. When fit is empty, this collapses to the same key
-// as the old 2-part alias — brands with no FIT distinction are unaffected.
 function buildAliasKey(...parts) {
   return parts
     .map(p => String(p ?? '').trim())
@@ -321,8 +319,6 @@ function buildImageLookups(products) {
       item?.pattern_code || ''
     ).trim();
 
-    // FIT is now a variant-level attribute, same source as colour/size.
-    // Empty string for brands that don't distinguish by fit.
     const fit = String(
       item?.fit || ''
     ).trim();
@@ -349,13 +345,6 @@ function buildImageLookups(products) {
       ).trim()
     };
 
-    // Aliases now come in two flavours per key type:
-    //  - WITH fit (when fit is non-empty): PRODUCTID__COLOUR__FIT / PATTERN__COLOUR__FIT
-    //  - WITHOUT fit (always added too, for backward compatibility with
-    //    brands that never had a fit distinction): PRODUCTID__COLOUR / PATTERN__COLOUR
-    // A filename with only colour (no fit) still matches correctly for
-    // single-fit brands. A filename with fit included only matches the
-    // fit-specific alias, correctly disambiguating GOKUL-style RN vs RNS.
     const aliases = [
       buildAliasKey(productId, colour),
       `${productId} ${colour}`,
@@ -624,6 +613,21 @@ export default function ImportStock() {
   ] = useState('');
 
   const [
+    categories,
+    setCategories
+  ] = useState([]);
+
+  const [
+    categoryId,
+    setCategoryId
+  ] = useState('');
+
+  const [
+    categoriesLoading,
+    setCategoriesLoading
+  ] = useState(true);
+
+  const [
     uploading,
     setUploading
   ] = useState(false);
@@ -729,12 +733,14 @@ export default function ImportStock() {
         !!file &&
         !!branchId &&
         !uploading &&
-        !!gender,
+        !!gender &&
+        !!categoryId,
       [
         file,
         branchId,
         uploading,
-        gender
+        gender,
+        categoryId
       ]
     );
 
@@ -785,8 +791,77 @@ export default function ImportStock() {
         'import_gender'
       ) || '';
 
+    const savedCategory =
+      localStorage.getItem(
+        'import_category_id'
+      ) || '';
+
     setGender(saved);
+    setCategoryId(savedCategory);
   }, []);
+
+  const fetchCategories =
+    useCallback(
+      async () => {
+        setCategoriesLoading(true);
+
+        try {
+          const data = await apiGet(
+            '/api/categories?active=true&withCounts=false'
+          );
+
+          const list = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.categories)
+              ? data.categories
+              : [];
+
+          setCategories(
+            list.filter(
+              category =>
+                category &&
+                category.is_active !== false &&
+                category.parent_id !== null &&
+                category.parent_id !== undefined &&
+                Number(category.level ?? 1) > 0
+            )
+          );
+        } catch {
+          setCategories([]);
+        } finally {
+          setCategoriesLoading(false);
+        }
+      },
+      []
+    );
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const genderCategories = useMemo(
+    () =>
+      categories.filter(
+        category =>
+          String(category.gender || category.root_name || '')
+            .trim()
+            .toUpperCase() === gender
+      ),
+    [categories, gender]
+  );
+
+  useEffect(() => {
+    if (!categoryId || categoriesLoading) return;
+
+    const valid = genderCategories.some(
+      category => String(category.id) === String(categoryId)
+    );
+
+    if (!valid) {
+      setCategoryId('');
+      localStorage.removeItem('import_category_id');
+    }
+  }, [categoryId, categoriesLoading, genderCategories]);
 
   const onB2BUpload =
     useCallback(
@@ -816,6 +891,13 @@ export default function ImportStock() {
             'gender',
             gender
           );
+
+          if (categoryId) {
+            fd.append(
+              'categoryId',
+              categoryId
+            );
+          }
 
           const token =
             localStorage.getItem(
@@ -887,6 +969,7 @@ export default function ImportStock() {
       [
         file,
         gender,
+        categoryId,
         b2bUploading,
         show,
         hide
@@ -1088,10 +1171,11 @@ export default function ImportStock() {
         if (
           !file ||
           !branchId ||
-          !gender
+          !gender ||
+          !categoryId
         ) {
           setMessage(
-            'Please select a category and choose a file.'
+            'Please select a gender, category, and file.'
           );
           return;
         }
@@ -1132,9 +1216,19 @@ export default function ImportStock() {
             gender
           );
 
+          fd.append(
+            'categoryId',
+            categoryId
+          );
+
           localStorage.setItem(
             'import_gender',
             gender
+          );
+
+          localStorage.setItem(
+            'import_category_id',
+            categoryId
           );
 
           const job =
@@ -1179,6 +1273,7 @@ export default function ImportStock() {
         file,
         branchId,
         gender,
+        categoryId,
         show,
         hide,
         processJob,
@@ -1853,7 +1948,7 @@ export default function ImportStock() {
             <div className="excel-block">
               <div className="select-wrap">
                 <label className="label">
-                  Category
+                  Gender
                 </label>
 
                 <select
@@ -1863,17 +1958,15 @@ export default function ImportStock() {
                       : 'invalid'
                   }`}
                   value={gender}
-                  onChange={
-                    e =>
-                      setGender(
-                        e.target
-                          .value
-                      )
-                  }
+                  onChange={e => {
+                    setGender(e.target.value);
+                    setCategoryId('');
+                    localStorage.removeItem('import_category_id');
+                  }}
                   required
                 >
                   <option value="">
-                    Select Category
+                    Select Gender
                   </option>
 
                   <option value="MEN">
@@ -1887,6 +1980,39 @@ export default function ImportStock() {
                   <option value="KIDS">
                     Kids
                   </option>
+                </select>
+              </div>
+
+              <div className="select-wrap">
+                <label className="label">
+                  Category
+                </label>
+
+                <select
+                  className={`audience-select ${categoryId ? '' : 'invalid'}`}
+                  value={categoryId}
+                  onChange={e => setCategoryId(e.target.value)}
+                  disabled={!gender || categoriesLoading}
+                  required
+                >
+                  <option value="">
+                    {categoriesLoading
+                      ? 'Loading Categories…'
+                      : !gender
+                        ? 'Select Gender First'
+                        : genderCategories.length
+                          ? 'Select Category'
+                          : 'No Categories Available'}
+                  </option>
+
+                  {genderCategories.map(category => (
+                    <option
+                      key={category.id}
+                      value={category.id}
+                    >
+                      {category.category_path || category.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -1958,6 +2084,7 @@ export default function ImportStock() {
                       disabled={
                         !file ||
                         !gender ||
+                        !categoryId ||
                         b2bUploading
                       }
                     >
@@ -1994,9 +2121,9 @@ export default function ImportStock() {
                       : 'warn'
                   }`}
                 >
-                  {gender
-                    ? `Category: ${gender}`
-                    : 'Select a category for Excel upload'}
+                  {gender && categoryId
+                    ? `${gender} • ${genderCategories.find(category => String(category.id) === String(categoryId))?.name || 'Category selected'}`
+                    : 'Select a gender and category for Excel upload'}
                 </span>
               </div>
             </div>
@@ -2351,6 +2478,10 @@ export default function ImportStock() {
                   </th>
 
                   <th>
+                    Category
+                  </th>
+
+                  <th>
                     Status
                   </th>
 
@@ -2394,6 +2525,11 @@ export default function ImportStock() {
 
                       <td data-label="Gender">
                         {j.gender ||
+                          '-'}
+                      </td>
+
+                      <td data-label="Category">
+                        {j.category_name ||
                           '-'}
                       </td>
 
