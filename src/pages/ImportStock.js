@@ -839,6 +839,12 @@ export default function ImportStock() {
     fetchCategories();
   }, [fetchCategories]);
 
+  useEffect(() => {
+    const refreshCategories = () => fetchCategories();
+    window.addEventListener('focus', refreshCategories);
+    return () => window.removeEventListener('focus', refreshCategories);
+  }, [fetchCategories]);
+
   const genderCategories = useMemo(
     () =>
       categories.filter(

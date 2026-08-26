@@ -1,26 +1,28 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './pages/AdminAuth'
 import { LoadingProvider } from './pages/LoadingContext'
-import B2BOrders from './pages/B2BOrders'
-import HomePage from './pages/HomePage'
-import Transaction from './pages/Transaction'
-import B2BStock from './pages/B2BStock'
-import Stocks from './pages/Stocks'
-import Sales from './pages/Sales'
-import Customers from './pages/Customers'
-import LoginAdmin from './pages/LoginAdmin'
-import ImportStock from './pages/ImportStock'
-import POS from './pages/POS'
 import AdminHomepageImages from './pages/AdminHomepageImages'
+import B2BOrders from './pages/B2BOrders'
+import B2BStock from './pages/B2BStock'
+import CategoryManagement from './pages/CategoryManagement'
+import Customers from './pages/Customers'
+import HomePage from './pages/HomePage'
+import ImportStock from './pages/ImportStock'
+import LoginAdmin from './pages/LoginAdmin'
 import OrderIssues from './pages/OrderIssues'
+import POS from './pages/POS'
 import ReturnReview from './pages/ReturnReview'
+import Sales from './pages/Sales'
+import Stocks from './pages/Stocks'
+import Transaction from './pages/Transaction'
 
 function RequireAuth({ children }) {
   const { token } = useAuth()
-  if (!token) return <Navigate to="/login" replace />
-  return children
+  return token ? children : <Navigate to="/login" replace />
 }
+
+const protectedPage = page => <RequireAuth>{page}</RequireAuth>
 
 export default function App() {
   return (
@@ -29,18 +31,19 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/login" element={<LoginAdmin />} />
-            <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
-            <Route path="/transactions" element={<RequireAuth><Transaction /></RequireAuth>} />
-            <Route path="/stocks" element={<RequireAuth><Stocks /></RequireAuth>} />
-            <Route path="/sales" element={<RequireAuth><Sales /></RequireAuth>} />
-            <Route path="/customers" element={<RequireAuth><Customers /></RequireAuth>} />
-            <Route path="/pos" element={<RequireAuth><POS /></RequireAuth>} />
-            <Route path="/import" element={<RequireAuth><ImportStock /></RequireAuth>} />
-            <Route path="/homepage-images" element={<RequireAuth><AdminHomepageImages /></RequireAuth>} />
-            <Route path="/order-issues" element={<RequireAuth><OrderIssues /></RequireAuth>} />
-            <Route path="/returns/:id" element={<RequireAuth><ReturnReview /></RequireAuth>} />
-            <Route path="/b2b-orders" element={<RequireAuth><B2BOrders /></RequireAuth>} />
-            <Route path="/b2b-stock" element={<RequireAuth><B2BStock /></RequireAuth>} />
+            <Route path="/" element={protectedPage(<HomePage />)} />
+            <Route path="/transactions" element={protectedPage(<Transaction />)} />
+            <Route path="/stocks" element={protectedPage(<Stocks />)} />
+            <Route path="/sales" element={protectedPage(<Sales />)} />
+            <Route path="/customers" element={protectedPage(<Customers />)} />
+            <Route path="/pos" element={protectedPage(<POS />)} />
+            <Route path="/import" element={protectedPage(<ImportStock />)} />
+            <Route path="/categories" element={protectedPage(<CategoryManagement />)} />
+            <Route path="/homepage-images" element={protectedPage(<AdminHomepageImages />)} />
+            <Route path="/order-issues" element={protectedPage(<OrderIssues />)} />
+            <Route path="/returns/:id" element={protectedPage(<ReturnReview />)} />
+            <Route path="/b2b-orders" element={protectedPage(<B2BOrders />)} />
+            <Route path="/b2b-stock" element={protectedPage(<B2BStock />)} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
