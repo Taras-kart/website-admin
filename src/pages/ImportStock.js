@@ -511,14 +511,22 @@ export default function ImportStock() {
     setUnmatchedList([]);
     show();
     try {
-      const products = await apiGet('/api/products?limit=100000');
-      const {
-        eanMap,
-        sharedMap,
-        sharedCollisions
-      } = buildImageLookups(products);
       const zip = await JSZip.loadAsync(imageZip);
       const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name));
+      let eanMap = new Map();
+      let sharedMap = new Map();
+      let sharedCollisions = new Set();
+      if (imageMode === 'ean') {
+        const identifiers = [...new Set(entries.map(file => extractIdentifierFromPath(file.name, imageMode).trim()).filter(Boolean))];
+        for (let start = 0; start < identifiers.length; start += 1000) {
+          const result = await apiPost(`/api/branch/${branchId}/images/lookup`, { eans: identifiers.slice(start, start + 1000) });
+          if (!Array.isArray(result?.found)) throw new Error('Invalid barcode lookup response. Deploy the updated backend first.');
+          for (const ean of result.found) eanMap.set(String(ean).trim(), true);
+        }
+      } else {
+        const products = await apiGet('/api/products?limit=100000');
+        ({ eanMap, sharedMap, sharedCollisions } = buildImageLookups(products));
+      }
       const total = entries.length;
       let done = 0;
       let matched = 0;
