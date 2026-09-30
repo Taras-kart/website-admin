@@ -667,10 +667,13 @@ export default function ImportStock() {
         });
       }
       if (confirmations.length) {
-        await apiPost(`/api/branch/${encodeURIComponent(branchId)}/images/confirm`, {
+        const confirmation = await apiPost(`/api/branch/${encodeURIComponent(branchId)}/images/confirm`, {
           scope: imageMode === 'ean' ? 'legacy' : 'shared',
           images: confirmations
         });
+        if (Number(confirmation?.totalUpdated) !== confirmations.length || Number(confirmation?.skipped || 0) > 0) {
+          throw new Error(`Images reached Cloudinary, but database confirmation saved ${Number(confirmation?.totalUpdated) || 0} of ${confirmations.length}. Skipped ${Number(confirmation?.skipped) || 0}. Check the deployed backend before retrying.`);
+        }
       }
       setMatchStats({
         matched,
