@@ -1,196 +1,191 @@
-:root {
-    --bg: #f8fafc;
-    --card: #ffffff;
-    --line: #1f1f1f;
-    --text: #253046;
-    --muted: #657187;
-    --gold: #ffd84d;
-    --gold2: #d4af37;
-    --ok: #29d07e;
-    --warn: #ffb020;
-    --err: #ff5c5c;
+.tadm-app {
+    --tadm-importstock-bg: #f8fafc;
+    --tadm-importstock-card: #ffffff;
+    --tadm-importstock-line: #dce3ec;
+    --tadm-importstock-text: #253046;
+    --tadm-importstock-muted: #657187;
+    --tadm-importstock-gold: #42536a;
+    --tadm-importstock-gold2: #42536a;
+    --tadm-importstock-ok: #42536a;
+    --tadm-importstock-warn: #42536a;
+    --tadm-importstock-err: #ff5c5c;
 }
 
-html,
-body {
-    overflow-x: hidden;
-}
-
-.import-page-admin {
-    min-height: 100vh;
-    background: radial-gradient(800px 400px at 50% -10%, rgba(255, 216, 77, 0.09), transparent), var(--bg);
-    color: var(--text);
+.tadm-importstock-import-page-admin {
+    min-height: auto;
+    background: #f4f7fb;
+    color: var(--tadm-importstock-text);
     padding: clamp(10px, 2vw, 18px);
 }
 
-.import-wrap-admin {
+.tadm-importstock-import-wrap-admin {
     max-width: 1100px;
     margin: 0 auto;
     display: grid;
     gap: clamp(10px, 2vw, 16px);
 }
 
-.import-card-admin {
+.tadm-importstock-import-card-admin {
     margin-top: 6px;
-    background: linear-gradient(180deg, rgba(255, 216, 77, 0.06), rgba(255, 216, 77, 0));
+    background: #f4f7fb;
     border: 1px solid rgba(255, 216, 77, 0.18);
     border-radius: 14px;
     padding: clamp(12px, 2vw, 18px);
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
-.import-title-admin {
+.tadm-importstock-import-title-admin {
     font-size: clamp(16px, 2.2vw, 20px);
-    font-weight: 800;
-    color: var(--gold);
+    font-weight: 700;
+    color: var(--tadm-importstock-gold);
 }
 
-.import-subtitle-admin {
+.tadm-importstock-import-subtitle-admin {
     font-size: clamp(12px, 1.8vw, 13px);
-    color: var(--muted);
+    color: var(--tadm-importstock-muted);
     margin-top: 4px;
 }
 
-.import-form-admin {
+.tadm-importstock-import-form-admin {
     margin-top: 12px;
     display: grid;
     gap: clamp(12px, 2vw, 18px);
 }
 
-.select-wrap {
+.tadm-importstock-select-wrap {
     background: #f8fafc;
-    border: 1px solid var(--line);
+    border: 1px solid var(--tadm-importstock-line);
     padding: 10px;
     border-radius: 12px;
     display: grid;
     gap: 6px;
 }
 
-.label {
+.tadm-importstock-label {
     font-size: 12px;
-    color: var(--muted);
+    color: var(--tadm-importstock-muted);
 }
 
-.audience-select {
+.tadm-importstock-audience-select {
     width: 100%;
     padding: 10px 12px;
     border-radius: 10px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--tadm-importstock-line);
     background: #f8fafc;
-    color: var(--text);
+    color: var(--tadm-importstock-text);
     outline: none;
 }
 
-.audience-select.invalid {
+.tadm-importstock-audience-select.tadm-importstock-invalid {
     border-color: rgba(255, 176, 32, 0.7);
     box-shadow: 0 0 0 2px rgba(255, 176, 32, 0.15) inset;
 }
 
-.inline-info {
+.tadm-importstock-inline-info {
     display: flex;
     gap: 8px;
     align-items: center;
     flex-wrap: wrap;
 }
 
-.pill-mini {
+.tadm-importstock-pill-mini {
     display: inline-block;
     padding: 4px 8px;
     border-radius: 999px;
     font-size: 11.5px;
     color: #111;
-    background: var(--gold);
+    background: var(--tadm-importstock-gold);
     white-space: nowrap;
 }
 
-.pill-mini.ok {
-    background: var(--ok);
+.tadm-importstock-pill-mini.tadm-importstock-ok {
+    background: var(--tadm-importstock-ok);
     color: #111;
 }
 
-.pill-mini.warn {
-    background: var(--warn);
+.tadm-importstock-pill-mini.tadm-importstock-warn {
+    background: var(--tadm-importstock-warn);
     color: #111;
 }
 
-.import-filebox-admin {
+.tadm-importstock-import-filebox-admin {
     background: #f8fafc;
-    border: 1px solid var(--line);
+    border: 1px solid var(--tadm-importstock-line);
     padding: 10px;
     border-radius: 12px;
     display: grid;
     gap: 8px;
 }
 
-.import-filebox-admin input[type="file"] {
+.tadm-importstock-import-filebox-admin input[type="file"] {
     width: 100%;
 }
 
-.import-filehint-admin {
-    color: var(--muted);
+.tadm-importstock-import-filehint-admin {
+    color: var(--tadm-importstock-muted);
     font-size: 11.5px;
     overflow-wrap: anywhere;
 }
 
-.import-btn-admin {
+.tadm-importstock-import-btn-admin {
     width: 100%;
-    background: linear-gradient(180deg, var(--gold), var(--gold2));
+    background: #f4f7fb;
     color: #111;
     border: none;
     padding: 12px 14px;
     border-radius: 12px;
-    font-weight: 800;
+    font-weight: 700;
     cursor: pointer;
     box-shadow: 0 8px 20px rgba(255, 216, 77, .22);
     transition: transform .15s ease;
 }
 
-.import-btn-admin:active {
+.tadm-importstock-import-btn-admin:active {
     transform: translateY(1px);
 }
 
-.import-btn-admin:disabled {
+.tadm-importstock-import-btn-admin:disabled {
     opacity: .7;
     cursor: not-allowed;
 }
 
-.import-msg-admin {
-    color: var(--gold);
+.tadm-importstock-import-msg-admin {
+    color: var(--tadm-importstock-gold);
     font-size: 13px;
 }
 
-.import-actions-admin {
+.tadm-importstock-import-actions-admin {
     margin-top: 8px;
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
 }
 
-.import-ghost-btn-admin {
+.tadm-importstock-import-ghost-btn-admin {
     flex: 0 0 auto;
     background: transparent;
-    border: 1px solid var(--line);
-    color: var(--text);
+    border: 1px solid var(--tadm-importstock-line);
+    color: var(--tadm-importstock-text);
     padding: 10px 12px;
     border-radius: 10px;
     cursor: pointer;
 }
 
-.import-tablewrap-admin {
+.tadm-importstock-import-tablewrap-admin {
     margin-top: 10px;
     overflow: auto;
     border-radius: 12px;
 }
 
-.import-table-admin {
+.tadm-importstock-import-table-admin {
     width: 100%;
     border-collapse: collapse;
     font-size: clamp(12.5px, 1.8vw, 14px);
 }
 
-.import-table-admin th,
-.import-table-admin td {
-    border-bottom: 1px solid var(--line);
+.tadm-importstock-import-table-admin th,
+.tadm-importstock-import-table-admin td {
+    border-bottom: 1px solid var(--tadm-importstock-line);
     padding: 10px 8px;
     text-align: left;
     vertical-align: top;
@@ -198,89 +193,89 @@ body {
     overflow-wrap: anywhere;
 }
 
-.pill-admin {
+.tadm-importstock-pill-admin {
     display: inline-block;
     padding: 4px 8px;
     border-radius: 999px;
     font-size: 11.5px;
     color: #111;
-    background: var(--gold);
+    background: var(--tadm-importstock-gold);
     width: fit-content;
     white-space: nowrap;
 }
 
-.pill-admin.pending {
-    background: var(--warn);
+.tadm-importstock-pill-admin.tadm-importstock-pending {
+    background: var(--tadm-importstock-warn);
     color: #111;
 }
 
-.pill-admin.processing {
-    background: var(--gold);
+.tadm-importstock-pill-admin.tadm-importstock-processing {
+    background: var(--tadm-importstock-gold);
     color: #111;
 }
 
-.pill-admin.complete,
-.pill-admin.completed {
-    background: var(--ok);
+.tadm-importstock-pill-admin.tadm-importstock-complete,
+.tadm-importstock-pill-admin.tadm-importstock-completed {
+    background: var(--tadm-importstock-ok);
     color: #111;
 }
 
-.pill-admin.partial {
+.tadm-importstock-pill-admin.tadm-importstock-partial {
     background: #6aa4ff;
     color: #111;
 }
 
-.pill-admin.error {
-    background: var(--err);
+.tadm-importstock-pill-admin.tadm-importstock-error {
+    background: var(--tadm-importstock-err);
     color: #111;
 }
 
-.import-empty-admin {
+.tadm-importstock-import-empty-admin {
     text-align: center;
-    color: var(--muted);
+    color: var(--tadm-importstock-muted);
     padding: 16px;
 }
 
-.import-note-admin {
+.tadm-importstock-import-note-admin {
     margin-top: 10px;
     font-size: 12px;
-    color: var(--muted);
+    color: var(--tadm-importstock-muted);
 }
 
-.excel-block {
+.tadm-importstock-excel-block {
     display: grid;
     gap: 12px;
 }
 
-.zip-block {
+.tadm-importstock-zip-block {
     display: grid;
     gap: 8px;
 }
 
-.image-stats {
+.tadm-importstock-image-stats {
     display: flex;
     gap: 12px;
     margin-top: 6px;
-    color: var(--muted);
+    color: var(--tadm-importstock-muted);
     font-size: 12px;
 }
 
-.unmatched-wrap {
+.tadm-importstock-unmatched-wrap {
     margin-top: 10px;
     background: #f8fafc;
-    border: 1px solid var(--line);
+    border: 1px solid var(--tadm-importstock-line);
     border-radius: 12px;
     padding: 10px;
 }
 
-.unmatched-title {
+.tadm-importstock-unmatched-title {
     font-size: 13px;
-    color: var(--gold);
+    color: var(--tadm-importstock-gold);
     font-weight: 700;
     margin-bottom: 6px;
 }
 
-.unmatched-list {
+.tadm-importstock-unmatched-list {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -290,23 +285,23 @@ body {
     overflow: auto;
 }
 
-.unmatched-list li {
+.tadm-importstock-unmatched-list li {
     display: grid;
     grid-template-columns: 160px 1fr;
     gap: 8px;
     align-items: center;
-    border-bottom: 1px dashed var(--line);
+    border-bottom: 1px dashed var(--tadm-importstock-line);
     padding-bottom: 6px;
 }
 
-.unmatched-ean {
+.tadm-importstock-unmatched-ean {
     font-weight: 700;
-    color: var(--text);
+    color: var(--tadm-importstock-text);
     font-size: 12.5px;
 }
 
-.unmatched-file {
-    color: var(--muted);
+.tadm-importstock-unmatched-file {
+    color: var(--tadm-importstock-muted);
     font-size: 12px;
     overflow-wrap: anywhere;
 }
@@ -314,25 +309,25 @@ body {
 @media (max-width: 900px) {}
 
 @media (max-width: 600px) {
-    .import-card-admin {
+    .tadm-importstock-import-card-admin {
         border-radius: 12px;
     }
 
-    .import-title-admin {
+    .tadm-importstock-import-title-admin {
         font-size: 15px;
     }
 
-    .import-tablewrap-admin {
+    .tadm-importstock-import-tablewrap-admin {
         border: none;
     }
 
-    .import-table-admin {
+    .tadm-importstock-import-table-admin {
         border-collapse: separate;
         border-spacing: 0 10px;
         font-size: 13px;
     }
 
-    .import-table-admin thead {
+    .tadm-importstock-import-table-admin thead {
         position: absolute;
         height: 0;
         width: 0;
@@ -341,60 +336,60 @@ body {
         white-space: nowrap;
     }
 
-    .import-table-admin tbody {
+    .tadm-importstock-import-table-admin tbody {
         display: block;
     }
 
-    .import-table-admin tbody tr {
+    .tadm-importstock-import-table-admin tbody tr {
         display: block;
         background: #f8fafc;
-        border: 1px solid var(--line);
+        border: 1px solid var(--tadm-importstock-line);
         border-radius: 12px;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
         overflow: hidden;
         margin: 0 2px;
     }
 
-    .import-table-admin td {
+    .tadm-importstock-import-table-admin td {
         display: grid;
         grid-template-columns: 128px 1fr;
         gap: 8px;
         padding: 12px;
-        border-bottom: 1px solid var(--line);
+        border-bottom: 1px solid var(--tadm-importstock-line);
     }
 
-    .import-table-admin td:last-child {
+    .tadm-importstock-import-table-admin td:last-child {
         border-bottom: 0;
     }
 
-    .import-table-admin td::before {
+    .tadm-importstock-import-table-admin td::before {
         content: attr(data-label);
-        color: var(--muted);
+        color: var(--tadm-importstock-muted);
         font-size: 12px;
         line-height: 1.2;
     }
 
-    .import-table-admin td>* {
+    .tadm-importstock-import-table-admin td>* {
         min-width: 0;
     }
 
-    .import-table-admin td span,
-    .import-table-admin td div {
+    .tadm-importstock-import-table-admin td span,
+    .tadm-importstock-import-table-admin td div {
         overflow-wrap: anywhere;
     }
 
-    .pill-admin {
+    .tadm-importstock-pill-admin {
         font-size: 11px;
         padding: 3px 7px;
     }
 }
 
 @media (min-width: 768px) {
-    .import-title-admin {
+    .tadm-importstock-import-title-admin {
         font-size: 18px;
     }
 
-    .import-table-admin thead {
+    .tadm-importstock-import-table-admin thead {
         position: static;
         height: auto;
         width: auto;
@@ -402,11 +397,11 @@ body {
         display: table-header-group;
     }
 
-    .import-table-admin tbody {
+    .tadm-importstock-import-table-admin tbody {
         display: table-row-group;
     }
 
-    .import-table-admin tbody tr {
+    .tadm-importstock-import-table-admin tbody tr {
         display: table-row;
         background: transparent;
         border: 0;
@@ -414,34 +409,31 @@ body {
         box-shadow: none;
     }
 
-    .import-table-admin td {
+    .tadm-importstock-import-table-admin td {
         display: table-cell;
         padding: 10px 8px;
-        border-bottom: 1px solid var(--line);
+        border-bottom: 1px solid var(--tadm-importstock-line);
     }
 
-    .import-table-admin td::before {
+    .tadm-importstock-import-table-admin td::before {
         content: none;
     }
 
-    .import-ghost-btn-admin {
+    .tadm-importstock-import-ghost-btn-admin {
         width: auto;
     }
 }
 
 @media (min-width: 1024px) {
-    .import-wrap-admin {
+    .tadm-importstock-import-wrap-admin {
         gap: 16px;
     }
 
-    .import-table-admin {
+    .tadm-importstock-import-table-admin {
         font-size: 14px;
     }
 }
-
-
-/* Discount Section */
-.discount-block {
+.tadm-importstock-discount-block {
   background: #f8fafc;
   border: 1px solid gold;
   padding: 20px;
@@ -449,25 +441,25 @@ body {
   margin-top: 20px;
 }
 
-.discount-row {
+.tadm-importstock-discount-row {
   display: flex;
   gap: 20px;
   margin-bottom: 15px;
 }
 
-.discount-field {
+.tadm-importstock-discount-field {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.discount-field .label {
-  color: gold;
+.tadm-importstock-discount-field .tadm-importstock-label {
+  color: #42536a;
   font-size: 14px;
   margin-bottom: 6px;
 }
 
-.discount-input {
+.tadm-importstock-discount-input {
   background: #f8fafc;
   border: 1px solid gold;
   color: #263140;
@@ -477,11 +469,11 @@ body {
   outline: none;
 }
 
-.discount-input:focus {
+.tadm-importstock-discount-input:focus {
   border-color: white;
 }
 
-.import-btn-admin {
+.tadm-importstock-import-btn-admin {
   background: gold;
   color: black;
   font-weight: bold;
@@ -492,18 +484,18 @@ body {
   transition: 0.2s ease;
 }
 
-.import-btn-admin:disabled {
-  background: #333;
+.tadm-importstock-import-btn-admin:disabled {
+  background: #ffffff;
   color: #777;
   cursor: not-allowed;
 }
 
-.import-btn-admin:hover:not(:disabled) {
+.tadm-importstock-import-btn-admin:hover:not(:disabled) {
   background: white;
   color: black;
 }
 
-.import-msg-admin {
+.tadm-importstock-import-msg-admin {
   margin-top: 10px;
   color: #263140;
   font-size: 14px;

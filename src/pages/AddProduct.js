@@ -3,59 +3,116 @@ import './AddProduct.css';
 import { useAuth } from './AdminAuth';
 import { useLoading } from './LoadingContext';
 import { apiGet, apiUpload, apiPost } from './api';
-
+const portalClass = value => String(value || '').split(/\s+/).filter(Boolean).flatMap(name => ({
+  "ops-main": ["tadm-operations-ops-main"],
+  "ops-heading": ["tadm-operations-ops-heading"],
+  "ops-panel": ["tadm-operations-ops-panel"],
+  "ops-actions": ["tadm-operations-ops-actions"],
+  "ops-row-actions": ["tadm-operations-ops-row-actions"],
+  "ops-primary": ["tadm-operations-ops-primary"],
+  "ops-metrics": ["tadm-operations-ops-metrics"],
+  "ops-quick": ["tadm-operations-ops-quick"],
+  "ops-table-wrap": ["tadm-operations-ops-table-wrap"],
+  "ops-badge": ["tadm-operations-ops-badge"],
+  "ops-toolbar": ["tadm-operations-ops-toolbar"],
+  "ops-dates": ["tadm-operations-ops-dates"],
+  "ops-pagination": ["tadm-operations-ops-pagination"],
+  "ops-alert": ["tadm-operations-ops-alert"],
+  "ops-success": ["tadm-operations-ops-success"],
+  "ops-empty": ["tadm-operations-ops-empty"],
+  "ops-overlay": ["tadm-operations-ops-overlay"],
+  "ops-modal": ["tadm-operations-ops-modal"],
+  "ops-form": ["tadm-operations-ops-form"],
+  "ops-form-grid": ["tadm-operations-ops-form-grid"],
+  "ops-nav": ["tadm-operations-ops-nav"],
+  "ops-nav-top": ["tadm-operations-ops-nav-top"],
+  "ops-brand": ["tadm-operations-ops-brand"],
+  "ops-nav-controls": ["tadm-operations-ops-nav-controls"],
+  "ops-nav-links": ["tadm-operations-ops-nav-links"],
+  "ops-mobile-toggle": ["tadm-operations-ops-mobile-toggle"],
+  "ops-pos-grid": ["tadm-operations-ops-pos-grid"],
+  "ops-pos-total": ["tadm-operations-ops-pos-total"],
+  "ops-pos-qty": ["tadm-operations-ops-pos-qty"],
+  "ops-danger": ["tadm-operations-ops-danger"],
+  "ops-password": ["tadm-operations-ops-password"],
+  "add-product-page": ["tadm-addproduct-add-product-page"],
+  "admin-section1": ["tadm-addproduct-admin-section1"],
+  "admin-section2": ["tadm-addproduct-admin-section2"],
+  "admin-section3": ["tadm-addproduct-admin-section3"],
+  "admin-section4-final": ["tadm-addproduct-admin-section4-final"],
+  "section-header": ["tadm-addproduct-section-header"],
+  "chip": ["tadm-addproduct-chip"],
+  "category-buttons": ["tadm-addproduct-category-buttons"],
+  "active": ["tadm-addproduct-active"],
+  "row-two": ["tadm-addproduct-row-two"],
+  "text-input": ["tadm-addproduct-text-input"],
+  "dropdown": ["tadm-addproduct-dropdown"],
+  "dropdown-item": ["tadm-addproduct-dropdown-item"],
+  "pill-button": ["tadm-addproduct-pill-button"],
+  "popup-overlay": ["tadm-addproduct-popup-overlay"],
+  "popup-box": ["tadm-addproduct-popup-box"],
+  "popup-actions": ["tadm-addproduct-popup-actions"],
+  "grid-two": ["tadm-addproduct-grid-two"],
+  "field-group": ["tadm-addproduct-field-group"],
+  "field-label": ["tadm-addproduct-field-label"],
+  "hint": ["tadm-addproduct-hint"],
+  "pill-grid": ["tadm-addproduct-pill-grid"],
+  "pill-option": ["tadm-addproduct-pill-option"],
+  "price-table-wrap": ["tadm-addproduct-price-table-wrap"],
+  "price-table": ["tadm-addproduct-price-table"],
+  "centered-input": ["tadm-addproduct-centered-input"],
+  "image-upload": ["tadm-addproduct-image-upload"],
+  "upload-btn": ["tadm-addproduct-upload-btn"],
+  "preview-image": ["tadm-addproduct-preview-image"],
+  "admin-section5": ["tadm-addproduct-admin-section5"],
+  "add-product-btn": ["tadm-addproduct-add-product-btn"],
+  "popup-card": ["tadm-addproduct-popup-card"],
+  "success": ["tadm-addproduct-success"],
+  "error": ["tadm-addproduct-error"]
+})[name] || ["tadm-addproduct-" + name]).join(' ');
 const AddProduct = () => {
-  const { user } = useAuth();
-  const { show, hide } = useLoading();
+  const {
+    user
+  } = useAuth();
+  const {
+    show,
+    hide
+  } = useLoading();
   const branchId = user?.branch_id;
-
-  const [identifierMode, setIdentifierMode] = useState('ean') // 'ean' or 'pattern'
-  const [patternCode, setPatternCode] = useState('')
+  const [identifierMode, setIdentifierMode] = useState('ean');
+  const [patternCode, setPatternCode] = useState('');
   const [brandList, setBrandList] = useState([]);
   const [productList, setProductList] = useState([]);
   const [colorList, setColorList] = useState([]);
   const [kidsSizes, setKidsSizes] = useState([]);
   const [adultSizes, setAdultSizes] = useState([]);
-
   const [loadingOptions, setLoadingOptions] = useState(false);
-
   const [selectedCategory, setSelectedCategory] = useState('');
   const [brandInput, setBrandInput] = useState('');
   const [filteredBrands, setFilteredBrands] = useState([]);
   const [showDropdownBrand, setShowDropdownBrand] = useState(false);
   const [showPopupBrand, setShowPopupBrand] = useState(false);
   const [newBrand, setNewBrand] = useState('');
-
   const [productInput, setProductInput] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [showDropdownProduct, setShowDropdownProduct] = useState(false);
   const [showPopupProduct, setShowPopupProduct] = useState(false);
   const [newProduct, setNewProduct] = useState('');
-
   const [originalPriceB2B, setOriginalPriceB2B] = useState('');
   const [discountB2B, setDiscountB2B] = useState('');
   const [finalPriceB2B, setFinalPriceB2B] = useState('');
-
   const [originalPriceB2C, setOriginalPriceB2C] = useState('');
   const [discountB2C, setDiscountB2C] = useState('');
   const [finalPriceB2C, setFinalPriceB2C] = useState('');
-
   const [totalCount, setTotalCount] = useState('');
-
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [uploadedImage, setUploadedImage] = useState('');
-
   const [eanCode, setEanCode] = useState('');
-
-  // Custom colour input — declared here at the top level of the component,
-  // alongside the other useState calls. This is the ONLY correct place for it.
   const [customColorInput, setCustomColorInput] = useState('');
-
   const [popupMessage, setPopupMessage] = useState('');
   const [popupType, setPopupType] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
   useEffect(() => {
     async function loadOptions() {
       setLoadingOptions(true);
@@ -79,13 +136,9 @@ const AddProduct = () => {
         const kids = [];
         const adults = [];
         allSizes.forEach(size => {
-          if (/^\d/.test(size)) kids.push(size);
-          else adults.push(size);
+          if (/^\d/.test(size)) kids.push(size);else adults.push(size);
         });
-        const fallbackKids = [
-          'Below 1 year', '1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9',
-          '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'
-        ];
+        const fallbackKids = ['Below 1 year', '1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9', '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'];
         const fallbackAdults = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
         setBrandList(brands);
         setProductList(products);
@@ -93,10 +146,7 @@ const AddProduct = () => {
         setKidsSizes(kids.length ? kids : fallbackKids);
         setAdultSizes(adults.length ? adults : fallbackAdults);
       } catch (e) {
-        const fallbackKids = [
-          'Below 1 year', '1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9',
-          '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'
-        ];
+        const fallbackKids = ['Below 1 year', '1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9', '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'];
         const fallbackAdults = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
         setBrandList([]);
         setProductList([]);
@@ -109,51 +159,46 @@ const AddProduct = () => {
     }
     loadOptions();
   }, []);
-
   const handlePriceChangeB2B = value => {
     setOriginalPriceB2B(value);
     const price = parseFloat(value);
     const disc = parseFloat(discountB2B);
     if (!isNaN(price) && !isNaN(disc)) {
-      setFinalPriceB2B((price - (price * disc) / 100).toFixed(2));
+      setFinalPriceB2B((price - price * disc / 100).toFixed(2));
     } else {
       setFinalPriceB2B('');
     }
   };
-
   const handleDiscountChangeB2B = value => {
     setDiscountB2B(value);
     const price = parseFloat(originalPriceB2B);
     const disc = parseFloat(value);
     if (!isNaN(price) && !isNaN(disc)) {
-      setFinalPriceB2B((price - (price * disc) / 100).toFixed(2));
+      setFinalPriceB2B((price - price * disc / 100).toFixed(2));
     } else {
       setFinalPriceB2B('');
     }
   };
-
   const handlePriceChangeB2C = value => {
     setOriginalPriceB2C(value);
     const price = parseFloat(value);
     const disc = parseFloat(discountB2C);
     if (!isNaN(price) && !isNaN(disc)) {
-      setFinalPriceB2C((price - (price * disc) / 100).toFixed(2));
+      setFinalPriceB2C((price - price * disc / 100).toFixed(2));
     } else {
       setFinalPriceB2C('');
     }
   };
-
   const handleDiscountChangeB2C = value => {
     setDiscountB2C(value);
     const price = parseFloat(originalPriceB2C);
     const disc = parseFloat(value);
     if (!isNaN(price) && !isNaN(disc)) {
-      setFinalPriceB2C((price - (price * disc) / 100).toFixed(2));
+      setFinalPriceB2C((price - price * disc / 100).toFixed(2));
     } else {
       setFinalPriceB2C('');
     }
   };
-
   const handleImageUpload = async e => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -175,14 +220,12 @@ const AddProduct = () => {
       }, 3000);
     }
   };
-
   const mapCategoryToGender = category => {
     if (category === 'Men') return 'MEN';
     if (category === 'Women') return 'WOMEN';
     if (category === 'Kids - Boys' || category === 'Kids - Girls') return 'KIDS';
     return '';
   };
-
   const resetForm = () => {
     setSelectedCategory('');
     setBrandInput('');
@@ -201,53 +244,39 @@ const AddProduct = () => {
     setPatternCode('');
     setIdentifierMode('ean');
   };
-
   const processJob = async (branchIdValue, jobId) => {
     let start = 0;
     for (;;) {
-      const r = await apiPost(
-        `/api/branch/${encodeURIComponent(branchIdValue)}/import/process/${jobId}?start=${start}&limit=200`,
-        {}
-      );
-      const next = r.nextStart ?? (start + (r.processed || 0));
+      const r = await apiPost(`/api/branch/${encodeURIComponent(branchIdValue)}/import/process/${jobId}?start=${start}&limit=200`, {});
+      const next = r.nextStart ?? start + (r.processed || 0);
       if (r.done) break;
       start = next;
     }
   };
-
   const handleAddProduct = async () => {
-    const ean = identifierMode === 'ean' ? eanCode.trim() : patternCode.trim()
-
+    const ean = identifierMode === 'ean' ? eanCode.trim() : patternCode.trim();
     if (identifierMode === 'ean') {
       if (!/^[0-9]{12,14}$/.test(ean)) {
-        setPopupMessage('EAN code must be 12–14 digits.')
-        setPopupType('error')
-        setTimeout(() => { setPopupMessage(''); setPopupType('') }, 3000)
-        return
+        setPopupMessage('EAN code must be 12–14 digits.');
+        setPopupType('error');
+        setTimeout(() => {
+          setPopupMessage('');
+          setPopupType('');
+        }, 3000);
+        return;
       }
     } else {
       if (!ean) {
-        setPopupMessage('Pattern code cannot be empty.')
-        setPopupType('error')
-        setTimeout(() => { setPopupMessage(''); setPopupType('') }, 3000)
-        return
+        setPopupMessage('Pattern code cannot be empty.');
+        setPopupType('error');
+        setTimeout(() => {
+          setPopupMessage('');
+          setPopupType('');
+        }, 3000);
+        return;
       }
     }
-    if (
-      !selectedCategory ||
-      !brandInput.trim() ||
-      !productInput.trim() ||
-      !selectedColor ||
-      !selectedSize ||
-      !originalPriceB2B ||
-      !discountB2B ||
-      !finalPriceB2B ||
-      !originalPriceB2C ||
-      !discountB2C ||
-      !finalPriceB2C ||
-      !totalCount ||
-      !uploadedImage
-    ) {
+    if (!selectedCategory || !brandInput.trim() || !productInput.trim() || !selectedColor || !selectedSize || !originalPriceB2B || !discountB2B || !finalPriceB2B || !originalPriceB2C || !discountB2C || !finalPriceB2C || !totalCount || !uploadedImage) {
       setPopupMessage('Please fill all the required fields.');
       setPopupType('error');
       setTimeout(() => {
@@ -256,7 +285,6 @@ const AddProduct = () => {
       }, 3000);
       return;
     }
-
     if (!branchId) {
       setPopupMessage('Branch not found. Please login again.');
       setPopupType('error');
@@ -266,7 +294,6 @@ const AddProduct = () => {
       }, 3000);
       return;
     }
-
     const gender = mapCategoryToGender(selectedCategory);
     if (!gender) {
       setPopupMessage('Please select a valid category.');
@@ -277,47 +304,16 @@ const AddProduct = () => {
       }, 3000);
       return;
     }
-
-    const csvHeaders = [
-      'productname',
-      'brandname',
-      'size',
-      'colour',
-      'eancode',
-      'mrp',
-      'rsaleprice',
-      'costprice',
-      'purchaseqty',
-      'b2cdiscount',
-      'b2bdiscount'
-    ];
-
+    const csvHeaders = ['productname', 'brandname', 'size', 'colour', 'eancode', 'mrp', 'rsaleprice', 'costprice', 'purchaseqty', 'b2cdiscount', 'b2bdiscount'];
     const safe = value => String(value ?? '').replace(/"/g, '""');
-
-    const csvRow = [
-      safe(productInput),
-      safe(brandInput),
-      safe(selectedSize),
-      safe(selectedColor),
-      ean,
-      safe(originalPriceB2C),
-      safe(finalPriceB2C),
-      safe(originalPriceB2B),
-      safe(totalCount),
-      safe(discountB2C),
-      safe(discountB2B)
-    ];
-
-    const csv =
-      csvHeaders.join(',') +
-      '\n' +
-      csvRow.map(v => `"${v}"`).join(',');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const csvRow = [safe(productInput), safe(brandInput), safe(selectedSize), safe(selectedColor), ean, safe(originalPriceB2C), safe(finalPriceB2C), safe(originalPriceB2B), safe(totalCount), safe(discountB2C), safe(discountB2B)];
+    const csv = csvHeaders.join(',') + '\n' + csvRow.map(v => `"${v}"`).join(',');
+    const blob = new Blob([csv], {
+      type: 'text/csv'
+    });
     const formData = new FormData();
     formData.append('file', blob, 'manual-product.csv');
     formData.append('gender', gender);
-
     try {
       setSubmitting(true);
       show();
@@ -330,10 +326,7 @@ const AddProduct = () => {
       setPopupType('success');
       resetForm();
     } catch (error) {
-      const message =
-        error?.payload?.message ||
-        error?.message ||
-        'Failed to add product.';
+      const message = error?.payload?.message || error?.message || 'Failed to add product.';
       setPopupMessage(message);
       setPopupType('error');
     } finally {
@@ -345,11 +338,9 @@ const AddProduct = () => {
       }, 3000);
     }
   };
-
   const handleCategorySelect = category => {
     setSelectedCategory(category);
   };
-
   const handleBrandSearch = e => {
     const value = e.target.value;
     setBrandInput(value);
@@ -357,18 +348,14 @@ const AddProduct = () => {
       setShowDropdownBrand(false);
       return;
     }
-    const filtered = brandList.filter(brand =>
-      brand.toLowerCase().includes(value.toLowerCase())
-    );
+    const filtered = brandList.filter(brand => brand.toLowerCase().includes(value.toLowerCase()));
     setFilteredBrands(filtered);
     setShowDropdownBrand(true);
   };
-
   const handleBrandSelect = brand => {
     setBrandInput(brand);
     setShowDropdownBrand(false);
   };
-
   const handleAddNewBrand = () => {
     const value = newBrand.trim();
     if (value && !brandList.includes(value)) {
@@ -380,7 +367,6 @@ const AddProduct = () => {
     setShowPopupBrand(false);
     setShowDropdownBrand(false);
   };
-
   const handleAddCustomColor = () => {
     const value = customColorInput.trim();
     if (value && !colorList.includes(value)) {
@@ -392,7 +378,6 @@ const AddProduct = () => {
     }
     setCustomColorInput('');
   };
-
   const handleProductSearch = e => {
     const value = e.target.value;
     setProductInput(value);
@@ -400,18 +385,14 @@ const AddProduct = () => {
       setShowDropdownProduct(false);
       return;
     }
-    const filtered = productList.filter(product =>
-      product.toLowerCase().includes(value.toLowerCase())
-    );
+    const filtered = productList.filter(product => product.toLowerCase().includes(value.toLowerCase()));
     setFilteredProducts(filtered);
     setShowDropdownProduct(true);
   };
-
   const handleProductSelect = product => {
     setProductInput(product);
     setShowDropdownProduct(false);
   };
-
   const handleAddNewProduct = () => {
     const value = newProduct.trim();
     if (value && !productList.includes(value)) {
@@ -423,382 +404,238 @@ const AddProduct = () => {
     setShowPopupProduct(false);
     setShowDropdownProduct(false);
   };
-
-  return (
-    <div className="add-product-page">
-      <div className="admin-section1">
-        <div className="section-header">
-          <h2>Product Category</h2>
-          {loadingOptions && <span className="chip">Loading options…</span>}
+  return <div className={portalClass("add-product-page")}>
+      <div className={portalClass("admin-section1")}>
+        <div className={portalClass("section-header")}>
+          <h2 className="tadm-addproduct-node-0">Product Category</h2>
+          {loadingOptions && <span className={portalClass("chip")}>Loading options…</span>}
         </div>
-        <div className="category-buttons">
-          {['Men', 'Women', 'Kids - Boys', 'Kids - Girls'].map(category => (
-            <button
-              key={category}
-              className={selectedCategory === category ? 'active' : ''}
-              onClick={() => handleCategorySelect(category)}
-            >
+        <div className={portalClass("category-buttons")}>
+          {['Men', 'Women', 'Kids - Boys', 'Kids - Girls'].map(category => <button key={category} className={portalClass(selectedCategory === category ? 'active' : '')} onClick={() => handleCategorySelect(category)}>
               {category}
-            </button>
-          ))}
+            </button>)}
         </div>
       </div>
 
-      <div className="row-two">
-        <div className="admin-section2">
-          <h2>Brand</h2>
-          <input
-            type="text"
-            placeholder="Search or type brand"
-            value={brandInput}
-            onChange={handleBrandSearch}
-            onFocus={() => {
-              if (brandList.length) {
-                setFilteredBrands(brandList);
-                setShowDropdownBrand(true);
-              }
-            }}
-            className="text-input"
-          />
-          {showDropdownBrand && filteredBrands.length > 0 && (
-            <div className="dropdown">
-              {filteredBrands.map(brand => (
-                <div
-                  key={brand}
-                  className="dropdown-item"
-                  onClick={() => handleBrandSelect(brand)}
-                >
+      <div className={portalClass("row-two")}>
+        <div className={portalClass("admin-section2")}>
+          <h2 className="tadm-addproduct-node-1">Brand</h2>
+          <input type="text" placeholder="Search or type brand" value={brandInput} onChange={handleBrandSearch} onFocus={() => {
+          if (brandList.length) {
+            setFilteredBrands(brandList);
+            setShowDropdownBrand(true);
+          }
+        }} className={portalClass("text-input")} />
+          {showDropdownBrand && filteredBrands.length > 0 && <div className={portalClass("dropdown")}>
+              {filteredBrands.map(brand => <div key={brand} className={portalClass("dropdown-item")} onClick={() => handleBrandSelect(brand)}>
                   {brand}
-                </div>
-              ))}
-            </div>
-          )}
-          <button
-            className="pill-button"
-            onClick={() => setShowPopupBrand(true)}
-          >
+                </div>)}
+            </div>}
+          <button className={portalClass("pill-button")} onClick={() => setShowPopupBrand(true)}>
             Add New Brand
           </button>
         </div>
 
-        <div className="admin-section3">
-          <h2>Product Name</h2>
-          <input
-            type="text"
-            placeholder="Search or type product"
-            value={productInput}
-            onChange={handleProductSearch}
-            onFocus={() => {
-              if (productList.length) {
-                setFilteredProducts(productList);
-                setShowDropdownProduct(true);
-              }
-            }}
-            className="text-input"
-          />
-          {showDropdownProduct && filteredProducts.length > 0 && (
-            <div className="dropdown">
-              {filteredProducts.map(product => (
-                <div
-                  key={product}
-                  className="dropdown-item"
-                  onClick={() => handleProductSelect(product)}
-                >
+        <div className={portalClass("admin-section3")}>
+          <h2 className="tadm-addproduct-node-2">Product Name</h2>
+          <input type="text" placeholder="Search or type product" value={productInput} onChange={handleProductSearch} onFocus={() => {
+          if (productList.length) {
+            setFilteredProducts(productList);
+            setShowDropdownProduct(true);
+          }
+        }} className={portalClass("text-input")} />
+          {showDropdownProduct && filteredProducts.length > 0 && <div className={portalClass("dropdown")}>
+              {filteredProducts.map(product => <div key={product} className={portalClass("dropdown-item")} onClick={() => handleProductSelect(product)}>
                   {product}
-                </div>
-              ))}
-            </div>
-          )}
-          <button
-            className="pill-button"
-            onClick={() => setShowPopupProduct(true)}
-          >
+                </div>)}
+            </div>}
+          <button className={portalClass("pill-button")} onClick={() => setShowPopupProduct(true)}>
             Add New Product
           </button>
         </div>
       </div>
 
-      {showPopupBrand && (
-        <div className="popup-overlay">
-          <div className="popup-box">
-            <h3>Add a New Brand</h3>
-            <input
-              type="text"
-              placeholder="Enter new brand name"
-              value={newBrand}
-              onChange={e => setNewBrand(e.target.value)}
-              className="text-input"
-            />
-            <div className="popup-actions">
-              <button onClick={handleAddNewBrand}>Add Brand</button>
-              <button onClick={() => setShowPopupBrand(false)}>Cancel</button>
+      {showPopupBrand && <div className={portalClass("popup-overlay")}>
+          <div className={portalClass("popup-box")}>
+            <h3 className="tadm-addproduct-node-3">Add a New Brand</h3>
+            <input type="text" placeholder="Enter new brand name" value={newBrand} onChange={e => setNewBrand(e.target.value)} className={portalClass("text-input")} />
+            <div className={portalClass("popup-actions")}>
+              <button onClick={handleAddNewBrand} className="tadm-addproduct-node-4">Add Brand</button>
+              <button onClick={() => setShowPopupBrand(false)} className="tadm-addproduct-node-5">Cancel</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>}
 
-      {showPopupProduct && (
-        <div className="popup-overlay">
-          <div className="popup-box">
-            <h3>Add a New Product</h3>
-            <input
-              type="text"
-              placeholder="Enter new product name"
-              value={newProduct}
-              onChange={e => setNewProduct(e.target.value)}
-              className="text-input"
-            />
-            <div className="popup-actions">
-              <button onClick={handleAddNewProduct}>Add Product</button>
-              <button onClick={() => setShowPopupProduct(false)}>Cancel</button>
+      {showPopupProduct && <div className={portalClass("popup-overlay")}>
+          <div className={portalClass("popup-box")}>
+            <h3 className="tadm-addproduct-node-6">Add a New Product</h3>
+            <input type="text" placeholder="Enter new product name" value={newProduct} onChange={e => setNewProduct(e.target.value)} className={portalClass("text-input")} />
+            <div className={portalClass("popup-actions")}>
+              <button onClick={handleAddNewProduct} className="tadm-addproduct-node-7">Add Product</button>
+              <button onClick={() => setShowPopupProduct(false)} className="tadm-addproduct-node-8">Cancel</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>}
 
-      <div className="admin-section4-final">
-        <div className="section-header">
-          <h2>Details</h2>
+      <div className={portalClass("admin-section4-final")}>
+        <div className={portalClass("section-header")}>
+          <h2 className="tadm-addproduct-node-9">Details</h2>
         </div>
 
-        <div className="grid-two">
-          <div className="field-group">
-            {/* Mode toggle */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="identifierMode"
-                  value="ean"
-                  checked={identifierMode === 'ean'}
-                  onChange={() => setIdentifierMode('ean')}
-                />
+        <div className={portalClass("grid-two")}>
+          <div className={portalClass("field-group")}>
+            {}
+            <div style={{
+            display: 'flex',
+            gap: '12px',
+            marginBottom: '10px'
+          }} className="tadm-addproduct-node-10">
+              <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer'
+            }} className="tadm-addproduct-node-11">
+                <input type="radio" name="identifierMode" value="ean" checked={identifierMode === 'ean'} onChange={() => setIdentifierMode('ean')} className="tadm-addproduct-node-12" />
                 EAN Code
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="identifierMode"
-                  value="pattern"
-                  checked={identifierMode === 'pattern'}
-                  onChange={() => setIdentifierMode('pattern')}
-                />
+              <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer'
+            }} className="tadm-addproduct-node-13">
+                <input type="radio" name="identifierMode" value="pattern" checked={identifierMode === 'pattern'} onChange={() => setIdentifierMode('pattern')} className="tadm-addproduct-node-14" />
                 Pattern Code
               </label>
             </div>
 
-            {identifierMode === 'ean' ? (
-              <>
-                <label className="field-label">EAN Code</label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="13 digit EAN code"
-                  value={eanCode}
-                  onChange={e => setEanCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))}
-                />
-                <span className="hint">Must be exactly 13 digits</span>
-              </>
-            ) : (
-              <>
-                <label className="field-label">Pattern Code</label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="Any pattern/style code e.g. CA01, DEFM, F909"
-                  value={patternCode}
-                  onChange={e => setPatternCode(e.target.value)}
-                />
-                <span className="hint">Any format — letters, numbers, no length restriction</span>
-              </>
-            )}
+            {identifierMode === 'ean' ? <>
+                <label className={portalClass("field-label")}>EAN Code</label>
+                <input type="text" className={portalClass("text-input")} placeholder="13 digit EAN code" value={eanCode} onChange={e => setEanCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))} />
+                <span className={portalClass("hint")}>Must be exactly 13 digits</span>
+              </> : <>
+                <label className={portalClass("field-label")}>Pattern Code</label>
+                <input type="text" className={portalClass("text-input")} placeholder="Any pattern/style code e.g. CA01, DEFM, F909" value={patternCode} onChange={e => setPatternCode(e.target.value)} />
+                <span className={portalClass("hint")}>Any format — letters, numbers, no length restriction</span>
+              </>}
           </div>
 
-          {/* Color field — the ONLY Color section in this file */}
-          <div className="field-group">
-            <label className="field-label">Color</label>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-              <input
-                type="text"
-                className="text-input"
-                placeholder="Type a colour name"
-                value={customColorInput}
-                onChange={e => setCustomColorInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddCustomColor();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className="pill-button"
-                onClick={handleAddCustomColor}
-              >
+          {}
+          <div className={portalClass("field-group")}>
+            <label className={portalClass("field-label")}>Color</label>
+            <div style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '10px'
+          }} className="tadm-addproduct-node-15">
+              <input type="text" className={portalClass("text-input")} placeholder="Type a colour name" value={customColorInput} onChange={e => setCustomColorInput(e.target.value)} onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddCustomColor();
+              }
+            }} />
+              <button type="button" className={portalClass("pill-button")} onClick={handleAddCustomColor}>
                 Add
               </button>
             </div>
-            <div className="pill-grid">
-              {colorList.map(color => (
-                <button
-                  key={color}
-                  type="button"
-                  className={`pill-option ${selectedColor === color ? 'active' : ''}`}
-                  onClick={() => setSelectedColor(color)}
-                >
+            <div className={portalClass("pill-grid")}>
+              {colorList.map(color => <button key={color} type="button" className={portalClass(`pill-option ${selectedColor === color ? 'active' : ''}`)} onClick={() => setSelectedColor(color)}>
                   {color}
-                </button>
-              ))}
+                </button>)}
             </div>
           </div>
         </div>
 
-        <div className="grid-two">
-          <div className="field-group">
-            <label className="field-label">Kids Sizes</label>
-            <div className="pill-grid">
-              {kidsSizes.map(size => (
-                <button
-                  key={size}
-                  type="button"
-                  className={`pill-option ${selectedSize === size ? 'active' : ''}`}
-                  onClick={() => setSelectedSize(size)}
-                >
+        <div className={portalClass("grid-two")}>
+          <div className={portalClass("field-group")}>
+            <label className={portalClass("field-label")}>Kids Sizes</label>
+            <div className={portalClass("pill-grid")}>
+              {kidsSizes.map(size => <button key={size} type="button" className={portalClass(`pill-option ${selectedSize === size ? 'active' : ''}`)} onClick={() => setSelectedSize(size)}>
                   {size}
-                </button>
-              ))}
+                </button>)}
             </div>
           </div>
 
-          <div className="field-group">
-            <label className="field-label">Adult Sizes</label>
-            <div className="pill-grid">
-              {adultSizes.map(size => (
-                <button
-                  key={size}
-                  type="button"
-                  className={`pill-option ${selectedSize === size ? 'active' : ''}`}
-                  onClick={() => setSelectedSize(size)}
-                >
+          <div className={portalClass("field-group")}>
+            <label className={portalClass("field-label")}>Adult Sizes</label>
+            <div className={portalClass("pill-grid")}>
+              {adultSizes.map(size => <button key={size} type="button" className={portalClass(`pill-option ${selectedSize === size ? 'active' : ''}`)} onClick={() => setSelectedSize(size)}>
                   {size}
-                </button>
-              ))}
+                </button>)}
             </div>
           </div>
-          <div className="field-group">
-            <label className="field-label">Initial Stock</label>
-            <input
-              type="number"
-              className="text-input"
-              placeholder="Enter quantity"
-              value={totalCount}
-              onChange={(e) => setTotalCount(e.target.value)}
-            />
+          <div className={portalClass("field-group")}>
+            <label className={portalClass("field-label")}>Initial Stock</label>
+            <input type="number" className={portalClass("text-input")} placeholder="Enter quantity" value={totalCount} onChange={e => setTotalCount(e.target.value)} />
           </div>
         </div>
 
-        <div className="price-table-wrap">
-          <table className="price-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th>B2B</th>
-                <th>B2C</th>
+        <div className={portalClass("price-table-wrap")}>
+          <table className={portalClass("price-table")}>
+            <thead className="tadm-addproduct-node-16">
+              <tr className="tadm-addproduct-node-17">
+                <th className="tadm-addproduct-node-18"></th>
+                <th className="tadm-addproduct-node-19">B2B</th>
+                <th className="tadm-addproduct-node-20">B2C</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>Original Price</td>
-                <td>
-                  <input
-                    type="number"
-                    value={originalPriceB2B}
-                    onChange={e => handlePriceChangeB2B(e.target.value)}
-                  />
+            <tbody className="tadm-addproduct-node-21">
+              <tr className="tadm-addproduct-node-22">
+                <td className="tadm-addproduct-node-23">Original Price</td>
+                <td className="tadm-addproduct-node-24">
+                  <input type="number" value={originalPriceB2B} onChange={e => handlePriceChangeB2B(e.target.value)} className="tadm-addproduct-node-25" />
                 </td>
-                <td>
-                  <input
-                    type="number"
-                    value={originalPriceB2C}
-                    onChange={e => handlePriceChangeB2C(e.target.value)}
-                  />
+                <td className="tadm-addproduct-node-26">
+                  <input type="number" value={originalPriceB2C} onChange={e => handlePriceChangeB2C(e.target.value)} className="tadm-addproduct-node-27" />
                 </td>
               </tr>
-              <tr>
-                <td>Discount (%)</td>
-                <td>
-                  <input
-                    type="number"
-                    value={discountB2B}
-                    onChange={e => handleDiscountChangeB2B(e.target.value)}
-                  />
+              <tr className="tadm-addproduct-node-28">
+                <td className="tadm-addproduct-node-29">Discount (%)</td>
+                <td className="tadm-addproduct-node-30">
+                  <input type="number" value={discountB2B} onChange={e => handleDiscountChangeB2B(e.target.value)} className="tadm-addproduct-node-31" />
                 </td>
-                <td>
-                  <input
-                    type="number"
-                    value={discountB2C}
-                    onChange={e => handleDiscountChangeB2C(e.target.value)}
-                  />
+                <td className="tadm-addproduct-node-32">
+                  <input type="number" value={discountB2C} onChange={e => handleDiscountChangeB2C(e.target.value)} className="tadm-addproduct-node-33" />
                 </td>
               </tr>
-              <tr>
-                <td>Final Price</td>
-                <td>
-                  <input type="number" value={finalPriceB2B} readOnly />
+              <tr className="tadm-addproduct-node-34">
+                <td className="tadm-addproduct-node-35">Final Price</td>
+                <td className="tadm-addproduct-node-36">
+                  <input type="number" value={finalPriceB2B} readOnly className="tadm-addproduct-node-37" />
                 </td>
-                <td>
-                  <input type="number" value={finalPriceB2C} readOnly />
+                <td className="tadm-addproduct-node-38">
+                  <input type="number" value={finalPriceB2C} readOnly className="tadm-addproduct-node-39" />
                 </td>
               </tr>
-              <tr>
-                <td>Total Count</td>
-                <td colSpan="2" className="centered-input">
-                  <input
-                    type="number"
-                    value={totalCount}
-                    onChange={e => setTotalCount(e.target.value)}
-                  />
+              <tr className="tadm-addproduct-node-40">
+                <td className="tadm-addproduct-node-41">Total Count</td>
+                <td colSpan="2" className={portalClass("centered-input")}>
+                  <input type="number" value={totalCount} onChange={e => setTotalCount(e.target.value)} className="tadm-addproduct-node-42" />
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div className="image-upload">
-          <label className="upload-btn">
+        <div className={portalClass("image-upload")}>
+          <label className={portalClass("upload-btn")}>
             Upload Image
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-            />
+            <input type="file" accept="image/*" onChange={handleImageUpload} className="tadm-addproduct-node-43" />
           </label>
-          {uploadedImage ? (
-            <img src={uploadedImage} alt="Uploaded" className="preview-image" />
-          ) : (
-            <span className="hint">No image selected</span>
-          )}
+          {uploadedImage ? <img src={uploadedImage} alt="Uploaded" className={portalClass("preview-image")} /> : <span className={portalClass("hint")}>No image selected</span>}
         </div>
       </div>
 
-      <div className="admin-section5">
-        <button
-          className="add-product-btn"
-          onClick={handleAddProduct}
-          disabled={submitting}
-        >
+      <div className={portalClass("admin-section5")}>
+        <button className={portalClass("add-product-btn")} onClick={handleAddProduct} disabled={submitting}>
           {submitting ? 'Adding Product…' : 'Add Product'}
         </button>
       </div>
 
-      {popupMessage && (
-        <div className={`popup-card ${popupType}`}>
+      {popupMessage && <div className={portalClass(`popup-card ${popupType}`)}>
           {popupMessage}
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 };
-
 export default AddProduct;

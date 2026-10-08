@@ -1,4 +1,4 @@
-.add-product-page {
+.tadm-addproduct-add-product-page {
   min-height: calc(100vh - 70px);
   padding: 24px 32px 40px;
   background-color: #f8fafc;
@@ -9,17 +9,17 @@
   gap: 20px;
 }
 
-.admin-section1,
-.admin-section2,
-.admin-section3,
-.admin-section4-final {
+.tadm-addproduct-admin-section1,
+.tadm-addproduct-admin-section2,
+.tadm-addproduct-admin-section3,
+.tadm-addproduct-admin-section4-final {
   background-color: #f8fafc;
-  border: 1px solid #333333;
+  border: 1px solid #dce3ec;
   border-radius: 12px;
   padding: 16px 18px;
 }
 
-.section-header {
+.tadm-addproduct-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -27,13 +27,13 @@
   margin-bottom: 10px;
 }
 
-.section-header h2 {
+.tadm-addproduct-section-header h2 {
   font-size: 18px;
   font-weight: 600;
   color: #263140;
 }
 
-.chip {
+.tadm-addproduct-chip {
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 999px;
@@ -41,13 +41,13 @@
   color: #263140;
 }
 
-.category-buttons {
+.tadm-addproduct-category-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.category-buttons button {
+.tadm-addproduct-category-buttons button {
   padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid #ffffff;
@@ -59,68 +59,68 @@
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
-.category-buttons button:hover {
+.tadm-addproduct-category-buttons button:hover {
   border-color: #ffd700;
   color: #263140;
 }
 
-.category-buttons button.active {
+.tadm-addproduct-category-buttons button.tadm-addproduct-active {
   background-color: #ffd700;
   border-color: #ffd700;
   color: #000000;
 }
 
-.row-two {
+.tadm-addproduct-row-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
-.admin-section2 h2,
-.admin-section3 h2 {
+.tadm-addproduct-admin-section2 h2,
+.tadm-addproduct-admin-section3 h2 {
   font-size: 16px;
   font-weight: 600;
   color: #263140;
   margin-bottom: 8px;
 }
 
-.text-input {
+.tadm-addproduct-text-input {
   width: 100%;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #555555;
+  border: 1px solid #dce3ec;
   background-color: #f8fafc;
   color: #263140;
   font-size: 14px;
   outline: none;
 }
 
-.text-input:focus {
+.tadm-addproduct-text-input:focus {
   border-color: #ffd700;
 }
 
-.dropdown {
+.tadm-addproduct-dropdown {
   margin-top: 6px;
   max-height: 180px;
   overflow-y: auto;
   border-radius: 8px;
-  border: 1px solid #333333;
+  border: 1px solid #dce3ec;
   background-color: #f8fafc;
 }
 
-.dropdown-item {
+.tadm-addproduct-dropdown-item {
   padding: 8px 10px;
   font-size: 14px;
   cursor: pointer;
   color: #263140;
 }
 
-.dropdown-item:hover {
+.tadm-addproduct-dropdown-item:hover {
   background-color: #f8fafc;
   color: #263140;
 }
 
-.pill-button {
+.tadm-addproduct-pill-button {
   margin-top: 10px;
   padding: 7px 14px;
   border-radius: 999px;
@@ -134,12 +134,12 @@
   transition: background-color 0.2s, color 0.2s;
 }
 
-.pill-button:hover {
+.tadm-addproduct-pill-button:hover {
   background-color: #ffd700;
   color: #000000;
 }
 
-.popup-overlay {
+.tadm-addproduct-popup-overlay {
   position: fixed;
   inset: 0;
   display: flex;
@@ -149,31 +149,31 @@
   z-index: 999;
 }
 
-.popup-box {
+.tadm-addproduct-popup-box {
   width: 100%;
   max-width: 360px;
   background-color: #f8fafc;
   border-radius: 12px;
-  border: 1px solid #333333;
+  border: 1px solid #dce3ec;
   padding: 18px 20px;
   color: #263140;
 }
 
-.popup-box h3 {
+.tadm-addproduct-popup-box h3 {
   margin: 0 0 12px;
   font-size: 16px;
   font-weight: 600;
   color: #263140;
 }
 
-.popup-actions {
+.tadm-addproduct-popup-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 14px;
 }
 
-.popup-actions button {
+.tadm-addproduct-popup-actions button {
   padding: 7px 14px;
   border-radius: 999px;
   border: 1px solid #ffd700;
@@ -185,50 +185,50 @@
   transition: background-color 0.2s, color 0.2s;
 }
 
-.popup-actions button:hover {
+.tadm-addproduct-popup-actions button:hover {
   background-color: #ffd700;
   color: #000000;
 }
 
-.admin-section4-final {
+.tadm-addproduct-admin-section4-final {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.grid-two {
+.tadm-addproduct-grid-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
-.field-group {
+.tadm-addproduct-field-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.field-label {
+.tadm-addproduct-field-label {
   font-size: 13px;
   font-weight: 500;
   color: #263140;
 }
 
-.hint {
+.tadm-addproduct-hint {
   font-size: 11px;
   color: #263140;
 }
 
-.pill-grid {
+.tadm-addproduct-pill-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.pill-option {
+.tadm-addproduct-pill-option {
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid #555555;
+  border: 1px solid #dce3ec;
   background-color: #f8fafc;
   color: #263140;
   font-size: 12px;
@@ -236,63 +236,63 @@
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
-.pill-option.active {
+.tadm-addproduct-pill-option.tadm-addproduct-active {
   border-color: #ffd700;
   background-color: #ffd700;
   color: #000000;
 }
 
-.price-table-wrap {
+.tadm-addproduct-price-table-wrap {
   margin-top: 4px;
   overflow-x: auto;
 }
 
-.price-table {
+.tadm-addproduct-price-table {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid #333333;
+  border: 1px solid #dce3ec;
   background-color: #f8fafc;
 }
 
-.price-table th,
-.price-table td {
-  border: 1px solid #333333;
+.tadm-addproduct-price-table th,
+.tadm-addproduct-price-table td {
+  border: 1px solid #dce3ec;
   padding: 8px 10px;
   font-size: 13px;
   text-align: left;
   color: #263140;
 }
 
-.price-table th {
+.tadm-addproduct-price-table th {
   background-color: #f8fafc;
   color: #263140;
 }
 
-.price-table td input {
+.tadm-addproduct-price-table td input {
   width: 100%;
   padding: 6px 8px;
   border-radius: 6px;
-  border: 1px solid #555555;
+  border: 1px solid #dce3ec;
   background-color: #f8fafc;
   color: #263140;
   font-size: 13px;
   outline: none;
 }
 
-.price-table td input:focus {
+.tadm-addproduct-price-table td input:focus {
   border-color: #ffd700;
 }
 
-.centered-input {
+.tadm-addproduct-centered-input {
   text-align: center;
 }
 
-.centered-input input {
+.tadm-addproduct-centered-input input {
   max-width: 180px;
   margin: 0 auto;
 }
 
-.image-upload {
+.tadm-addproduct-image-upload {
   margin-top: 8px;
   display: flex;
   flex-direction: column;
@@ -300,7 +300,7 @@
   align-items: flex-start;
 }
 
-.upload-btn {
+.tadm-addproduct-upload-btn {
   position: relative;
   overflow: hidden;
   padding: 8px 16px;
@@ -317,32 +317,32 @@
   gap: 6px;
 }
 
-.upload-btn input[type="file"] {
+.tadm-addproduct-upload-btn input[type="file"] {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
 }
 
-.upload-btn:hover {
+.tadm-addproduct-upload-btn:hover {
   background-color: #ffd700;
   color: #000000;
 }
 
-.preview-image {
+.tadm-addproduct-preview-image {
   max-width: 320px;
   width: 100%;
   border-radius: 10px;
-  border: 1px solid #333333;
+  border: 1px solid #dce3ec;
 }
 
-.admin-section5 {
+.tadm-addproduct-admin-section5 {
   display: flex;
   justify-content: flex-end;
   margin-top: 4px;
 }
 
-.add-product-btn {
+.tadm-addproduct-add-product-btn {
   padding: 10px 20px;
   border-radius: 999px;
   border: 1px solid #ffd700;
@@ -354,20 +354,20 @@
   transition: opacity 0.2s, transform 0.1s;
 }
 
-.add-product-btn:hover {
+.tadm-addproduct-add-product-btn:hover {
   opacity: 0.9;
 }
 
-.add-product-btn:active {
+.tadm-addproduct-add-product-btn:active {
   transform: scale(0.97);
 }
 
-.add-product-btn:disabled {
+.tadm-addproduct-add-product-btn:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
-.popup-card {
+.tadm-addproduct-popup-card {
   position: fixed;
   left: 50%;
   bottom: 20px;
@@ -377,33 +377,33 @@
   background-color: #f8fafc;
   color: #263140;
   font-size: 13px;
-  border: 1px solid #333333;
+  border: 1px solid #dce3ec;
   z-index: 1000;
 }
 
-.popup-card.success {
+.tadm-addproduct-popup-card.tadm-addproduct-success {
   border-color: #ffd700;
   color: #263140;
 }
 
-.popup-card.error {
+.tadm-addproduct-popup-card.tadm-addproduct-error {
   border-color: #ffd700;
   color: #263140;
 }
 
 @media (max-width: 900px) {
-  .row-two,
-  .grid-two {
+  .tadm-addproduct-row-two,
+  .tadm-addproduct-grid-two {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 600px) {
-  .add-product-page {
+  .tadm-addproduct-add-product-page {
     padding: 16px 14px 24px;
   }
 
-  .preview-image {
+  .tadm-addproduct-preview-image {
     max-width: 260px;
   }
 }

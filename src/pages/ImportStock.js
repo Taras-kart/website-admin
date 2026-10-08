@@ -1,10 +1,85 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import Navbar from './NavbarAdmin';
 import { useAuth } from './AdminAuth';
 import { useLoading } from './LoadingContext';
 import { apiGet, apiUpload, apiPost } from './api';
 import JSZip from 'jszip';
 import './ImportStock.css';
+const portalClass = value => String(value || '').split(/\s+/).filter(Boolean).flatMap(name => ({
+  "ops-main": ["tadm-operations-ops-main"],
+  "ops-heading": ["tadm-operations-ops-heading"],
+  "ops-panel": ["tadm-operations-ops-panel"],
+  "ops-actions": ["tadm-operations-ops-actions"],
+  "ops-row-actions": ["tadm-operations-ops-row-actions"],
+  "ops-primary": ["tadm-operations-ops-primary"],
+  "ops-metrics": ["tadm-operations-ops-metrics"],
+  "ops-quick": ["tadm-operations-ops-quick"],
+  "ops-table-wrap": ["tadm-operations-ops-table-wrap"],
+  "ops-badge": ["tadm-operations-ops-badge"],
+  "ops-toolbar": ["tadm-operations-ops-toolbar"],
+  "ops-dates": ["tadm-operations-ops-dates"],
+  "ops-pagination": ["tadm-operations-ops-pagination"],
+  "ops-alert": ["tadm-operations-ops-alert"],
+  "ops-success": ["tadm-operations-ops-success"],
+  "ops-empty": ["tadm-operations-ops-empty"],
+  "ops-overlay": ["tadm-operations-ops-overlay"],
+  "ops-modal": ["tadm-operations-ops-modal"],
+  "ops-form": ["tadm-operations-ops-form"],
+  "ops-form-grid": ["tadm-operations-ops-form-grid"],
+  "ops-nav": ["tadm-operations-ops-nav"],
+  "ops-nav-top": ["tadm-operations-ops-nav-top"],
+  "ops-brand": ["tadm-operations-ops-brand"],
+  "ops-nav-controls": ["tadm-operations-ops-nav-controls"],
+  "ops-nav-links": ["tadm-operations-ops-nav-links"],
+  "ops-mobile-toggle": ["tadm-operations-ops-mobile-toggle"],
+  "ops-pos-grid": ["tadm-operations-ops-pos-grid"],
+  "ops-pos-total": ["tadm-operations-ops-pos-total"],
+  "ops-pos-qty": ["tadm-operations-ops-pos-qty"],
+  "ops-danger": ["tadm-operations-ops-danger"],
+  "ops-password": ["tadm-operations-ops-password"],
+  "import-page-admin": ["tadm-importstock-import-page-admin"],
+  "import-wrap-admin": ["tadm-importstock-import-wrap-admin"],
+  "import-card-admin": ["tadm-importstock-import-card-admin"],
+  "import-title-admin": ["tadm-importstock-import-title-admin"],
+  "import-subtitle-admin": ["tadm-importstock-import-subtitle-admin"],
+  "import-form-admin": ["tadm-importstock-import-form-admin"],
+  "select-wrap": ["tadm-importstock-select-wrap"],
+  "label": ["tadm-importstock-label"],
+  "audience-select": ["tadm-importstock-audience-select"],
+  "invalid": ["tadm-importstock-invalid"],
+  "inline-info": ["tadm-importstock-inline-info"],
+  "pill-mini": ["tadm-importstock-pill-mini"],
+  "ok": ["tadm-importstock-ok"],
+  "warn": ["tadm-importstock-warn"],
+  "import-filebox-admin": ["tadm-importstock-import-filebox-admin"],
+  "import-filehint-admin": ["tadm-importstock-import-filehint-admin"],
+  "import-btn-admin": ["tadm-importstock-import-btn-admin"],
+  "import-msg-admin": ["tadm-importstock-import-msg-admin"],
+  "import-actions-admin": ["tadm-importstock-import-actions-admin"],
+  "import-ghost-btn-admin": ["tadm-importstock-import-ghost-btn-admin"],
+  "import-tablewrap-admin": ["tadm-importstock-import-tablewrap-admin"],
+  "import-table-admin": ["tadm-importstock-import-table-admin"],
+  "pill-admin": ["tadm-importstock-pill-admin"],
+  "pending": ["tadm-importstock-pending"],
+  "processing": ["tadm-importstock-processing"],
+  "complete": ["tadm-importstock-complete"],
+  "completed": ["tadm-importstock-completed"],
+  "partial": ["tadm-importstock-partial"],
+  "error": ["tadm-importstock-error"],
+  "import-empty-admin": ["tadm-importstock-import-empty-admin"],
+  "import-note-admin": ["tadm-importstock-import-note-admin"],
+  "excel-block": ["tadm-importstock-excel-block"],
+  "zip-block": ["tadm-importstock-zip-block"],
+  "image-stats": ["tadm-importstock-image-stats"],
+  "unmatched-wrap": ["tadm-importstock-unmatched-wrap"],
+  "unmatched-title": ["tadm-importstock-unmatched-title"],
+  "unmatched-list": ["tadm-importstock-unmatched-list"],
+  "unmatched-ean": ["tadm-importstock-unmatched-ean"],
+  "unmatched-file": ["tadm-importstock-unmatched-file"],
+  "discount-block": ["tadm-importstock-discount-block"],
+  "discount-row": ["tadm-importstock-discount-row"],
+  "discount-field": ["tadm-importstock-discount-field"],
+  "discount-input": ["tadm-importstock-discount-input"]
+})[name] || ["tadm-importstock-" + name]).join(' ');
 const PROCESS_LIMIT = 100;
 function baseNameNoExt(name) {
   const n = name.split('/').pop() || name;
@@ -18,7 +93,7 @@ function isImagePath(p) {
 function extractIdentifierFromPath(path, mode) {
   const base = baseNameNoExt(path);
   if (mode === 'ean') {
-    return String(base).replace(/__(front|back|side|detail[0-9]*)$/i,'').trim();
+    return String(base).replace(/__(front|back|side|detail[0-9]*)$/i, '').trim();
   }
   return String(base).trim();
 }
@@ -308,12 +383,12 @@ export default function ImportStock() {
     } finally {
       setUploading(false);
       hide();
-
     }
   }, [file, branchId, gender, categoryId, show, hide, processJob, fetchJobs]);
   async function uploadToCloudinary(blob, publicIdBase) {
-    const form=new FormData();form.append('image',blob,`${publicIdBase}.jpg`)
-    return apiUpload('/api/upload',form)
+    const form = new FormData();
+    form.append('image', blob, `${publicIdBase}.jpg`);
+    return apiUpload('/api/upload', form);
   }
   const onUploadImages = useCallback(async e => {
     e.preventDefault();
@@ -343,14 +418,30 @@ export default function ImportStock() {
       if (imageMode === 'ean') {
         const identifiers = [...new Set(entries.map(file => extractIdentifierFromPath(file.name, imageMode).trim()).filter(Boolean))];
         for (let start = 0; start < identifiers.length; start += 1000) {
-          const result = await apiPost(`/api/branch/${branchId}/images/lookup`, { eans: identifiers.slice(start, start + 1000) });
+          const result = await apiPost(`/api/branch/${branchId}/images/lookup`, {
+            eans: identifiers.slice(start, start + 1000)
+          });
           if (!Array.isArray(result?.found)) throw new Error('Invalid barcode lookup response. Deploy the updated backend first.');
           for (const ean of result.found) eanMap.set(String(ean).trim(), true);
         }
       } else {
-        const products=[];let offset=0;
-        while(true){const page=await apiGet('/api/manage/stock',{branch_id:branchId,limit:200,offset});products.push(...page.rows);offset+=page.rows.length;if(offset>=page.total||!page.rows.length)break}
-        ({ eanMap, sharedMap, sharedCollisions } = buildImageLookups(products));
+        const products = [];
+        let offset = 0;
+        while (true) {
+          const page = await apiGet('/api/manage/stock', {
+            branch_id: branchId,
+            limit: 200,
+            offset
+          });
+          products.push(...page.rows);
+          offset += page.rows.length;
+          if (offset >= page.total || !page.rows.length) break;
+        }
+        ({
+          eanMap,
+          sharedMap,
+          sharedCollisions
+        } = buildImageLookups(products));
       }
       const total = entries.length;
       let done = 0;
@@ -361,8 +452,8 @@ export default function ImportStock() {
       for (const f of entries) {
         const identifier = extractIdentifierFromPath(f.name, imageMode).trim();
         if (imageMode === 'ean') {
-          const imageType=baseNameNoExt(f.name).match(/__(front|back|side|detail[0-9]*)$/i)?.[1]?.toLowerCase()||'front';
-          const imageKey=`${identifier}:${imageType}`;
+          const imageType = baseNameNoExt(f.name).match(/__(front|back|side|detail[0-9]*)$/i)?.[1]?.toLowerCase() || 'front';
+          const imageKey = `${identifier}:${imageType}`;
           if (!identifier || !eanMap.has(identifier)) {
             unmatched.push({
               file: f.name,
@@ -547,21 +638,23 @@ export default function ImportStock() {
       setTimeout(() => setDiscountMessage(''), 4000);
     }
   }, [branchId, b2cDiscount, b2bDiscount, show, hide]);
-  return <div className="import-page-admin">
-      <Navbar /><div className="ops-main" style={{paddingBottom:0}}><a href="/templates/Tara-Product-Import-Template.xlsx" download>Download product import template</a><p>Choose branch, department and category. Upload one row per colour and size. Re-uploading the same file resumes its original job.</p></div>
-      <div className="import-wrap-admin">
-        <div className="import-card-admin">
-          <div className="import-title-admin">
+  return <div className={portalClass("import-page-admin")}>
+      <div className={portalClass("ops-main")} style={{
+      paddingBottom: 0
+    }}><h1 className="tadm-importstock-heading">Excel &amp; images</h1><a href="/templates/Tara-Product-Import-Template.xlsx" download className="tadm-importstock-node-0">Download product import template</a><p className="tadm-importstock-node-1">Choose branch, department and category. Upload one row per colour and size. Re-uploading the same file resumes its original job.</p></div>
+      <div className={portalClass("import-wrap-admin")}>
+        <div className={portalClass("import-card-admin")}>
+          <div className={portalClass("import-title-admin")}>
             Import Stock (Excel)
           </div>
-          <div className="import-subtitle-admin">
+          <div className={portalClass("import-subtitle-admin")}>
             Upload your branch Excel file for a selected category.
           </div>
           <div style={{
           display: 'flex',
           gap: 8,
           marginBottom: 16
-        }}>
+        }} className="tadm-importstock-node-2">
             <button type="button" onClick={() => {
             setImportType('B2C');
             setB2bMessage('');
@@ -572,9 +665,9 @@ export default function ImportStock() {
             cursor: 'pointer',
             fontWeight: 700,
             fontSize: 13,
-            background: importType === 'B2C' ? '#ca8a04' : '#1f2937',
-            color: importType === 'B2C' ? '#000' : '#fff'
-          }}>
+            background: importType === 'B2C' ? 'var(--portal-soft)' : "#ffffff",
+            color: importType === 'B2C' ? 'var(--portal-accent)' : "#42536a"
+          }} className="tadm-importstock-node-3">
               B2C Import
             </button>
             <button type="button" onClick={() => {
@@ -587,104 +680,104 @@ export default function ImportStock() {
             cursor: 'pointer',
             fontWeight: 700,
             fontSize: 13,
-            background: importType === 'B2B' ? '#ca8a04' : '#1f2937',
-            color: importType === 'B2B' ? '#000' : '#fff'
-          }}>
+            background: importType === 'B2B' ? 'var(--portal-soft)' : "#ffffff",
+            color: importType === 'B2B' ? 'var(--portal-accent)' : "#42536a"
+          }} className="tadm-importstock-node-4">
               B2B Import
             </button>
           </div>
-          <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
-            <div className="excel-block">
-              <div className="select-wrap">
-                <label className="label">
+          <form className={portalClass("import-form-admin")} onSubmit={e => e.preventDefault()}>
+            <div className={portalClass("excel-block")}>
+              <div className={portalClass("select-wrap")}>
+                <label className={portalClass("label")}>
                   Gender
                 </label>
-                <select className={`audience-select ${gender ? '' : 'invalid'}`} value={gender} onChange={e => {
+                <select className={portalClass(`audience-select ${gender ? '' : 'invalid'}`)} value={gender} onChange={e => {
                 setGender(e.target.value);
                 setCategoryId('');
                 localStorage.removeItem('import_category_id');
               }} required>
-                  <option value="">
+                  <option value="" className="tadm-importstock-node-5">
                     Select Gender
                   </option>
-                  <option value="MEN">
+                  <option value="MEN" className="tadm-importstock-node-6">
                     Men
                   </option>
-                  <option value="WOMEN">
+                  <option value="WOMEN" className="tadm-importstock-node-7">
                     Women
                   </option>
-                  <option value="KIDS">
+                  <option value="KIDS" className="tadm-importstock-node-8">
                     Kids
                   </option>
                 </select>
               </div>
-              <div className="select-wrap">
-                <label className="label">
+              <div className={portalClass("select-wrap")}>
+                <label className={portalClass("label")}>
                   Category
                 </label>
-                <select className={`audience-select ${categoryId ? '' : 'invalid'}`} value={categoryId} onChange={e => setCategoryId(e.target.value)} disabled={!gender || categoriesLoading} required>
-                  <option value="">
+                <select className={portalClass(`audience-select ${categoryId ? '' : 'invalid'}`)} value={categoryId} onChange={e => setCategoryId(e.target.value)} disabled={!gender || categoriesLoading} required>
+                  <option value="" className="tadm-importstock-node-9">
                     {categoriesLoading ? 'Loading Categories…' : !gender ? 'Select Gender First' : genderCategories.length ? 'Select Category' : 'No Categories Available'}
                   </option>
-                  {genderCategories.map(category => <option key={category.id} value={category.id}>
+                  {genderCategories.map(category => <option key={category.id} value={category.id} className="tadm-importstock-node-10">
                       {category.category_path || category.name}
                     </option>)}
                 </select>
               </div>
-              <div className="import-filebox-admin">
-                <label className="label">
+              <div className={portalClass("import-filebox-admin")}>
+                <label className={portalClass("label")}>
                   Excel / CSV
                 </label>
-                <input type="file" accept=".xlsx,.xls,.csv" onChange={e => setFile(e.target.files?.[0] || null)} />
-                {file ? <div className="import-filehint-admin">
+                <input type="file" accept=".xlsx,.xls,.csv" onChange={e => setFile(e.target.files?.[0] || null)} className="tadm-importstock-node-11" />
+                {file ? <div className={portalClass("import-filehint-admin")}>
                     {file.name}
                     {' • '}
                     {(file.size / 1024 / 1024).toFixed(2)}
                     {' MB'}
-                  </div> : <div className="import-filehint-admin">
+                  </div> : <div className={portalClass("import-filehint-admin")}>
                     No file selected
                   </div>}
                 {importType === 'B2C' ? <>
-                    <button className="import-btn-admin" onClick={onUpload} disabled={!canUpload}>
+                    <button className={portalClass("import-btn-admin")} onClick={onUpload} disabled={!canUpload}>
                       {uploading ? 'Uploading…' : 'Upload B2C Excel'}
                     </button>
-                    {message ? <div className="import-msg-admin">
+                    {message ? <div className={portalClass("import-msg-admin")}>
                         {message}
                       </div> : null}
                   </> : <>
-                    <button className="import-btn-admin" onClick={onB2BUpload} disabled={!file || !gender || !categoryId || b2bUploading}>
+                    <button className={portalClass("import-btn-admin")} onClick={onB2BUpload} disabled={!file || !gender || !categoryId || b2bUploading}>
                       {b2bUploading ? 'Uploading…' : 'Upload B2B Excel'}
                     </button>
-                    {b2bMessage ? <div className="import-msg-admin">
+                    {b2bMessage ? <div className={portalClass("import-msg-admin")}>
                         {b2bMessage}
                       </div> : null}
                   </>}
-                {progress ? <div className="import-msg-admin">
+                {progress ? <div className={portalClass("import-msg-admin")}>
                     {progress.state}
                     {' '}
                     {progress.total ? `${progress.done}/${progress.total}` : `${progress.done}+`}
                     {' rows'}
                   </div> : null}
               </div>
-              <div className="inline-info">
-                <span className={`pill-mini ${gender ? 'ok' : 'warn'}`}>
+              <div className={portalClass("inline-info")}>
+                <span className={portalClass(`pill-mini ${gender ? 'ok' : 'warn'}`)}>
                   {gender && categoryId ? `${gender} • ${genderCategories.find(category => String(category.id) === String(categoryId))?.name || 'Category selected'}` : 'Select a gender and category for Excel upload'}
                 </span>
               </div>
             </div>
           </form>
         </div>
-        <div className="import-card-admin">
-          <div className="import-title-admin">
+        <div className={portalClass("import-card-admin")}>
+          <div className={portalClass("import-title-admin")}>
             Upload Product Images
           </div>
-          <div className="import-subtitle-admin">
+          <div className={portalClass("import-subtitle-admin")}>
             Use EAN mode for legacy per-variant images, or Shared mode to upload one image for every size of the same product, colour, and fit.
           </div>
-          <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
-            <div className="zip-block">
-              <div className="import-filebox-admin">
-                <label className="label">
+          <form className={portalClass("import-form-admin")} onSubmit={e => e.preventDefault()}>
+            <div className={portalClass("zip-block")}>
+              <div className={portalClass("import-filebox-admin")}>
+                <label className={portalClass("label")}>
                   Images ZIP Folder
                 </label>
                 <div style={{
@@ -692,14 +785,14 @@ export default function ImportStock() {
                 gap: '16px',
                 marginBottom: '10px',
                 flexWrap: 'wrap'
-              }}>
+              }} className="tadm-importstock-node-12">
                   <label style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                   cursor: 'pointer'
-                }}>
-                    <input type="radio" name="imageMode" value="ean" checked={imageMode === 'ean'} onChange={() => setImageMode('ean')} />
+                }} className="tadm-importstock-node-13">
+                    <input type="radio" name="imageMode" value="ean" checked={imageMode === 'ean'} onChange={() => setImageMode('ean')} className="tadm-importstock-node-14" />
                     EAN Image
                   </label>
                   <label style={{
@@ -707,55 +800,55 @@ export default function ImportStock() {
                   alignItems: 'center',
                   gap: '6px',
                   cursor: 'pointer'
-                }}>
-                    <input type="radio" name="imageMode" value="shared" checked={imageMode === 'shared'} onChange={() => setImageMode('shared')} />
+                }} className="tadm-importstock-node-15">
+                    <input type="radio" name="imageMode" value="shared" checked={imageMode === 'shared'} onChange={() => setImageMode('shared')} className="tadm-importstock-node-16" />
                     Shared Product + Colour (+Fit) Image
                   </label>
                 </div>
-                <div className="import-filehint-admin" style={{
+                <div className={portalClass("import-filehint-admin")} style={{
                 marginBottom: '10px'
               }}>
                   {imageMode === 'ean' ? 'EAN filenames: 8903289347502.jpg (front), 8903289347502__back.jpg, 8903289347502__side.jpg' : 'Shared mode filename examples: 1508__JUNGLE GREEN.jpg (no fit distinction) or 1508__JUNGLE GREEN__RN.jpg / 1508__JUNGLE GREEN__RNS.jpg (when the same product+colour has different looks per fit, like GOKUL vests). Product ID + colour + fit is safest; Pattern + colour(+fit) also works when unique.'}
                 </div>
-                <input type="file" accept=".zip" onChange={e => setImageZip(e.target.files?.[0] || null)} />
-                {imageZip ? <div className="import-filehint-admin">
+                <input type="file" accept=".zip" onChange={e => setImageZip(e.target.files?.[0] || null)} className="tadm-importstock-node-17" />
+                {imageZip ? <div className={portalClass("import-filehint-admin")}>
                     {imageZip.name}
                     {' • '}
                     {(imageZip.size / 1024 / 1024).toFixed(2)}
                     {' MB'}
-                  </div> : <div className="import-filehint-admin">
+                  </div> : <div className={portalClass("import-filehint-admin")}>
                     No ZIP selected
                   </div>}
-                <button className="import-btn-admin" onClick={onUploadImages} disabled={!canUploadImages || uploadingImages}>
+                <button className={portalClass("import-btn-admin")} onClick={onUploadImages} disabled={!canUploadImages || uploadingImages}>
                   {uploadingImages ? `Uploading ${imageProgress.done}/${imageProgress.total}…` : 'Upload Images ZIP'}
                 </button>
-                {imageMessage ? <div className="import-msg-admin">
+                {imageMessage ? <div className={portalClass("import-msg-admin")}>
                     {imageMessage}
                   </div> : null}
-                <div className="image-stats">
-                  <span>
+                <div className={portalClass("image-stats")}>
+                  <span className="tadm-importstock-node-18">
                     Matched:{' '}
                     {matchStats.matched}
                   </span>
-                  <span>
+                  <span className="tadm-importstock-node-19">
                     Unmatched:{' '}
                     {matchStats.skipped}
                   </span>
-                  <span>
+                  <span className="tadm-importstock-node-20">
                     Total:{' '}
                     {matchStats.total}
                   </span>
                 </div>
-                {!!unmatchedList.length && <div className="unmatched-wrap">
-                    <div className="unmatched-title">
+                {!!unmatchedList.length && <div className={portalClass("unmatched-wrap")}>
+                    <div className={portalClass("unmatched-title")}>
                       Unmatched Images
                     </div>
-                    <ul className="unmatched-list">
-                      {unmatchedList.map((u, i) => <li key={`${u.file}-${i}`}>
-                            <span className="unmatched-ean">
+                    <ul className={portalClass("unmatched-list")}>
+                      {unmatchedList.map((u, i) => <li key={`${u.file}-${i}`} className="tadm-importstock-node-21">
+                            <span className={portalClass("unmatched-ean")}>
                               {u.identifier}
                             </span>
-                            <span className="unmatched-file">
+                            <span className={portalClass("unmatched-file")}>
                               {u.file}
                               {u.reason ? ` — ${u.reason}` : ''}
                             </span>
@@ -766,127 +859,127 @@ export default function ImportStock() {
             </div>
           </form>
         </div>
-        <div className="import-card-admin">
-          <div className="import-title-admin">
+        <div className={portalClass("import-card-admin")}>
+          <div className={portalClass("import-title-admin")}>
             B2C / B2B Discounts
           </div>
-          <div className="import-subtitle-admin">
+          <div className={portalClass("import-subtitle-admin")}>
             Set discount percentages for all products in this branch. These are kept separate from Excel and image uploads.
           </div>
-          <form className="import-form-admin" onSubmit={onSaveDiscounts}>
-            <div className="discount-block">
-              <div className="discount-row">
-                <div className="discount-field">
-                  <label className="label">
+          <form className={portalClass("import-form-admin")} onSubmit={onSaveDiscounts}>
+            <div className={portalClass("discount-block")}>
+              <div className={portalClass("discount-row")}>
+                <div className={portalClass("discount-field")}>
+                  <label className={portalClass("label")}>
                     B2C Discount (%)
                   </label>
-                  <input type="number" min="0" max="100" step="0.01" value={b2cDiscount} onChange={e => setB2cDiscount(e.target.value)} className="discount-input" />
+                  <input type="number" min="0" max="100" step="0.01" value={b2cDiscount} onChange={e => setB2cDiscount(e.target.value)} className={portalClass("discount-input")} />
                 </div>
-                <div className="discount-field">
-                  <label className="label">
+                <div className={portalClass("discount-field")}>
+                  <label className={portalClass("label")}>
                     B2B Discount (%)
                   </label>
-                  <input type="number" min="0" max="100" step="0.01" value={b2bDiscount} onChange={e => setB2bDiscount(e.target.value)} className="discount-input" />
+                  <input type="number" min="0" max="100" step="0.01" value={b2bDiscount} onChange={e => setB2bDiscount(e.target.value)} className={portalClass("discount-input")} />
                 </div>
               </div>
-              <button type="submit" className="import-btn-admin" disabled={!canSaveDiscounts}>
+              <button type="submit" className={portalClass("import-btn-admin")} disabled={!canSaveDiscounts}>
                 {savingDiscounts ? 'Saving…' : 'Save Discounts'}
               </button>
-              {discountMessage ? <div className="import-msg-admin">
+              {discountMessage ? <div className={portalClass("import-msg-admin")}>
                   {discountMessage}
                 </div> : null}
             </div>
           </form>
         </div>
-        <div className="import-card-admin">
-          <div className="import-title-admin">
+        <div className={portalClass("import-card-admin")}>
+          <div className={portalClass("import-title-admin")}>
             Recent Imports
           </div>
-          <div className="import-actions-admin">
-            <button className="import-ghost-btn-admin" onClick={fetchJobs} disabled={refreshing}>
+          <div className={portalClass("import-actions-admin")}>
+            <button className={portalClass("import-ghost-btn-admin")} onClick={fetchJobs} disabled={refreshing}>
               {refreshing ? 'Refreshing…' : 'Refresh'}
             </button>
           </div>
-          <div className="import-tablewrap-admin">
-            <table className="import-table-admin">
-              <thead>
-                <tr>
-                  <th>
+          <div className={portalClass("import-tablewrap-admin")}>
+            <table className={portalClass("import-table-admin")}>
+              <thead className="tadm-importstock-node-22">
+                <tr className="tadm-importstock-node-23">
+                  <th className="tadm-importstock-node-24">
                     ID
                   </th>
-                  <th>
+                  <th className="tadm-importstock-node-25">
                     File
                   </th>
-                  <th>
+                  <th className="tadm-importstock-node-26">
                     Gender
                   </th>
-                  <th>
+                  <th className="tadm-importstock-node-27">
                     Category
                   </th>
-                  <th>
+                  <th className="tadm-importstock-node-28">
                     Status
                   </th>
-                  <th>
+                  <th className="tadm-importstock-node-29">
                     Total
                   </th>
-                  <th>
+                  <th className="tadm-importstock-node-30">
                     Success
                   </th>
-                  <th>
+                  <th className="tadm-importstock-node-31">
                     Error
                   </th>
-                  <th>
+                  <th className="tadm-importstock-node-32">
                     Uploaded
                   </th>
-                  <th>
+                  <th className="tadm-importstock-node-33">
                     Completed
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                {jobs.map(j => <tr key={j.id} className="import-row-card">
-                      <td data-label="ID">
+              <tbody className="tadm-importstock-node-34">
+                {jobs.map(j => <tr key={j.id} className={portalClass("import-row-card")}>
+                      <td data-label="ID" className="tadm-importstock-node-35">
                         {j.id}
                       </td>
-                      <td data-label="File">
+                      <td data-label="File" className="tadm-importstock-node-36">
                         {j.file_name || '-'}
                       </td>
-                      <td data-label="Gender">
+                      <td data-label="Gender" className="tadm-importstock-node-37">
                         {j.gender || '-'}
                       </td>
-                      <td data-label="Category">
+                      <td data-label="Category" className="tadm-importstock-node-38">
                         {j.category_name || '-'}
                       </td>
-                      <td data-label="Status">
-                        <span className={`pill-admin ${String(j.status_enum || '').toLowerCase()}`}>
+                      <td data-label="Status" className="tadm-importstock-node-39">
+                        <span className={portalClass(`pill-admin ${String(j.status_enum || '').toLowerCase()}`)}>
                           {j.status_enum}
                         </span>
                       </td>
-                      <td data-label="Total">
+                      <td data-label="Total" className="tadm-importstock-node-40">
                         {j.rows_total ?? 0}
                       </td>
-                      <td data-label="Success">
+                      <td data-label="Success" className="tadm-importstock-node-41">
                         {j.rows_success ?? 0}
                       </td>
-                      <td data-label="Error">
+                      <td data-label="Error" className="tadm-importstock-node-42">
                         {j.rows_error ?? 0}
                       </td>
-                      <td data-label="Uploaded">
+                      <td data-label="Uploaded" className="tadm-importstock-node-43">
                         {j.uploaded_at ? new Date(j.uploaded_at).toLocaleString() : '-'}
                       </td>
-                      <td data-label="Completed">
+                      <td data-label="Completed" className="tadm-importstock-node-44">
                         {j.completed_at ? new Date(j.completed_at).toLocaleString() : '-'}
                       </td>
                     </tr>)}
-                {!jobs.length && <tr>
-                    <td colSpan="9" className="import-empty-admin">
+                {!jobs.length && <tr className="tadm-importstock-node-45">
+                    <td colSpan="9" className={portalClass("import-empty-admin")}>
                       No imports yet
                     </td>
                   </tr>}
               </tbody>
             </table>
           </div>
-          <div className="import-note-admin">
+          <div className={portalClass("import-note-admin")}>
             Quantity counts selling units. For a 3-piece pack, enter quantity 1 and PACK SIZE 3, or 1box (pack of3). MRP is the full pack price. Normal products use PACK SIZE 1. Reimporting adds stock to your branch.
           </div>
         </div>

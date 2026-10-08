@@ -1,1 +1,1 @@
-export const SUPER_PORTAL = false
+export const SUPER_PORTAL = false;

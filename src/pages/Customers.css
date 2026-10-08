@@ -1,27 +1,27 @@
-.customers-page {
+.tadm-customers-customers-page {
   padding: 2rem;
   font-family: 'Segoe UI', sans-serif;
 }
 
-.customers-container {
+.tadm-customers-customers-container {
   background-color: #fff;
   padding: 1.5rem;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.profile-tabs-wrapper {
+.tadm-customers-profile-tabs-wrapper {
   display: flex;
   justify-content: center;
   margin-bottom: 2rem;
 }
 
-.profile-tabs {
+.tadm-customers-profile-tabs {
   display: flex;
   gap: 1rem;
 }
 
-.tab-btn {
+.tadm-customers-tab-btn {
   padding: 10px 20px;
   border: 1px solid #ccc;
   background-color: #f2f2f2;
@@ -30,32 +30,32 @@
   font-size: 1rem;
 }
 
-.tab-btn.active {
+.tadm-customers-tab-btn.tadm-customers-active {
   background-color: #f8fafc;
   color: #263140;
-  border-color: #000;
+  border-color: #dce3ec;
 }
 
-.table-section {
+.tadm-customers-table-section {
   margin-top: 2rem;
 }
 
-.customers-container h2 {
+.tadm-customers-customers-container h2 {
   margin-bottom: 1rem;
 }
 
-.customers-table {
+.tadm-customers-customers-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.customers-table th,
-.customers-table td {
+.tadm-customers-customers-table th,
+.tadm-customers-customers-table td {
   border: 1px solid #ddd;
   padding: 10px;
   text-align: left;
 }
 
-.customers-table th {
+.tadm-customers-customers-table th {
   background-color: #f8f8f8;
 }
