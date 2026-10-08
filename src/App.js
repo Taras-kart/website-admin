@@ -1,53 +1,20 @@
-import React from 'react'
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom'
-import { AuthProvider, useAuth } from './pages/AdminAuth'
-import { LoadingProvider } from './pages/LoadingContext'
-import AdminHomepageImages from './pages/AdminHomepageImages'
-import B2BOrders from './pages/B2BOrders'
-import B2BStock from './pages/B2BStock'
-import CategoryManagement from './pages/CategoryManagement'
-import Customers from './pages/Customers'
-import HomePage from './pages/HomePage'
-import ImportStock from './pages/ImportStock'
-import LoginAdmin from './pages/LoginAdmin'
-import OrderIssues from './pages/OrderIssues'
-import POS from './pages/POS'
-import ReturnReview from './pages/ReturnReview'
-import Sales from './pages/Sales'
-import Stocks from './pages/Stocks'
-import Transaction from './pages/Transaction'
-
-function RequireAuth({ children }) {
-  const { token } = useAuth()
-  return token ? children : <Navigate to="/login" replace />
-}
-
-const protectedPage = page => <RequireAuth>{page}</RequireAuth>
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <LoadingProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<LoginAdmin />} />
-            <Route path="/" element={protectedPage(<HomePage />)} />
-            <Route path="/transactions" element={protectedPage(<Transaction />)} />
-            <Route path="/stocks" element={protectedPage(<Stocks />)} />
-            <Route path="/sales" element={protectedPage(<Sales />)} />
-            <Route path="/customers" element={protectedPage(<Customers />)} />
-            <Route path="/pos" element={protectedPage(<POS />)} />
-            <Route path="/import" element={protectedPage(<ImportStock />)} />
-            <Route path="/categories" element={protectedPage(<CategoryManagement />)} />
-            <Route path="/homepage-images" element={protectedPage(<AdminHomepageImages />)} />
-            <Route path="/order-issues" element={protectedPage(<OrderIssues />)} />
-            <Route path="/returns/:id" element={protectedPage(<ReturnReview />)} />
-            <Route path="/b2b-orders" element={protectedPage(<B2BOrders />)} />
-            <Route path="/b2b-stock" element={protectedPage(<B2BStock />)} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </LoadingProvider>
-    </AuthProvider>
-  )
-}
+import React,{lazy,Suspense} from 'react'
+import {BrowserRouter,Routes,Route,Navigate} from 'react-router-dom'
+import {AuthProvider,useAuth} from './pages/AdminAuth'
+import {LoadingProvider} from './pages/LoadingContext'
+import {SUPER_PORTAL} from './portalConfig'
+import {Dashboard,StockPage,ProductEditor,SalesPage,ManagementPage,MovementsPage,AuditPage,SettingsPage,ShippingPage} from './pages/Operations'
+const Login=lazy(()=>import('./pages/LoginAdmin'))
+const ImportStock=lazy(()=>import('./pages/ImportStock'))
+const POS=lazy(()=>import('./pages/POS'))
+const Categories=lazy(()=>import('./pages/CategoryManagement'))
+const Customers=lazy(()=>import('./pages/Customers'))
+const Homepage=lazy(()=>import('./pages/AdminHomepageImages'))
+const OrderIssues=lazy(()=>import('./pages/OrderIssues'))
+const Returns=lazy(()=>import('./pages/ReturnReview'))
+const B2BOrders=lazy(()=>import('./pages/B2BOrders'))
+const B2BStock=lazy(()=>import('./pages/B2BStock'))
+const Coins=lazy(()=>import('./pages/CoinsSettings'))
+function Guard({children,superOnly=false}){const {token,user,ready}=useAuth();if(!ready)return <div className="ops-empty">Checking your session...</div>;if(!token||!user)return <Navigate to="/login" replace/>;if((SUPER_PORTAL||superOnly)&&user.role!=='SUPER_ADMIN')return <div className="ops-empty">This page requires super admin access. <a href="/login">Sign in with another account</a></div>;return children}
+const protect=(page,superOnly=false)=><Guard superOnly={superOnly}>{page}</Guard>
+export default function App(){return <AuthProvider><LoadingProvider><BrowserRouter><Suspense fallback={<div className="ops-empty">Loading page...</div>}><Routes><Route path="/login" element={<Login/>}/><Route path="/" element={protect(<Dashboard/>)}/><Route path="/stocks" element={protect(<StockPage/>)}/><Route path="/products" element={protect(<ProductEditor/>)}/><Route path="/sales" element={protect(<SalesPage/>)}/><Route path="/transactions" element={protect(<MovementsPage/>)}/><Route path="/pos" element={protect(<POS/>)}/><Route path="/import" element={protect(<ImportStock/>)}/><Route path="/branches" element={protect(<ManagementPage kind="branches"/>,true)}/><Route path="/branch-admins" element={protect(<ManagementPage kind="admins"/>,true)}/><Route path="/categories" element={protect(<Categories/>,true)}/><Route path="/customers" element={protect(<Customers/>,true)}/><Route path="/homepage-images" element={protect(<Homepage/>,true)}/><Route path="/order-issues" element={protect(<OrderIssues/>,true)}/><Route path="/returns/:id" element={protect(<Returns/>,true)}/><Route path="/b2b-orders" element={protect(<B2BOrders/>,true)}/><Route path="/b2b-stock" element={protect(<B2BStock/>,true)}/><Route path="/shipping" element={protect(<ShippingPage/>,true)}/><Route path="/coin-settings" element={protect(<Coins/>,true)}/><Route path="/audit" element={protect(<AuditPage/>,true)}/><Route path="/settings" element={protect(<SettingsPage/>)}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></Suspense></BrowserRouter></LoadingProvider></AuthProvider>}

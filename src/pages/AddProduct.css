@@ -1,8 +1,8 @@
 .add-product-page {
   min-height: calc(100vh - 70px);
   padding: 24px 32px 40px;
-  background-color: #000000;
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #263140;
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
@@ -13,7 +13,7 @@
 .admin-section2,
 .admin-section3,
 .admin-section4-final {
-  background-color: #0a0a0a;
+  background-color: #f8fafc;
   border: 1px solid #333333;
   border-radius: 12px;
   padding: 16px 18px;
@@ -30,7 +30,7 @@
 .section-header h2 {
   font-size: 18px;
   font-weight: 600;
-  color: #ffd700;
+  color: #263140;
 }
 
 .chip {
@@ -38,7 +38,7 @@
   padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid #ffd700;
-  color: #ffd700;
+  color: #263140;
 }
 
 .category-buttons {
@@ -52,7 +52,7 @@
   border-radius: 999px;
   border: 1px solid #ffffff;
   background-color: transparent;
-  color: #ffffff;
+  color: #263140;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -61,7 +61,7 @@
 
 .category-buttons button:hover {
   border-color: #ffd700;
-  color: #ffd700;
+  color: #263140;
 }
 
 .category-buttons button.active {
@@ -80,7 +80,7 @@
 .admin-section3 h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #ffd700;
+  color: #263140;
   margin-bottom: 8px;
 }
 
@@ -89,8 +89,8 @@
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid #555555;
-  background-color: #111111;
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #263140;
   font-size: 14px;
   outline: none;
 }
@@ -105,19 +105,19 @@
   overflow-y: auto;
   border-radius: 8px;
   border: 1px solid #333333;
-  background-color: #050505;
+  background-color: #f8fafc;
 }
 
 .dropdown-item {
   padding: 8px 10px;
   font-size: 14px;
   cursor: pointer;
-  color: #ffffff;
+  color: #263140;
 }
 
 .dropdown-item:hover {
-  background-color: #111111;
-  color: #ffd700;
+  background-color: #f8fafc;
+  color: #263140;
 }
 
 .pill-button {
@@ -126,7 +126,7 @@
   border-radius: 999px;
   border: 1px solid #ffd700;
   background-color: transparent;
-  color: #ffd700;
+  color: #263140;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -152,18 +152,18 @@
 .popup-box {
   width: 100%;
   max-width: 360px;
-  background-color: #050505;
+  background-color: #f8fafc;
   border-radius: 12px;
   border: 1px solid #333333;
   padding: 18px 20px;
-  color: #ffffff;
+  color: #263140;
 }
 
 .popup-box h3 {
   margin: 0 0 12px;
   font-size: 16px;
   font-weight: 600;
-  color: #ffd700;
+  color: #263140;
 }
 
 .popup-actions {
@@ -178,7 +178,7 @@
   border-radius: 999px;
   border: 1px solid #ffd700;
   background-color: transparent;
-  color: #ffd700;
+  color: #263140;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -211,12 +211,12 @@
 .field-label {
   font-size: 13px;
   font-weight: 500;
-  color: #ffd700;
+  color: #263140;
 }
 
 .hint {
   font-size: 11px;
-  color: #f5f5f5;
+  color: #263140;
 }
 
 .pill-grid {
@@ -229,8 +229,8 @@
   padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid #555555;
-  background-color: #111111;
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #263140;
   font-size: 12px;
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
@@ -251,7 +251,7 @@
   width: 100%;
   border-collapse: collapse;
   border: 1px solid #333333;
-  background-color: #050505;
+  background-color: #f8fafc;
 }
 
 .price-table th,
@@ -260,12 +260,12 @@
   padding: 8px 10px;
   font-size: 13px;
   text-align: left;
-  color: #ffffff;
+  color: #263140;
 }
 
 .price-table th {
-  background-color: #111111;
-  color: #ffd700;
+  background-color: #f8fafc;
+  color: #263140;
 }
 
 .price-table td input {
@@ -273,8 +273,8 @@
   padding: 6px 8px;
   border-radius: 6px;
   border: 1px solid #555555;
-  background-color: #111111;
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #263140;
   font-size: 13px;
   outline: none;
 }
@@ -307,7 +307,7 @@
   border-radius: 999px;
   border: 1px solid #ffd700;
   background-color: transparent;
-  color: #ffd700;
+  color: #263140;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -374,8 +374,8 @@
   transform: translateX(-50%);
   padding: 10px 18px;
   border-radius: 999px;
-  background-color: #111111;
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #263140;
   font-size: 13px;
   border: 1px solid #333333;
   z-index: 1000;
@@ -383,12 +383,12 @@
 
 .popup-card.success {
   border-color: #ffd700;
-  color: #ffd700;
+  color: #263140;
 }
 
 .popup-card.error {
   border-color: #ffd700;
-  color: #ffd700;
+  color: #263140;
 }
 
 @media (max-width: 900px) {

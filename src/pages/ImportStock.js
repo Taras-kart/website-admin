@@ -5,94 +5,7 @@ import { useLoading } from './LoadingContext';
 import { apiGet, apiUpload, apiPost } from './api';
 import JSZip from 'jszip';
 import './ImportStock.css';
-const CLOUD_NAME = 'deymt9uyh';
-const UPLOAD_PRESET = 'unsigned_ean';
-const PROCESS_LIMIT = 500;
-function normalizeKey(k) {
-  return String(k || '').toLowerCase().replace(/\s+/g, ' ').trim();
-}
-function pickValue(row, candidates) {
-  const keys = Object.keys(row || {});
-  for (const c of candidates) {
-    const ck = normalizeKey(c);
-    const found = keys.find(k => normalizeKey(k) === ck);
-    if (found !== undefined) return row[found];
-  }
-  for (const c of candidates) {
-    const ck = normalizeKey(c);
-    const found = keys.find(k => normalizeKey(k).includes(ck));
-    if (found !== undefined) return row[found];
-  }
-  return undefined;
-}
-function toNumber(v) {
-  if (v === null || v === undefined) return null;
-  if (typeof v === 'number') return isFinite(v) ? v : null;
-  const s = String(v).replace(/₹/g, '').replace(/,/g, '').replace(/\s+/g, ' ').trim();
-  if (!s) return null;
-  const m = s.match(/-?\d+(\.\d+)?/);
-  if (!m) return null;
-  const n = parseFloat(m[0]);
-  return isFinite(n) ? n : null;
-}
-function rowHasBannedPhrases(row) {
-  const banned = ['inclusive of all taxes', 'brand', 'new in', 'product', '₹0.00'];
-  const values = Object.values(row || {}).map(v => String(v ?? '').toLowerCase().trim()).filter(Boolean);
-  return values.some(val => banned.some(b => val === b || val.includes(b)));
-}
-function isDefaultBrandOrProduct(s) {
-  const t = String(s ?? '').toLowerCase().trim();
-  if (!t) return true;
-  const defaults = ['brand', 'product', 'new in', 'inclusive of all taxes'];
-  return defaults.includes(t) || defaults.some(d => t.includes(d));
-}
-function shouldDropRow(row) {
-  if (!row || typeof row !== 'object') return true;
-  const values = Object.values(row).map(v => String(v ?? '').trim());
-  const allEmpty = values.every(v => v === '');
-  if (allEmpty) return true;
-  const brand = pickValue(row, ['brand', 'brand name']);
-  const product = pickValue(row, ['product', 'product name', 'name', 'title']);
-  const priceVal = pickValue(row, ['price', 'selling price', 'sale price', 'our price', 'sp']);
-  const mrpVal = pickValue(row, ['mrp', 'm.r.p', 'list price', 'regular price']);
-  const price = toNumber(priceVal);
-  const mrp = toNumber(mrpVal);
-  const priceIsZero = price !== null && price === 0;
-  const mrpIsZero = mrp !== null && mrp === 0;
-  const defaultNames = isDefaultBrandOrProduct(brand) || isDefaultBrandOrProduct(product);
-  if (rowHasBannedPhrases(row) && (priceIsZero || mrpIsZero)) {
-    return true;
-  }
-  if (priceIsZero && mrpIsZero && defaultNames) {
-    return true;
-  }
-  return false;
-}
-function parseCsvLine(line) {
-  const cols = [];
-  let cur = '';
-  let inQuotes = false;
-  for (let j = 0; j < line.length; j++) {
-    const ch = line[j];
-    if (ch === '"' && line[j + 1] === '"') {
-      cur += '"';
-      j++;
-      continue;
-    }
-    if (ch === '"') {
-      inQuotes = !inQuotes;
-      continue;
-    }
-    if (ch === ',' && !inQuotes) {
-      cols.push(cur);
-      cur = '';
-      continue;
-    }
-    cur += ch;
-  }
-  cols.push(cur);
-  return cols;
-}
+const PROCESS_LIMIT = 100;
 function baseNameNoExt(name) {
   const n = name.split('/').pop() || name;
   const i = n.lastIndexOf('.');
@@ -105,8 +18,7 @@ function isImagePath(p) {
 function extractIdentifierFromPath(path, mode) {
   const base = baseNameNoExt(path);
   if (mode === 'ean') {
-    const m = String(base).match(/(\d{6,14})/);
-    return m ? m[1] : '';
+    return String(base).replace(/__(front|back|side|detail[0-9]*)$/i,'').trim();
   }
   return String(base).trim();
 }
@@ -176,83 +88,6 @@ function buildImageLookups(products) {
     sharedMap,
     sharedCollisions
   };
-}
-async function cleanExcelOrCsvFile(inputFile) {
-  const name = inputFile?.name || '';
-  const lower = name.toLowerCase();
-  if (lower.endsWith('.csv')) {
-    const text = await inputFile.text();
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    if (!lines.length) {
-      return inputFile;
-    }
-    const headerLine = lines[0];
-    const headers = parseCsvLine(headerLine).map(h => h.trim().replace(/^"|"$/g, ''));
-    const rows = [];
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line || !line.trim()) {
-        continue;
-      }
-      const cols = parseCsvLine(line);
-      const rowObj = {};
-      headers.forEach((h, idx) => {
-        rowObj[h] = cols[idx] ?? '';
-      });
-      if (!shouldDropRow(rowObj)) {
-        rows.push(rowObj);
-      }
-    }
-    const esc = v => {
-      const s = String(v ?? '');
-      if (s.includes('"') || s.includes(',') || s.includes('\n') || s.includes('\r')) {
-        return `"${s.replace(/"/g, '""')}"`;
-      }
-      return s;
-    };
-    const outLines = [];
-    outLines.push(headers.map(esc).join(','));
-    for (const r of rows) {
-      outLines.push(headers.map(h => esc(r[h])).join(','));
-    }
-    const blob = new Blob([outLines.join('\n')], {
-      type: 'text/csv'
-    });
-    return new File([blob], inputFile.name, {
-      type: inputFile.type || 'text/csv'
-    });
-  }
-  if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
-    const xlsxModule = await import('xlsx');
-    const XLSX = xlsxModule.default || xlsxModule;
-    const buf = await inputFile.arrayBuffer();
-    const wb = XLSX.read(buf, {
-      type: 'array'
-    });
-    const sheetName = wb.SheetNames?.[0];
-    if (!sheetName) {
-      return inputFile;
-    }
-    const ws = wb.Sheets[sheetName];
-    const json = XLSX.utils.sheet_to_json(ws, {
-      defval: ''
-    });
-    const filtered = (Array.isArray(json) ? json : []).filter(r => !shouldDropRow(r));
-    const newWb = XLSX.utils.book_new();
-    const newWs = XLSX.utils.json_to_sheet(filtered.length ? filtered : []);
-    XLSX.utils.book_append_sheet(newWb, newWs, sheetName);
-    const out = XLSX.write(newWb, {
-      type: 'array',
-      bookType: 'xlsx'
-    });
-    const blob = new Blob([out], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-    return new File([blob], inputFile.name, {
-      type: blob.type
-    });
-  }
-  return inputFile;
 }
 export default function ImportStock() {
   const {
@@ -456,7 +291,7 @@ export default function ImportStock() {
     setProgress(null);
     show();
     try {
-      const cleaned = await cleanExcelOrCsvFile(file);
+      const cleaned = file;
       const fd = new FormData();
       fd.append('file', cleaned);
       fd.append('gender', gender);
@@ -473,23 +308,12 @@ export default function ImportStock() {
     } finally {
       setUploading(false);
       hide();
-      setTimeout(() => setMessage(''), 3000);
+
     }
   }, [file, branchId, gender, categoryId, show, hide, processJob, fetchJobs]);
   async function uploadToCloudinary(blob, publicIdBase) {
-    const form = new FormData();
-    form.append('file', blob);
-    form.append('upload_preset', UPLOAD_PRESET);
-    form.append('folder', 'products');
-    form.append('public_id', publicIdBase);
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-      method: 'POST',
-      body: form
-    });
-    if (!res.ok) {
-      throw new Error(`Cloudinary upload failed (${res.status})`);
-    }
-    return res.json();
+    const form=new FormData();form.append('image',blob,`${publicIdBase}.jpg`)
+    return apiUpload('/api/upload',form)
   }
   const onUploadImages = useCallback(async e => {
     e.preventDefault();
@@ -524,7 +348,8 @@ export default function ImportStock() {
           for (const ean of result.found) eanMap.set(String(ean).trim(), true);
         }
       } else {
-        const products = await apiGet('/api/products?limit=100000');
+        const products=[];let offset=0;
+        while(true){const page=await apiGet('/api/manage/stock',{branch_id:branchId,limit:200,offset});products.push(...page.rows);offset+=page.rows.length;if(offset>=page.total||!page.rows.length)break}
         ({ eanMap, sharedMap, sharedCollisions } = buildImageLookups(products));
       }
       const total = entries.length;
@@ -536,6 +361,8 @@ export default function ImportStock() {
       for (const f of entries) {
         const identifier = extractIdentifierFromPath(f.name, imageMode).trim();
         if (imageMode === 'ean') {
+          const imageType=baseNameNoExt(f.name).match(/__(front|back|side|detail[0-9]*)$/i)?.[1]?.toLowerCase()||'front';
+          const imageKey=`${identifier}:${imageType}`;
           if (!identifier || !eanMap.has(identifier)) {
             unmatched.push({
               file: f.name,
@@ -549,7 +376,7 @@ export default function ImportStock() {
             });
             continue;
           }
-          if (seen.has(identifier)) {
+          if (seen.has(imageKey)) {
             unmatched.push({
               file: f.name,
               identifier,
@@ -562,7 +389,7 @@ export default function ImportStock() {
             });
             continue;
           }
-          seen.add(identifier);
+          seen.add(imageKey);
           const blob = await f.async('blob');
           const uploaded = await uploadToCloudinary(blob, identifier);
           const secureUrl = String(uploaded?.secure_url || uploaded?.url || '').trim();
@@ -581,6 +408,7 @@ export default function ImportStock() {
           }
           confirmations.push({
             ean: identifier,
+            image_type: imageType,
             secure_url: secureUrl,
             cloudinary_public_id: uploaded?.public_id || null
           });
@@ -720,7 +548,7 @@ export default function ImportStock() {
     }
   }, [branchId, b2cDiscount, b2bDiscount, show, hide]);
   return <div className="import-page-admin">
-      <Navbar />
+      <Navbar /><div className="ops-main" style={{paddingBottom:0}}><a href="/templates/Tara-Product-Import-Template.xlsx" download>Download product import template</a><p>Choose branch, department and category. Upload one row per colour and size. Re-uploading the same file resumes its original job.</p></div>
       <div className="import-wrap-admin">
         <div className="import-card-admin">
           <div className="import-title-admin">
@@ -887,7 +715,7 @@ export default function ImportStock() {
                 <div className="import-filehint-admin" style={{
                 marginBottom: '10px'
               }}>
-                  {imageMode === 'ean' ? 'EAN mode filename example: 8903289347502.jpg' : 'Shared mode filename examples: 1508__JUNGLE GREEN.jpg (no fit distinction) or 1508__JUNGLE GREEN__RN.jpg / 1508__JUNGLE GREEN__RNS.jpg (when the same product+colour has different looks per fit, like GOKUL vests). Product ID + colour + fit is safest; Pattern + colour(+fit) also works when unique.'}
+                  {imageMode === 'ean' ? 'EAN filenames: 8903289347502.jpg (front), 8903289347502__back.jpg, 8903289347502__side.jpg' : 'Shared mode filename examples: 1508__JUNGLE GREEN.jpg (no fit distinction) or 1508__JUNGLE GREEN__RN.jpg / 1508__JUNGLE GREEN__RNS.jpg (when the same product+colour has different looks per fit, like GOKUL vests). Product ID + colour + fit is safest; Pattern + colour(+fit) also works when unique.'}
                 </div>
                 <input type="file" accept=".zip" onChange={e => setImageZip(e.target.files?.[0] || null)} />
                 {imageZip ? <div className="import-filehint-admin">

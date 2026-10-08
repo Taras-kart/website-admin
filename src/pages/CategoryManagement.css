@@ -216,12 +216,12 @@
 .category-delete,
 .category-confirm-delete {
   background: #c93434;
-  color: #fff;
+  color: #263140;
 }
 
 .category-restore {
-  background: #218147;
-  color: #fff;
+  background: #f8fafc;
+  color: #263140;
 }
 
 .category-refresh:disabled,
@@ -244,14 +244,14 @@
   max-width: 380px;
   border-radius: 8px;
   padding: 11px 13px;
-  color: #fff;
+  color: #263140;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
   font-size: 12px;
   font-weight: 600;
 }
 
 .category-toast.success {
-  background: #16723a;
+  background: #f8fafc;
 }
 
 .category-toast.error {
@@ -261,7 +261,7 @@
 .category-toast button {
   border: 0;
   background: transparent;
-  color: #fff;
+  color: #263140;
   font-size: 20px;
   cursor: pointer;
 }

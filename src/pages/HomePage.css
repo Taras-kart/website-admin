@@ -1,7 +1,7 @@
 /* D:\shopping-admin\src\pages\HomePage.css */
 .admin-homepage {
-  background-color: #000000;
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #263140;
   font-family: Arial, sans-serif;
 }
 
@@ -14,7 +14,7 @@
 
 .admin-sidebar {
   width: 100%;
-  background-color: #000000;
+  background-color: #f8fafc;
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -27,7 +27,7 @@
 .sidebar-button {
   background: none;
   border: 1px solid #ffffff;
-  color: #ffffff;
+  color: #263140;
   padding: 8px 14px;
   font-size: 14px;
   font-weight: 600;
@@ -40,7 +40,7 @@
 
 .sidebar-button:hover {
   border-color: #ffd700;
-  color: #ffd700;
+  color: #263140;
 }
 
 .sidebar-button.active {

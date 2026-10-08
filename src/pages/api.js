@@ -33,6 +33,7 @@ async function request(method, path, body, opts = {}) {
   const data = isJson ? await response.json().catch(() => ({})) : await response.text()
 
   if (!response.ok) {
+    if(response.status === 401 && !path.includes('/login')) window.dispatchEvent(new Event('auth-expired'))
     const message = isJson && data?.message ? data.message : `HTTP ${response.status}`
     const error = new Error(message)
     error.status = response.status
@@ -86,6 +87,7 @@ export async function apiUpload(path, formData, opts = {}) {
   const data = isJson ? await response.json().catch(() => ({})) : await response.text()
 
   if (!response.ok) {
+    if(response.status === 401 && !path.includes('/login')) window.dispatchEvent(new Event('auth-expired'))
     const message = isJson && data?.message ? data.message : `HTTP ${response.status}`
     const error = new Error(message)
     error.status = response.status
