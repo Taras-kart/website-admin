@@ -433,3 +433,22 @@
     border-radius: 14px 14px 0 0;
   }
 }
+
+/* Category actions stay together on desktop and fit small screens without overflow. */
+@media (min-width: 701px) {
+  .tadm-categorymanagement-category-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .tadm-categorymanagement-category-actions button {
+    white-space: nowrap;
+  }
+}
+@media (max-width: 420px) {
+  .tadm-categorymanagement-category-actions {
+    grid-template-columns: 1fr;
+  }
+  .tadm-categorymanagement-category-add {
+    grid-column: auto;
+  }
+}
