@@ -96,7 +96,7 @@ function Modal({
       </div>
     </div>;
 }
-export default function CategoryManagement() {
+export default function CategoryManagement({ addOnly = false }) {
   const [rows, setRows] = useState([]);
   const [gender, setGender] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
@@ -365,7 +365,7 @@ export default function CategoryManagement() {
       <main className={portalClass("category-container")}>
         <section className={portalClass("category-card")}>
           <div className={portalClass("category-header")}>
-            <h1 className="tadm-categorymanagement-node-4">Category Management</h1>
+            <h1 className="tadm-categorymanagement-node-4">{addOnly ? 'Add New Category' : 'Category Management'}</h1>
             <button type="button" className={portalClass("category-refresh")} onClick={loadCategories} disabled={loading}>
               {loading ? 'Loading...' : 'Refresh'}
             </button>
@@ -404,18 +404,19 @@ export default function CategoryManagement() {
               </div>
             </div>}
 
+          {addOnly && <p className="tadm-categorymanagement-create-help">Select a gender and, optionally, a parent category. Then click Add Category. You can add multiple nested levels.</p>}
           <div className={portalClass("category-actions")}>
             <button type="button" className={portalClass("category-add")} disabled={addDisabled} onClick={openAdd}>
               Add Category
             </button>
 
-            <button type="button" className={portalClass("category-update")} disabled={!selectedCategory} onClick={openUpdate}>
+            {!addOnly && <button type="button" className={portalClass("category-update")} disabled={!selectedCategory} onClick={openUpdate}>
               Update Category
-            </button>
+            </button>}
 
-            <button type="button" className={portalClass(selectedCategory?.is_active ? 'category-delete' : 'category-restore')} disabled={!selectedCategory} onClick={openStatusDialog}>
+            {!addOnly && <button type="button" className={portalClass(selectedCategory?.is_active ? 'category-delete' : 'category-restore')} disabled={!selectedCategory} onClick={openStatusDialog}>
               {selectedCategory?.is_active ? 'Delete Category' : 'Restore Category'}
-            </button>
+            </button>}
           </div>
         </section>
       </main>

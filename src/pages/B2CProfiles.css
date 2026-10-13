@@ -1,12 +1,12 @@
 .tadm-app {
-  --tadm-b2cprofiles-black: #000;
-  --tadm-b2cprofiles-white: #42536a;
-  --tadm-b2cprofiles-gold: #42536a;
+  --tadm-b2cprofiles-black: #283247;
+  --tadm-b2cprofiles-white: #283247;
+  --tadm-b2cprofiles-gold: #6750a4;
 }
 
 .tadm-b2cprofiles-b2c-container {
   min-height: auto;
-  background: var(--tadm-b2cprofiles-black);
+  background: #f5f6fb;
   color: var(--tadm-b2cprofiles-white);
   font-family: 'Segoe UI', system-ui, -apple-system, Arial, Helvetica, sans-serif;
   padding: 24px;

@@ -1,7 +1,7 @@
 .tadm-app {
-    --tadm-pos-gold: #42536a;
-    --tadm-pos-black: #000;
-    --tadm-pos-white: #42536a;
+    --tadm-pos-gold: #6750a4;
+    --tadm-pos-black: #283247;
+    --tadm-pos-white: #283247;
     --tadm-pos-muted: #657187;
     --tadm-pos-panel: #ffffff;
     --tadm-pos-panel2: #ffffff;
@@ -10,7 +10,7 @@
 
 .tadm-pos-pos-page {
     min-height: auto;
-    background: var(--tadm-pos-black);
+    background: #f5f6fb;
     color: var(--tadm-pos-white);
 }
 

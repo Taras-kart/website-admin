@@ -1,14 +1,14 @@
 .tadm-app {
-  --tadm-b2bprofiles-black: #000000;
-  --tadm-b2bprofiles-white: #42536a;
-  --tadm-b2bprofiles-gold: #42536a;
-  --tadm-b2bprofiles-gold-strong: #42536a;
+  --tadm-b2bprofiles-black: #283247;
+  --tadm-b2bprofiles-white: #283247;
+  --tadm-b2bprofiles-gold: #6750a4;
+  --tadm-b2bprofiles-gold-strong: #563e94;
   --tadm-b2bprofiles-ink: #0a0a0a;
 }
 
 .tadm-b2bprofiles-b2b-container-b2b {
   min-height: auto;
-  background: var(--tadm-b2bprofiles-black);
+  background: #f5f6fb;
   color: var(--tadm-b2bprofiles-white);
   font-family: 'Segoe UI', system-ui, -apple-system, Arial, Helvetica, sans-serif;
   padding: 24px;
@@ -210,7 +210,7 @@
 
 .tadm-b2bprofiles-popup-input-b2b {
   padding: 12px 14px;
-  background: var(--tadm-b2bprofiles-black);
+  background: #f5f6fb;
   color: var(--tadm-b2bprofiles-white);
   border: 1.5px solid rgba(212, 175, 55, .7);
   border-radius: 10px;

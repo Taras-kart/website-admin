@@ -32,7 +32,7 @@
   border: 2px solid white;
   background: transparent;
   color: #263140;
-  font-weight: bold;
+  font-weight: 700;
   cursor: pointer;
   transition: .2s;
 }
@@ -78,7 +78,7 @@
   background: none;
   border: 2px solid gold;
   color: #42536a;
-  font-weight: bold;
+  font-weight: 700;
   border-radius: 10px;
   cursor: pointer;
   transition: .2s;
@@ -99,7 +99,7 @@
   background: none;
   border: 2px solid #ff6b6b;
   color: #263140;
-  font-weight: bold;
+  font-weight: 700;
   border-radius: 10px;
   cursor: pointer;
   transition: .2s;
@@ -141,7 +141,7 @@
   padding: 8px 14px;
   background-color: red;
   color: #263140;
-  font-weight: bold;
+  font-weight: 700;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -187,7 +187,7 @@
 
 .tadm-deleteproduct-popup-actions button {
   padding: 10px 20px;
-  font-weight: bold;
+  font-weight: 700;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -222,5 +222,5 @@
 .tadm-deleteproduct-pagination-info {
   font-size: 14px;
   color: #263140;
-  font-weight: bold;
+  font-weight: 700;
 }

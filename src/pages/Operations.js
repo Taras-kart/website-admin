@@ -271,7 +271,7 @@ export function StockPage() {
                     setQuantity(row.on_hand);
                     setReason('');
                     setError('');
-                  }} className="tadm-operations-node-83">Adjust</button><Link to={`/products?variantId=${row.variant_id}&branchId=${row.branch_id}`}>Edit</Link><button onClick={() => changeVisibility(row)} className="tadm-operations-node-84">{row.is_active ? 'Hide' : 'Restore'}</button></div></td></tr>)}</tbody></table></div>{!data?.rows.length && <Empty loading={loading} />}<Pager total={data?.total || 0} page={page} setPage={setPage} /></section>{selected && <Modal title={`Adjust ${selected.name}`} onClose={() => setSelected(null)}><form onSubmit={save} className={portalClass("ops-form")}><p className="tadm-operations-node-85">{selected.branch_name} · {selected.colour} · {selected.size}</p><label className="tadm-operations-node-86">New on-hand quantity<input required type="number" min={selected.reserved} step="1" value={quantity} onChange={e => setQuantity(e.target.value)} className="tadm-operations-node-87" /></label><label className="tadm-operations-node-88">Reason<input required minLength="3" value={reason} onChange={e => setReason(e.target.value)} placeholder="Stock count correction" className="tadm-operations-node-89" /></label><Message error={error} /><button className={portalClass("ops-primary")} disabled={busy}>{busy ? 'Saving...' : 'Save correction'}</button></form></Modal>}</Shell>;
+                  }} className="tadm-operations-node-83">Adjust</button><Link to={`/products/update?variantId=${row.variant_id}&branchId=${row.branch_id}`}>Edit</Link><button onClick={() => changeVisibility(row)} className="tadm-operations-node-84">{row.is_active ? 'Hide' : 'Restore'}</button></div></td></tr>)}</tbody></table></div>{!data?.rows.length && <Empty loading={loading} />}<Pager total={data?.total || 0} page={page} setPage={setPage} /></section>{selected && <Modal title={`Adjust ${selected.name}`} onClose={() => setSelected(null)}><form onSubmit={save} className={portalClass("ops-form")}><p className="tadm-operations-node-85">{selected.branch_name} · {selected.colour} · {selected.size}</p><label className="tadm-operations-node-86">New on-hand quantity<input required type="number" min={selected.reserved} step="1" value={quantity} onChange={e => setQuantity(e.target.value)} className="tadm-operations-node-87" /></label><label className="tadm-operations-node-88">Reason<input required minLength="3" value={reason} onChange={e => setReason(e.target.value)} placeholder="Stock count correction" className="tadm-operations-node-89" /></label><Message error={error} /><button className={portalClass("ops-primary")} disabled={busy}>{busy ? 'Saving...' : 'Save correction'}</button></form></Modal>}</Shell>;
 }
 const emptyProduct = {
   name: '',
@@ -292,7 +292,7 @@ const emptyProduct = {
   pack_size: 1,
   image_url: ''
 };
-export function ProductEditor() {
+export function ProductEditor({ mode = 'create' }) {
   const {
       user
     } = useAuth(),
@@ -301,7 +301,7 @@ export function ProductEditor() {
     [error, setError] = useState(''),
     [success, setSuccess] = useState('');
   const params = new URLSearchParams(window.location.search),
-    variantId = params.get('variantId'),
+    variantId = mode === 'update' ? params.get('variantId') : null,
     branchId = params.get('branchId') || user?.branch_id;
   const {
       data
@@ -351,7 +351,7 @@ export function ProductEditor() {
       setBusy(false);
     }
   };
-  return <Shell title={variantId ? 'Edit product' : 'Add product'} subtitle="One row represents one colour and size. Use the same style code for every variant." actions={<Link to="/import">Bulk import with Excel</Link>}><Message error={error} success={success} />{!branchId ? <Empty>Select a branch in the navigation before adding products.</Empty> : <form className={portalClass("ops-panel ops-form")} onSubmit={save}><h2 className="tadm-operations-node-92">1. Product and category</h2><div className={portalClass("ops-form-grid")}>{field('name', 'Product name', 'text', {
+  return <Shell title={variantId ? 'Update product' : 'Add product'} subtitle="One row represents one colour and size. Use the same style code for every variant." actions={<Link to="/import">Bulk import with Excel</Link>}><Message error={error} success={success} />{!branchId ? <Empty>Select a branch in the navigation before adding products.</Empty> : <form className={portalClass("ops-panel ops-form")} onSubmit={save}><h2 className="tadm-operations-node-92">1. Product and category</h2><div className={portalClass("ops-form-grid")}>{field('name', 'Product name', 'text', {
           required: true,
           maxLength: 180
         })}{field('brand', 'Brand name', 'text', {
@@ -400,7 +400,7 @@ export function ProductEditor() {
           min: 0,
           step: 1,
           required: true
-        })}</div><p className="tadm-operations-node-102">A discount percentage takes priority over the selling price. Price is per pack when pack size is greater than one. Unknown brands appear as Fashion on the website.</p>{variantId && <p className="tadm-operations-node-103">Product name and category apply to all variants of this style. Prices apply to this variant in every branch. Use Stock inventory to correct branch quantities.</p>}<div className={portalClass("ops-actions")}><button className={portalClass("ops-primary")} disabled={busy}>{busy ? 'Saving...' : variantId ? 'Save product' : 'Save product and stock'}</button><Link to="/stocks">View stock</Link></div></form>}</Shell>;
+        })}</div><p className="tadm-operations-node-102">A discount percentage takes priority over the selling price. Price is per pack when pack size is greater than one. Unknown brands appear as Fashion on the website.</p>{variantId && <p className="tadm-operations-node-103">Product name and category apply to all variants of this style. Prices apply to this variant in every branch. Use Stock inventory to correct branch quantities.</p>}<div className={portalClass("ops-actions")}><button className={portalClass("ops-primary")} disabled={busy}>{busy ? 'Saving...' : variantId ? 'Save product' : 'Save product and stock'}</button><Link to="/stocks">View stock</Link><Link to="/products/update">Update products</Link><Link to="/products/delete">Delete products</Link><Link to="/categories/new">Add category</Link></div></form>}</Shell>;
 }
 export function SalesPage() {
   const {
