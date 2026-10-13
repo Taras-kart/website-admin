@@ -187,12 +187,18 @@ export function StockPage() {
     [search, setSearch] = useState(''),
     [page, setPage] = useState(0),
     [low, setLow] = useState(false),
+    [gender, setGender] = useState(''),
+    [category, setCategory] = useState(''),
+    [stockState, setStockState] = useState(''),
+    [sort, setSort] = useState('recent'),
     [selected, setSelected] = useState(null),
     [quantity, setQuantity] = useState(''),
     [reason, setReason] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [success, setSuccess] = useState('');
+  const { data: categoryResponse } = useData('/categories/admin');
+  const categories=Array.isArray(categoryResponse?.rows)?categoryResponse.rows.filter(c=>c.parent_id!==null&&c.is_active):[];
   const {
     data,
     error: loadError,
@@ -202,9 +208,9 @@ export function StockPage() {
     branch_id: user?.branch_id,
     q: search,
     offset: page * 50,
-    low
+    low, gender, category_id:category, stock_state: stockState, sort
   });
-  useEffect(() => setPage(0), [user?.branch_id, search, low]);
+  useEffect(() => setPage(0), [user?.branch_id, search, low, gender, category, stockState, sort]);
   const save = async e => {
     e.preventDefault();
     setBusy(true);
@@ -249,7 +255,7 @@ export function StockPage() {
         result = await apiGet('/manage/stock', {
           branch_id: user?.branch_id,
           q: search,
-          low,
+          low, gender, category_id:category, stock_state: stockState, sort,
           limit: 200,
           offset
         });
@@ -266,7 +272,14 @@ export function StockPage() {
   return <Shell title="Stock inventory" subtitle="Quantities stay separate for each branch" actions={<><Link className={portalClass("ops-primary")} to="/products">Add product</Link><button disabled={busy} onClick={exportRows} className="tadm-operations-node-50">Export filtered stock</button></>}><div className={portalClass("ops-toolbar")}><form onSubmit={e => {
         e.preventDefault();
         setSearch(q);
-      }} className="tadm-operations-node-51"><input aria-label="Search stock" placeholder="Product, brand, colour or barcode" value={q} onChange={e => setQ(e.target.value)} className="tadm-operations-node-52" /><button className="tadm-operations-node-53">Search</button></form><label className="tadm-operations-node-54"><input type="checkbox" checked={low} onChange={e => setLow(e.target.checked)} className="tadm-operations-node-55" /> Low stock only</label><button onClick={reload} className="tadm-operations-node-56">Refresh</button></div><Message error={error || loadError} success={success} /><section className={portalClass("ops-panel")}><div className={portalClass("ops-table-wrap")}><table className="tadm-operations-node-57"><thead className="tadm-operations-node-58"><tr className="tadm-operations-node-59"><th className="tadm-operations-node-60">Product</th><th className="tadm-operations-node-61">Branch</th><th className="tadm-operations-node-62">Variant</th><th className="tadm-operations-node-63">Barcode</th><th className="tadm-operations-node-64">MRP</th><th className="tadm-operations-node-65">On hand</th><th className="tadm-operations-node-66">Reserved</th><th className="tadm-operations-node-67">Available</th><th className="tadm-operations-node-68">Actions</th></tr></thead><tbody className="tadm-operations-node-69">{data?.rows.map(row => <tr key={`${row.branch_id}:${row.variant_id}`} className="tadm-operations-node-70"><td className="tadm-operations-node-71"><strong className="tadm-operations-node-72">{row.name}</strong><small className="tadm-operations-node-73">{row.brand_name} · {row.category_name}</small></td><td className="tadm-operations-node-74">{row.branch_name}</td><td className="tadm-operations-node-75">{row.colour} / {row.size}<small className="tadm-operations-node-76">Pack of {row.pack_size || 1}</small></td><td className="tadm-operations-node-77">{row.ean_code || 'No barcode'}</td><td className="tadm-operations-node-78">{money(row.mrp)}</td><td className="tadm-operations-node-79">{row.on_hand}</td><td className="tadm-operations-node-80">{row.reserved}</td><td className="tadm-operations-node-81"><span className={portalClass(`ops-badge ${Number(row.available) <= 5 ? 'is-low' : ''}`)}>{row.available}</span></td><td className="tadm-operations-node-82"><div className={portalClass("ops-row-actions")}><button onClick={() => {
+      }} className="tadm-operations-node-51"><input aria-label="Search stock" placeholder="Product, brand, colour or barcode" value={q} onChange={e => setQ(e.target.value)} className="tadm-operations-node-52" /><button className="tadm-operations-node-53">Search</button></form><label className="tadm-operations-node-54"><input type="checkbox" checked={low} onChange={e => setLow(e.target.checked)} className="tadm-operations-node-55" /> Low stock only</label><button onClick={reload} className="tadm-operations-node-56">Refresh</button></div>
+    <div className="tadm-filter-grid" aria-label="Stock filters">
+      <label>Department<select value={gender} onChange={e=>{setGender(e.target.value);setCategory('')}}><option value="">All departments</option><option value="MEN">Men</option><option value="WOMEN">Women</option><option value="KIDS">Kids</option></select></label>
+      <label>Category<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">All categories</option>{categories.filter(c=>!gender||c.gender===gender).map(c=><option key={c.id} value={c.id}>{c.category_path}</option>)}</select></label>
+      <label>Stock availability<select value={stockState} onChange={e=>setStockState(e.target.value)}><option value="">All stock levels</option><option value="in">Available</option><option value="low">Low stock (1–5)</option><option value="out">Out of stock</option><option value="high">High stock (100+)</option></select></label>
+      <label>Sort stock<select value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Recently added</option><option value="name">Product name</option><option value="stock_asc">Lowest quantity</option><option value="stock_desc">Highest quantity</option><option value="price_asc">Lowest price</option><option value="price_desc">Highest price</option></select></label>
+      <button type="button" className="tadm-filter-reset" onClick={()=>{setQ('');setSearch('');setLow(false);setGender('');setCategory('');setStockState('');setSort('recent');setPage(0);}}>Clear filters</button>
+    </div><div className="tadm-summary-grid" aria-label="Inventory totals">{[['Total SKUs',data?.summary?.sku_count,'violet'],['Total Units',data?.summary?.total_units,'mint'],['Low Stock',data?.summary?.low_stock,'amber'],['Out of Stock',data?.summary?.out_of_stock,'rose'],['High Stock',data?.summary?.high_stock,'mint']].map(([label,value,tint])=><article key={label} className={tint}><span>{label}</span><strong>{Number(value||0).toLocaleString('en-IN')}</strong></article>)}</div><Message error={error || loadError} success={success} /><section className={portalClass("ops-panel")}><div className={portalClass("ops-table-wrap")}><table className="tadm-operations-node-57"><thead className="tadm-operations-node-58"><tr className="tadm-operations-node-59"><th className="tadm-operations-node-60">Product</th><th className="tadm-operations-node-61">Branch</th><th className="tadm-operations-node-62">Variant</th><th className="tadm-operations-node-63">Barcode</th><th className="tadm-operations-node-64">MRP</th><th className="tadm-operations-node-65">On hand</th><th className="tadm-operations-node-66">Reserved</th><th className="tadm-operations-node-67">Available</th><th className="tadm-operations-node-68">Actions</th></tr></thead><tbody className="tadm-operations-node-69">{data?.rows.map(row => <tr key={`${row.branch_id}:${row.variant_id}`} className="tadm-operations-node-70"><td className="tadm-operations-node-71"><strong className="tadm-operations-node-72">{row.name}</strong><small className="tadm-operations-node-73">{row.brand_name} · {row.category_name}</small></td><td className="tadm-operations-node-74">{row.branch_name}</td><td className="tadm-operations-node-75">{row.colour} / {row.size}<small className="tadm-operations-node-76">Pack of {row.pack_size || 1}</small></td><td className="tadm-operations-node-77">{row.ean_code || 'No barcode'}</td><td className="tadm-operations-node-78">{money(row.mrp)}</td><td className="tadm-operations-node-79">{row.on_hand}</td><td className="tadm-operations-node-80">{row.reserved}</td><td className="tadm-operations-node-81"><span className={portalClass(`ops-badge ${Number(row.available) <= 5 ? 'is-low' : ''}`)}>{row.available}</span></td><td className="tadm-operations-node-82"><div className={portalClass("ops-row-actions")}><button onClick={() => {
                     setSelected(row);
                     setQuantity(row.on_hand);
                     setReason('');
@@ -306,7 +319,7 @@ export function ProductEditor({ mode = 'create' }) {
   const {
       data
     } = useData('/categories/admin'),
-    categories = Array.isArray(data) ? data : data?.categories || [];
+    categories = Array.isArray(data) ? data : data?.rows || data?.categories || [];
   useEffect(() => {
     if (!variantId) return;
     apiGet(`/manage/products/${variantId}`, {
@@ -400,7 +413,7 @@ export function ProductEditor({ mode = 'create' }) {
           min: 0,
           step: 1,
           required: true
-        })}</div><p className="tadm-operations-node-102">A discount percentage takes priority over the selling price. Price is per pack when pack size is greater than one. Unknown brands appear as Fashion on the website.</p>{variantId && <p className="tadm-operations-node-103">Product name and category apply to all variants of this style. Prices apply to this variant in every branch. Use Stock inventory to correct branch quantities.</p>}<div className={portalClass("ops-actions")}><button className={portalClass("ops-primary")} disabled={busy}>{busy ? 'Saving...' : variantId ? 'Save product' : 'Save product and stock'}</button><Link to="/stocks">View stock</Link><Link to="/products/update">Update products</Link><Link to="/products/delete">Delete products</Link><Link to="/categories/new">Add category</Link></div></form>}</Shell>;
+        })}</div><p className="tadm-operations-node-102">A discount percentage takes priority over the selling price. Price is per pack when pack size is greater than one. Unknown brands appear as Fashion on the website.</p>{variantId && <p className="tadm-operations-node-103">Product name and category apply to all variants of this style. Prices apply to this variant in every branch. Use Stock inventory to correct branch quantities.</p>}<div className={portalClass("ops-actions")}><button className={portalClass("ops-primary")} disabled={busy}>{busy ? 'Saving...' : variantId ? 'Save product' : 'Save product and stock'}</button><Link to="/stocks">View stock</Link><Link to="/products/update">Update products</Link><Link to="/products/delete">Delete products</Link>{user?.role !== 'SUPER_ADMIN' && <Link to="/categories/new">New category</Link>}</div></form>}</Shell>;
 }
 export function SalesPage() {
   const {
@@ -409,6 +422,9 @@ export function SalesPage() {
     [dates, setDates] = useState(initialDates),
     [q, setQ] = useState(''),
     [search, setSearch] = useState(''),
+    [statusFilter, setStatusFilter] = useState(''),
+    [paymentFilter, setPaymentFilter] = useState(''),
+    [sourceFilter, setSourceFilter] = useState(''),
     [page, setPage] = useState(0),
     [detail, setDetail] = useState(null),
     [error, setError] = useState(''),
@@ -422,10 +438,10 @@ export function SalesPage() {
   } = useData('/manage/sales', {
     branch_id: user?.branch_id,
     ...dates,
-    q: search,
+    q: search, status: statusFilter, payment: paymentFilter, source: sourceFilter,
     offset: page * 50
   });
-  useEffect(() => setPage(0), [user?.branch_id, dates, search]);
+  useEffect(() => setPage(0), [user?.branch_id, dates, search, statusFilter, paymentFilter, sourceFilter]);
   const open = async row => {
     try {
       setDetail(await apiGet(`/sales/admin/${row.id}`));
@@ -462,7 +478,7 @@ export function SalesPage() {
         result = await apiGet('/manage/sales', {
           branch_id: user?.branch_id,
           ...dates,
-          q: search,
+          q: search, status: statusFilter, payment: paymentFilter, source: sourceFilter,
           offset,
           limit: 200
         });
@@ -492,10 +508,16 @@ export function SalesPage() {
       setError(e.message);
     }
   };
-  return <Shell title="Sales and orders" subtitle="Online and counter sales, scoped to the selected branch" actions={<><button onClick={reload} className="tadm-operations-node-104">Refresh</button><button onClick={exportRows} className="tadm-operations-node-105">Export filtered sales</button></>}><Dates value={dates} onChange={setDates} /><form className={portalClass("ops-toolbar")} onSubmit={e => {
+  return <Shell title="Sales and orders" subtitle="Online and counter sales, scoped to the selected branch" actions={<><button onClick={reload} className="tadm-operations-node-104">Refresh</button><button onClick={exportRows} className="tadm-operations-node-105">Export filtered sales</button></>}><Dates value={dates} onChange={setDates} /><div className="tadm-summary-grid" aria-label="Order totals">{[['Total Orders',data?.summary?.total_orders,'violet'],['Placed',data?.summary?.placed,'amber'],['Confirmed',data?.summary?.confirmed,'mint'],['Shipped',data?.summary?.shipped,'violet'],['Delivered',data?.summary?.delivered,'mint'],['Cancelled',data?.summary?.cancelled,'rose']].map(([label,value,tint])=><article className={tint} key={label}><span>{label}</span><strong>{Number(value||0).toLocaleString('en-IN')}</strong></article>)}</div><form className={portalClass("ops-toolbar")} onSubmit={e => {
       e.preventDefault();
       setSearch(q);
-    }}><input value={q} onChange={e => setQ(e.target.value)} placeholder="Order ID, customer or status" aria-label="Search sales" className="tadm-operations-node-106" /><button className="tadm-operations-node-107">Search</button></form><Message error={error || loadError} /><section className={portalClass("ops-panel")}><div className={portalClass("ops-table-wrap")}><table className="tadm-operations-node-108"><thead className="tadm-operations-node-109"><tr className="tadm-operations-node-110"><th className="tadm-operations-node-111">Order</th><th className="tadm-operations-node-112">Customer</th><th className="tadm-operations-node-113">Branch</th><th className="tadm-operations-node-114">Source</th><th className="tadm-operations-node-115">Order status</th><th className="tadm-operations-node-116">Payment</th><th className="tadm-operations-node-117">Total</th><th className="tadm-operations-node-118">Details</th></tr></thead><tbody className="tadm-operations-node-119">{data?.rows.map(row => <tr key={row.id} className="tadm-operations-node-120"><td className="tadm-operations-node-121">{String(row.id).slice(0, 8)}<small className="tadm-operations-node-122">{date(row.created_at)}</small></td><td className="tadm-operations-node-123">{row.customer_name || 'Counter customer'}<small className="tadm-operations-node-124">{row.customer_email}</small></td><td className="tadm-operations-node-125">{row.branch_name || 'Unassigned'}</td><td className="tadm-operations-node-126">{row.source}</td><td className="tadm-operations-node-127"><span className={portalClass("ops-badge")}>{row.status}</span></td><td className="tadm-operations-node-128">{row.payment_status}</td><td className="tadm-operations-node-129">{money(row.total ?? row.totals?.payable)}</td><td className="tadm-operations-node-130"><button onClick={() => open(row)} className="tadm-operations-node-131">View</button></td></tr>)}</tbody></table></div>{!data?.rows.length && <Empty loading={loading} />}<Pager total={data?.total || 0} page={page} setPage={setPage} /></section>{detail && <Modal title={`Order ${String(detail.sale?.id).slice(0, 8)}`} onClose={() => setDetail(null)}><p className="tadm-operations-node-132">{detail.sale?.customer_name} · {detail.sale?.customer_email}</p><p className="tadm-operations-node-133">{detail.sale?.status} · {detail.sale?.payment_status}</p><div className={portalClass("ops-table-wrap")}><table className="tadm-operations-node-134"><thead className="tadm-operations-node-135"><tr className="tadm-operations-node-136"><th className="tadm-operations-node-137">Item</th><th className="tadm-operations-node-138">Variant</th><th className="tadm-operations-node-139">Qty</th><th className="tadm-operations-node-140">Price</th></tr></thead><tbody className="tadm-operations-node-141">{detail.items?.map((row, i) => <tr key={i} className="tadm-operations-node-142"><td className="tadm-operations-node-143">{row.product_name}</td><td className="tadm-operations-node-144">{row.colour} / {row.size}</td><td className="tadm-operations-node-145">{row.qty}</td><td className="tadm-operations-node-146">{money(row.price)}</td></tr>)}</tbody></table></div><h3 className="tadm-operations-node-147">Delivery address</h3><p className="tadm-operations-node-148">{Object.values(detail.sale?.shipping_address || {}).filter(v => typeof v === 'string').join(', ') || 'Counter sale'}</p><strong className="tadm-operations-node-149">Payable: {money(detail.sale?.totals?.payable)}</strong><Message error={error} success={notice} />{detail.sale?.source === 'WEB' && ['PAID', 'COD'].includes(detail.sale.payment_status) && !['CANCELLED', 'DELIVERED', 'RETURNED'].includes(detail.sale.status) && <div className={portalClass("ops-actions")}>{{
+    }}><input value={q} onChange={e => setQ(e.target.value)} placeholder="Order ID, customer or status" aria-label="Search sales" className="tadm-operations-node-106" /><button className="tadm-operations-node-107">Search</button></form>
+  <div className="tadm-filter-grid" aria-label="Order filters">
+    <label>Order status<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>{['','PLACED','CONFIRMED','PROCESSING','SHIPPED','DELIVERED','CANCELLED','RETURNED','FAILED'].map(v=><option key={v} value={v}>{v || 'All statuses'}</option>)}</select></label>
+    <label>Payment status<select value={paymentFilter} onChange={e=>setPaymentFilter(e.target.value)}>{['','PAID','COD','PENDING','FAILED','REFUNDED'].map(v=><option key={v} value={v}>{v || 'All payments'}</option>)}</select></label>
+    <label>Sales channel<select value={sourceFilter} onChange={e=>setSourceFilter(e.target.value)}><option value="">All channels</option><option value="WEB">Website</option><option value="POS">In store / POS</option><option value="B2B">Wholesale</option></select></label>
+    <button type="button" className="tadm-filter-reset" onClick={()=>{setQ('');setSearch('');setStatusFilter('');setPaymentFilter('');setSourceFilter('');setDates({start:'',end:''});setPage(0);}}>Clear filters</button>
+  </div><Message error={error || loadError} /><section className={portalClass("ops-panel")}><div className={portalClass("ops-table-wrap")}><table className="tadm-operations-node-108"><thead className="tadm-operations-node-109"><tr className="tadm-operations-node-110"><th className="tadm-operations-node-111">Order</th><th className="tadm-operations-node-112">Customer</th><th className="tadm-operations-node-113">Branch</th><th className="tadm-operations-node-114">Source</th><th className="tadm-operations-node-115">Order status</th><th className="tadm-operations-node-116">Payment</th><th className="tadm-operations-node-117">Total</th><th className="tadm-operations-node-118">Details</th></tr></thead><tbody className="tadm-operations-node-119">{data?.rows.map(row => <tr key={row.id} className="tadm-operations-node-120"><td className="tadm-operations-node-121">{String(row.id).slice(0, 8)}<small className="tadm-operations-node-122">{date(row.created_at)}</small></td><td className="tadm-operations-node-123">{row.customer_name || 'Counter customer'}<small className="tadm-operations-node-124">{row.customer_email}</small></td><td className="tadm-operations-node-125">{row.branch_name || 'Unassigned'}</td><td className="tadm-operations-node-126">{row.source}</td><td className="tadm-operations-node-127"><span className={portalClass("ops-badge")}>{row.status}</span></td><td className="tadm-operations-node-128">{row.payment_status}</td><td className="tadm-operations-node-129">{money(row.total ?? row.totals?.payable)}</td><td className="tadm-operations-node-130"><button onClick={() => open(row)} className="tadm-operations-node-131">View</button></td></tr>)}</tbody></table></div>{!data?.rows.length && <Empty loading={loading} />}<Pager total={data?.total || 0} page={page} setPage={setPage} /></section>{detail && <Modal title={`Order ${String(detail.sale?.id).slice(0, 8)}`} onClose={() => setDetail(null)}><p className="tadm-operations-node-132">{detail.sale?.customer_name} · {detail.sale?.customer_email}</p><p className="tadm-operations-node-133">{detail.sale?.status} · {detail.sale?.payment_status}</p><div className={portalClass("ops-table-wrap")}><table className="tadm-operations-node-134"><thead className="tadm-operations-node-135"><tr className="tadm-operations-node-136"><th className="tadm-operations-node-137">Item</th><th className="tadm-operations-node-138">Variant</th><th className="tadm-operations-node-139">Qty</th><th className="tadm-operations-node-140">Price</th></tr></thead><tbody className="tadm-operations-node-141">{detail.items?.map((row, i) => <tr key={i} className="tadm-operations-node-142"><td className="tadm-operations-node-143">{row.product_name}</td><td className="tadm-operations-node-144">{row.colour} / {row.size}</td><td className="tadm-operations-node-145">{row.qty}</td><td className="tadm-operations-node-146">{money(row.price)}</td></tr>)}</tbody></table></div><h3 className="tadm-operations-node-147">Delivery address</h3><p className="tadm-operations-node-148">{Object.values(detail.sale?.shipping_address || {}).filter(v => typeof v === 'string').join(', ') || 'Counter sale'}</p><strong className="tadm-operations-node-149">Payable: {money(detail.sale?.totals?.payable)}</strong><Message error={error} success={notice} />{detail.sale?.source === 'WEB' && ['PAID', 'COD'].includes(detail.sale.payment_status) && !['CANCELLED', 'DELIVERED', 'RETURNED'].includes(detail.sale.status) && <div className={portalClass("ops-actions")}>{{
           PLACED: 'PROCESSING',
           CONFIRMED: 'PROCESSING',
           PROCESSING: 'SHIPPED',
@@ -602,15 +624,19 @@ export function MovementsPage() {
       user
     } = useAuth(),
     [page, setPage] = useState(0),
+    [searchInput, setSearchInput] = useState(''),
+    [query, setQuery] = useState(''),
+    [direction, setDirection] = useState(''),
     {
       data,
       error,
       loading
     } = useData('/manage/movements', {
       branch_id: user?.branch_id,
-      offset: page * 50
+      offset: page * 50,
+      q: query, direction
     });
-  return <Shell title="Stock movements" subtitle="A history of receipts, sales and stock corrections"><Message error={error} /><section className={portalClass("ops-panel")}><div className={portalClass("ops-table-wrap")}><table className="tadm-operations-node-187"><thead className="tadm-operations-node-188"><tr className="tadm-operations-node-189"><th className="tadm-operations-node-190">Date</th><th className="tadm-operations-node-191">Branch</th><th className="tadm-operations-node-192">Product</th><th className="tadm-operations-node-193">Change</th><th className="tadm-operations-node-194">Balance</th><th className="tadm-operations-node-195">Reason</th></tr></thead><tbody className="tadm-operations-node-196">{data?.map(row => <tr key={row.id} className="tadm-operations-node-197"><td className="tadm-operations-node-198">{date(row.created_at)}</td><td className="tadm-operations-node-199">{row.branch_name}</td><td className="tadm-operations-node-200">{row.product_name}<small className="tadm-operations-node-201">{row.colour} / {row.size}</small></td><td className="tadm-operations-node-202">{Number(row.delta) > 0 ? '+' : ''}{row.delta}</td><td className="tadm-operations-node-203">{row.balance}</td><td className="tadm-operations-node-204">{row.reason}<small className="tadm-operations-node-205">{row.reference}</small></td></tr>)}</tbody></table></div>{!data?.length && <Empty loading={loading} />}<div className={portalClass("ops-pagination")}><button disabled={!page} onClick={() => setPage(page - 1)} className="tadm-operations-node-206">Previous</button><span className="tadm-operations-node-207">Page {page + 1}</span><button disabled={(data?.length || 0) < 50} onClick={() => setPage(page + 1)} className="tadm-operations-node-208">Next</button></div></section></Shell>;
+  return <Shell title="Transactions" subtitle="Search inventory movements and audit stock changes across your branch"><div className="tadm-filter-grid" aria-label="Transaction filters"><form onSubmit={e=>{e.preventDefault();setQuery(searchInput.trim());setPage(0);}}><label>Search transactions<input value={searchInput} onChange={e=>setSearchInput(e.target.value)} placeholder="Product, reason, colour, reference" /></label><button type="submit">Search</button></form><label>Movement type<select value={direction} onChange={e=>{setDirection(e.target.value);setPage(0);}}><option value="">All movements</option><option value="increase">Received / added</option><option value="decrease">Sold / removed</option></select></label><button type="button" className="tadm-filter-reset" onClick={()=>{setQuery('');setSearchInput('');setDirection('');setPage(0);}}>Clear filters</button></div><Message error={error} /><section className={portalClass("ops-panel")}><div className={portalClass("ops-table-wrap")}><table className="tadm-operations-node-187"><thead className="tadm-operations-node-188"><tr className="tadm-operations-node-189"><th className="tadm-operations-node-190">Date</th><th className="tadm-operations-node-191">Branch</th><th className="tadm-operations-node-192">Product</th><th className="tadm-operations-node-193">Change</th><th className="tadm-operations-node-194">Balance</th><th className="tadm-operations-node-195">Reason</th></tr></thead><tbody className="tadm-operations-node-196">{data?.map(row => <tr key={row.id} className="tadm-operations-node-197"><td className="tadm-operations-node-198">{date(row.created_at)}</td><td className="tadm-operations-node-199">{row.branch_name}</td><td className="tadm-operations-node-200">{row.product_name}<small className="tadm-operations-node-201">{row.colour} / {row.size}</small></td><td className="tadm-operations-node-202">{Number(row.delta) > 0 ? '+' : ''}{row.delta}</td><td className="tadm-operations-node-203">{row.balance}</td><td className="tadm-operations-node-204">{row.reason}<small className="tadm-operations-node-205">{row.reference}</small></td></tr>)}</tbody></table></div>{!data?.length && <Empty loading={loading} />}<div className={portalClass("ops-pagination")}><button disabled={!page} onClick={() => setPage(page - 1)} className="tadm-operations-node-206">Previous</button><span className="tadm-operations-node-207">Page {page + 1}</span><button disabled={(data?.length || 0) < 50} onClick={() => setPage(page + 1)} className="tadm-operations-node-208">Next</button></div></section></Shell>;
 }
 export function AuditPage() {
   const {

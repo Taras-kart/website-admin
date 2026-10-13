@@ -4,8 +4,8 @@
     --tadm-loginadmin-line: #dce3ec;
     --tadm-loginadmin-text: #253046;
     --tadm-loginadmin-muted: #657187;
-    --tadm-loginadmin-gold: #42536a;
-    --tadm-loginadmin-gold-2: #42536a;
+    --tadm-loginadmin-gold: #5a4ac9;
+    --tadm-loginadmin-gold-2: #473cae;
     --tadm-loginadmin-danger: #ff5c5c;
 }
 
@@ -21,7 +21,7 @@
     width: min(460px, calc(100vw - 32px));
     background:
         #f4f7fb;
-    border: 1px solid rgba(255, 216, 77, 0.18);
+    border: 1px solid rgba(90, 74, 201, .14);
     border-radius: 20px;
     padding: 24px;
     box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
@@ -77,8 +77,8 @@
 }
 
 .tadm-loginadmin-login-input-admin-admin-login:focus {
-    border-color: rgba(255, 216, 77, .65);
-    box-shadow: 0 0 0 5px rgba(255, 216, 77, .10);
+    border-color: rgba(90, 74, 201, .60);
+    box-shadow: 0 0 0 5px rgba(90, 74, 201, .10);
     background: #f8fafc;
 }
 .tadm-loginadmin-login-toggle-btn-admin-admin-login {

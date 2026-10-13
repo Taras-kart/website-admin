@@ -2,8 +2,8 @@
 
 ## Delivered
 
-- Black **top** navigation only. No left sidebar or company logo. Horizontal navigation links can scroll on narrow phones; “All links” expands them without opening a left drawer.
-- Light ivory/lavender backgrounds, white cards, plum action accents and softer table borders. No font-weight above 700.
+- Black **top** navigation only. No left sidebar or company logo. Horizontal navigation links can scroll on narrow phones; “More” reveals secondary links without opening a left drawer.
+- Light lavender/slate backgrounds, white cards, violet action accents and softer table borders. No font-weight above 700.
 - Dedicated navigation/pages for **Add Product** (`/products`), **Update Products** (`/products/update`) and **Delete Products** (`/products/delete`).
 - **Categories** (`/categories`) still supports update, restore and child-category deactivation. **Add Category** (`/categories/new`) uses the existing dynamic gender > category > subcategory selector and POST `/api/categories`.
 - Product delete page includes search, table, paging and a barcode-typing confirmation. Deleting a product calls `DELETE /api/manage/products/:id`.
@@ -15,7 +15,7 @@
 1. Update and deploy the **backend ZIP first**. The old backend does not implement barcode-releasing product deletion.
 2. In Vercel (or your deployment environment), set `REACT_APP_API_BASE` to the deployed backend's base URL when needed. The provided `src/pages/api.js` defaults to the existing production API URL; review it before deployment.
 3. Run `npm ci`, then `npm run build` in `tara-admin/` and deploy the production build. No `node_modules` directory is bundled.
-4. Sign in as a super admin and test Add, Update, Delete, reupload and Categories on a staging database before using production inventory.
+4. Sign in as a branch admin to test New Category and as a super admin to confirm it is inaccessible. Test Add, Update, Delete and barcode reupload on a staging database before using production inventory.
 5. Existing styles not linked into current `App.js` were retained for compatibility; the portal routes shown above are the active implementation.
 
 ## Product deletion behavior
@@ -29,3 +29,12 @@ The confirmation dialog clearly states that **variant deletion is global across 
 - TypeScript JSX parser successfully checked frontend JS syntax and local imports.
 - Backend product-retirement unit tests passed.
 - Full API integration test suite and browser/device testing require installing dependencies and a staging database; they were not run in this environment.
+
+## Reference-page refinement
+- Main branch navigation: New Category, Sales, Transactions, POS, Stocks, Customers, Products. Product actions use horizontal tabs.
+- Category create/update/status mutations return 403 to super admins, including direct API calls.
+- Sales and Stock pages have summary cards and expanded SQL-backed filters. Products and customers have filters and sorting.
+- Transactions now reports payment transactions rather than stock movements. Shiprocket/bank settlement is **not calculated** because the current database has no verified payout reconciliation.
+- Stock movements remain accessible from More → Stock Movements.
+- Branch customer lists are limited to customers linked to orders in their branch. Super admin retains the existing global customer directory.
+- Narrow-screen filters stack vertically and wide tables scroll inside their cards.

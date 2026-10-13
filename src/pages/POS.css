@@ -1,11 +1,11 @@
 .tadm-app {
-    --tadm-pos-gold: #6750a4;
+    --tadm-pos-gold: #5a4ac9;
     --tadm-pos-black: #283247;
     --tadm-pos-white: #283247;
     --tadm-pos-muted: #657187;
     --tadm-pos-panel: #ffffff;
     --tadm-pos-panel2: #ffffff;
-    --tadm-pos-border: rgba(255, 255, 255, 0.15);
+    --tadm-pos-border: #dce0ec;
 }
 
 .tadm-pos-pos-page {
@@ -60,7 +60,7 @@
 .tadm-pos-scan-row input:focus {
     outline: none;
     border-color: var(--tadm-pos-gold);
-    box-shadow: 0 0 0 3px rgba(255, 211, 110, 0.15);
+    box-shadow: 0 0 0 3px rgba(103, 84, 201, 0.15);
 }
 
 .tadm-pos-btn {
@@ -282,7 +282,7 @@
 .tadm-pos-pay-input:focus {
     outline: none;
     border-color: var(--tadm-pos-gold);
-    box-shadow: 0 0 0 3px rgba(255, 211, 110, 0.15);
+    box-shadow: 0 0 0 3px rgba(103, 84, 201, 0.15);
 }
 
 .tadm-pos-modal-actions {
@@ -330,3 +330,4 @@
         transform: translateX(-50%) scale(1);
     }
 }
+@media(max-width:680px){.tadm-pos-pos-container{padding:12px}.tadm-pos-pos-header{align-items:flex-start;flex-direction:column;gap:12px}.tadm-pos-scan-row{grid-template-columns:minmax(0,1fr);gap:8px}.tadm-pos-cart{overflow-x:auto}.tadm-pos-cart-head,.tadm-pos-cart-row{min-width:610px}.tadm-pos-payment-grid,.tadm-pos-modal-actions{overflow-x:auto;flex-wrap:nowrap}.tadm-pos-payment-grid>* ,.tadm-pos-modal-actions>*{flex-shrink:0}}

@@ -4,21 +4,23 @@ import { useAuth } from './pages/AdminAuth';
 import { apiGet } from './pages/api';
 import './PortalFrame.css';
 
-const workspace = [
-  ['Overview', '/'], ['Stock', '/stocks'], ['Add Product', '/products'],
-  ['Update Product', '/products/update'], ['Delete Product', '/products/delete'],
-  ['Excel & Images', '/import'], ['Sales', '/sales'], ['Counter Sale', '/pos'],
-  ['Movements', '/transactions']
+// Seven primary destinations, in the order requested. Category access is branch-only.
+const primaryNavigation = [
+  ['Sales', '/sales'], ['Transactions', '/transactions'], ['POS', '/pos'],
+  ['Stocks', '/stocks'], ['Customers', '/customers'], ['Products', '/products']
 ];
-const management = [
-  ['Branches', '/branches'], ['Admins', '/branch-admins'],
-  ['Categories', '/categories'], ['Add Category', '/categories/new'],
-  ['Customers', '/customers'], ['Homepage', '/homepage-images'],
-  ['Order Issues', '/order-issues'], ['B2B Orders', '/b2b-orders'],
-  ['B2B Stock', '/b2b-stock'], ['Shipping', '/shipping'],
-  ['Rewards', '/coin-settings'], ['Activity', '/audit']
+const secondaryNavigation = [
+  ['Import & Upload', '/import'], ['Stock Movements', '/movements'], ['Overview', '/'], ['Account', '/settings']
 ];
-
+const superNavigation = [
+  ['Branches', '/branches'], ['Admins', '/branch-admins'], ['Homepage Images', '/homepage-images'],
+  ['Issues', '/order-issues'], ['B2B Orders', '/b2b-orders'], ['B2B Stock', '/b2b-stock'],
+  ['Shipping', '/shipping'], ['Rewards', '/coin-settings'], ['Activity', '/audit']
+];
+const productTabs = [
+  ['Add Product', '/products'], ['Update Product', '/products/update'],
+  ['Delete Product', '/products/delete'], ['Bulk Upload', '/import']
+];
 class PageBoundary extends React.Component {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -50,17 +52,19 @@ export default function PortalFrame({ children }) {
     return () => controller.abort();
   }, [visible]);
   useEffect(() => setMenuOpen(false), [location.pathname]);
-  const links = superAdmin ? [...workspace, ...management, ['Account', '/settings']] : [...workspace, ['Account', '/settings']];
+  const links = [...(superAdmin ? [] : [['New Category', '/categories/new']]), ...primaryNavigation,
+    ...secondaryNavigation, ...(superAdmin ? superNavigation : [])];
+  const isProductArea = location.pathname.startsWith('/products') || location.pathname === '/import';
   const renderLinks = entries => entries.map(([label, url]) => (
     <NavLink key={url} to={url} end={url === '/'}
-      className={({ isActive }) => `tadm-nav-link${isActive ? ' tadm-nav-current' : ''}`}>
+      className={({ isActive }) => `tadm-nav-link${isActive || (url === '/products' && isProductArea) ? ' tadm-nav-current' : ''}`} >
       {label}
     </NavLink>
   ));
   return <div className={`tadm-app ${visible ? 'tadm-signed' : 'tadm-guest'}`}>
     {visible && <header className="tadm-site-header">
       <div className="tadm-topbar">
-        <Link className="tadm-title" to="/" aria-label="Go to admin overview">Admin workspace <span>{superAdmin ? 'Super Admin' : 'Branch Admin'}</span></Link>
+        <Link className="tadm-title" to="/" aria-label="Go to admin overview">Store Admin <span>{superAdmin ? 'Super Admin' : 'Branch Admin'}</span></Link>
         <div className="tadm-context">
           <label className="tadm-branch"><span>Branch</span>
             {superAdmin ? <select aria-label="Select branch" value={user.branch_id || ''} onChange={event => setBranch(event.target.value)}>
@@ -70,16 +74,22 @@ export default function PortalFrame({ children }) {
           </label>
           <span className="tadm-username">{user.username}</span>
           <button type="button" className="tadm-signout" onClick={logout}>Sign out</button>
-          <button type="button" className="tadm-menu" aria-expanded={menuOpen} aria-controls="tadm-navigation" onClick={() => setMenuOpen(value => !value)}>{menuOpen ? 'Hide links' : 'All links'}</button>
+          <button type="button" className="tadm-menu" aria-expanded={menuOpen} aria-controls="tadm-navigation" onClick={() => setMenuOpen(value => !value)}>{menuOpen ? 'Close' : 'More'}</button>
         </div>
       </div>
       <nav id="tadm-navigation" aria-label="Admin navigation" className={`tadm-topnav${menuOpen ? ' tadm-topnav-expanded' : ''}`}>
         <div className="tadm-nav-scroll">
-          {renderLinks(workspace)}
-          {superAdmin && <><span className="tadm-nav-divider" aria-hidden="true" />{renderLinks(management)}</>}
-          <span className="tadm-nav-divider" aria-hidden="true" />{renderLinks([['Account', '/settings']])}
+          {!superAdmin && renderLinks([['New Category', '/categories/new']])}
+          {renderLinks(primaryNavigation)}
+          <div className={`tadm-more-links${menuOpen ? ' tadm-more-open' : ''}`}>
+            {renderLinks([...secondaryNavigation, ...(superAdmin ? superNavigation : [])])}
+          </div>
         </div>
       </nav>
+      {isProductArea && <nav className="tadm-product-tabs" aria-label="Product actions">
+        {productTabs.map(([label, path]) => <NavLink key={path} to={path} end={path === '/products'}
+          className={({ isActive }) => `tadm-product-tab${isActive ? ' is-active' : ''}`}>{label}</NavLink>)}
+      </nav>}
     </header>}
     <div className={visible ? 'tadm-content' : 'tadm-login-content'} data-page={links.find(([,url]) => url === location.pathname)?.[0] || location.pathname}>
       {visible && branchError && <p className="tadm-branch-error" role="alert">Branch list: {branchError}</p>}

@@ -54,6 +54,9 @@ export default function Customers() {
     [error, setError] = useState(''),
     [revision, setRevision] = useState(0),
     [search, setSearch] = useState(''),
+    [city, setCity] = useState(''),
+    [contactFilter, setContactFilter] = useState(''),
+    [customerSort, setCustomerSort] = useState('name'),
     [page, setPage] = useState(0),
     [adding, setAdding] = useState(false),
     [form, setForm] = useState(blank),
@@ -77,7 +80,7 @@ export default function Customers() {
     });
     return () => controller.abort();
   }, [type, revision]);
-  useEffect(() => setPage(0), [search, type]);
+  useEffect(() => setPage(0), [search, type, city, contactFilter, customerSort]);
   useEffect(() => {
     if (!adding) return;
     const key = e => {
@@ -86,7 +89,13 @@ export default function Customers() {
     document.addEventListener('keydown', key);
     return () => document.removeEventListener('keydown', key);
   }, [adding, busy]);
-  const filtered = useMemo(() => rows.filter(row => [row.name, row.email, row.mobile, row.city].some(value => String(value || '').toLowerCase().includes(search.toLowerCase().trim()))), [rows, search]);
+  const cities = useMemo(() => [...new Set(rows.map(row=>String(row.city||'').trim()).filter(Boolean))].sort(), [rows]);
+  const filtered = useMemo(() => rows.filter(row => {
+    const matchesSearch = [row.name, row.email, row.mobile, row.city].some(value => String(value || '').toLowerCase().includes(search.toLowerCase().trim()));
+    const matchesCity = !city || String(row.city || '') === city;
+    const matchesContact = !contactFilter || (contactFilter==='email' ? Boolean(row.email) : contactFilter==='mobile' ? Boolean(row.mobile) : !row.email || !row.mobile);
+    return matchesSearch && matchesCity && matchesContact;
+  }).sort((a,b)=>customerSort==='recent' ? Number(b.id||0)-Number(a.id||0) : String(a.name||'').localeCompare(String(b.name||''))), [rows, search, city, contactFilter, customerSort]);
   const save = async e => {
     e.preventDefault();
     setFormError('');
@@ -120,6 +129,7 @@ export default function Customers() {
           setPage(0);
           setSuccess('');
         }}>{label}</button>)}</div><input aria-label="Search customers" placeholder="Search name, email, mobile or city" value={search} onChange={e => setSearch(e.target.value)} className="tadm-customers-node-1" /></div>
+  <div className="tadm-filter-grid" aria-label="Customer filters"><label>City<select value={city} onChange={e=>setCity(e.target.value)}><option value="">All cities</option>{cities.map(v=><option key={v}>{v}</option>)}</select></label><label>Contact details<select value={contactFilter} onChange={e=>setContactFilter(e.target.value)}><option value="">All customers</option><option value="email">Has email</option><option value="mobile">Has mobile</option><option value="missing">Missing contact detail</option></select></label><label>Sort customers<select value={customerSort} onChange={e=>setCustomerSort(e.target.value)}><option value="name">Name A–Z</option><option value="recent">Recently added</option></select></label><button type="button" className="tadm-filter-reset" onClick={()=>{setSearch('');setCity('');setContactFilter('');setCustomerSort('name');setPage(0);}}>Clear filters</button></div>
   {success && <p className={portalClass("ops-success")} role="status">{success}</p>}
   {error ? <div className={portalClass("ops-alert")} role="alert">{error} <button onClick={() => setRevision(v => v + 1)} className="tadm-customers-node-2">Try again</button></div> : <section className={portalClass("ops-panel")} aria-busy={loading}><div className={portalClass("ops-table-wrap")}><table className="tadm-customers-node-3"><thead className="tadm-customers-node-4"><tr className="tadm-customers-node-5"><th className="tadm-customers-node-6">Customer</th><th className="tadm-customers-node-7">Email</th><th className="tadm-customers-node-8">Mobile</th>{type === 'B2B' && <th className="tadm-customers-node-9">City</th>}</tr></thead><tbody className="tadm-customers-node-10">{filtered.slice(page * 25, page * 25 + 25).map(row => <tr key={row.id} className="tadm-customers-node-11"><td className="tadm-customers-node-12"><strong className="tadm-customers-node-13">{row.name || 'Unnamed customer'}</strong><small className="tadm-customers-node-14">{type === 'B2B' ? 'Wholesale' : 'Retail'}</small></td><td className="tadm-customers-node-15">{row.email || 'Not provided'}</td><td className="tadm-customers-node-16">{row.mobile || 'Not provided'}</td>{type === 'B2B' && <td className="tadm-customers-node-17">{row.city || 'Not provided'}</td>}</tr>)}</tbody></table></div>{loading ? <div className={portalClass("ops-empty")} role="status">Loading customers...</div> : !filtered.length ? <div className={portalClass("ops-empty")}>{search ? 'No customers match your search.' : 'No customers found.'}</div> : <div className={portalClass("ops-pagination")}><button disabled={!page} onClick={() => setPage(v => v - 1)} className="tadm-customers-node-18">Previous</button><span className="tadm-customers-node-19">{filtered.length} customers, page {page + 1} of {Math.max(1, Math.ceil(filtered.length / 25))}</span><button disabled={(page + 1) * 25 >= filtered.length} onClick={() => setPage(v => v + 1)} className="tadm-customers-node-20">Next</button></div>}</section>}
   {adding && <div className={portalClass("ops-overlay")}><section className={portalClass("ops-modal")} role="dialog" aria-modal="true" aria-label="Add wholesale customer"><header className="tadm-customers-node-21"><h2 className="tadm-customers-node-22">Add wholesale customer</h2><button aria-label="Close dialog" disabled={busy} onClick={() => setAdding(false)} className="tadm-customers-node-23">Close</button></header><form className={portalClass("ops-form")} onSubmit={save}><div className={portalClass("ops-form-grid")}>{[['name', 'Full name', 'text'], ['email', 'Email', 'email'], ['mobile', 'Mobile', 'tel'], ['city', 'City (optional)', 'text'], ['password', 'Password', 'password'], ['confirm', 'Confirm password', 'password']].map(([key, label, inputType]) => <label key={key} className="tadm-customers-node-24">{label}<input autoFocus={key === 'name'} required={key !== 'city'} type={inputType} autoComplete={inputType === 'password' ? 'new-password' : 'off'} minLength={inputType === 'password' ? 8 : undefined} value={form[key]} onChange={e => setForm({

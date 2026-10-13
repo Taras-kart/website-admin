@@ -45,6 +45,9 @@ const Categories = lazy(() => import('./pages/CategoryManagement'));
 const UpdateProductPage = lazy(() => import('./pages/ProductRecords').then(m => ({default:m.UpdateProductPage})));
 const DeleteProductPage = lazy(() => import('./pages/ProductRecords').then(m => ({default:m.DeleteProductPage}))); 
 const Customers = lazy(() => import('./pages/Customers'));
+const BranchCustomers = lazy(() => import('./pages/BranchCustomers'));
+function RoleCustomers(){const {user}=useAuth();return user?.role==='SUPER_ADMIN'?<Customers />:<BranchCustomers />;}
+const Transactions = lazy(() => import('./pages/TransactionsPage'));
 const Homepage = lazy(() => import('./pages/AdminHomepageImages'));
 const OrderIssues = lazy(() => import('./pages/OrderIssues'));
 const Returns = lazy(() => import('./pages/ReturnReview'));
@@ -53,7 +56,8 @@ const B2BStock = lazy(() => import('./pages/B2BStock'));
 const Coins = lazy(() => import('./pages/CoinsSettings'));
 function Guard({
   children,
-  superOnly = false
+  superOnly = false,
+  branchOnly = false
 }) {
   const {
     token,
@@ -63,9 +67,11 @@ function Guard({
   if (!ready) return <div className={portalClass("ops-empty")}>Checking your session...</div>;
   if (!token || !user) return <Navigate to="/login" replace />;
   if ((SUPER_PORTAL || superOnly) && user.role !== 'SUPER_ADMIN') return <div className={portalClass("ops-empty")}>This page requires super admin access. <a href="/login" className="tadm-app-node-0">Sign in with another account</a></div>;
+  if (branchOnly && (user.role === 'SUPER_ADMIN' || !user.branch_id)) return <div className={portalClass('ops-empty')}>Category management is available to branch administrators only.</div>;
   return children;
 }
 const protect = (page, superOnly = false) => <Guard superOnly={superOnly}>{page}</Guard>;
+const protectBranch = page => <Guard branchOnly>{page}</Guard>;
 export default function App() {
-  return <AuthProvider><LoadingProvider><BrowserRouter><PortalFrame><Suspense fallback={<div className={portalClass("ops-empty")}>Loading page...</div>}><Routes><Route path="/login" element={<Login />} /><Route path="/" element={protect(<Dashboard />)} /><Route path="/stocks" element={protect(<StockPage />)} /><Route path="/products" element={protect(<ProductEditor mode="create" />)} /><Route path="/products/update" element={protect(<UpdateProductPage />)} /><Route path="/products/delete" element={protect(<DeleteProductPage />)} /><Route path="/sales" element={protect(<SalesPage />)} /><Route path="/transactions" element={protect(<MovementsPage />)} /><Route path="/pos" element={protect(<POS />)} /><Route path="/import" element={protect(<ImportStock />)} /><Route path="/branches" element={protect(<ManagementPage kind="branches" />, true)} /><Route path="/branch-admins" element={protect(<ManagementPage kind="admins" />, true)} /><Route path="/categories" element={protect(<Categories />, true)} /><Route path="/categories/new" element={protect(<Categories addOnly />, true)} /><Route path="/customers" element={protect(<Customers />, true)} /><Route path="/homepage-images" element={protect(<Homepage />, true)} /><Route path="/order-issues" element={protect(<OrderIssues />, true)} /><Route path="/returns/:id" element={protect(<Returns />, true)} /><Route path="/b2b-orders" element={protect(<B2BOrders />, true)} /><Route path="/b2b-stock" element={protect(<B2BStock />, true)} /><Route path="/shipping" element={protect(<ShippingPage />, true)} /><Route path="/coin-settings" element={protect(<Coins />, true)} /><Route path="/audit" element={protect(<AuditPage />, true)} /><Route path="/settings" element={protect(<SettingsPage />)} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Suspense></PortalFrame></BrowserRouter></LoadingProvider></AuthProvider>;
+  return <AuthProvider><LoadingProvider><BrowserRouter><PortalFrame><Suspense fallback={<div className={portalClass("ops-empty")}>Loading page...</div>}><Routes><Route path="/login" element={<Login />} /><Route path="/" element={protect(<Dashboard />)} /><Route path="/stocks" element={protect(<StockPage />)} /><Route path="/products" element={protect(<ProductEditor mode="create" />)} /><Route path="/products/update" element={protect(<UpdateProductPage />)} /><Route path="/products/delete" element={protect(<DeleteProductPage />)} /><Route path="/sales" element={protect(<SalesPage />)} /><Route path="/transactions" element={protect(<Transactions />)} /><Route path="/movements" element={protect(<MovementsPage />)} /><Route path="/pos" element={protect(<POS />)} /><Route path="/import" element={protect(<ImportStock />)} /><Route path="/branches" element={protect(<ManagementPage kind="branches" />, true)} /><Route path="/branch-admins" element={protect(<ManagementPage kind="admins" />, true)} /><Route path="/categories" element={protectBranch(<Categories />)} /><Route path="/categories/new" element={protectBranch(<Categories addOnly />)} /><Route path="/customers" element={protect(<RoleCustomers />)} /><Route path="/homepage-images" element={protect(<Homepage />, true)} /><Route path="/order-issues" element={protect(<OrderIssues />, true)} /><Route path="/returns/:id" element={protect(<Returns />, true)} /><Route path="/b2b-orders" element={protect(<B2BOrders />, true)} /><Route path="/b2b-stock" element={protect(<B2BStock />, true)} /><Route path="/shipping" element={protect(<ShippingPage />, true)} /><Route path="/coin-settings" element={protect(<Coins />, true)} /><Route path="/audit" element={protect(<AuditPage />, true)} /><Route path="/settings" element={protect(<SettingsPage />)} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Suspense></PortalFrame></BrowserRouter></LoadingProvider></AuthProvider>;
 }

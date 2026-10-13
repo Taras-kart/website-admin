@@ -10,6 +10,11 @@ function ProductList({ mode }) {
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
+  const [gender, setGender] = useState('');
+  const [stock, setStock] = useState('');
+  const [sort, setSort] = useState('recent');
+  const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState([]);
   const [page, setPage] = useState(0);
   const [data, setData] = useState({ rows: [], total: 0 });
   const [busy, setBusy] = useState(false);
@@ -21,15 +26,22 @@ function ProductList({ mode }) {
   const [revision, setRevision] = useState(0);
   const branch = user?.branch_id || '';
   useEffect(() => {
+    let mounted = true;
+    apiGet('/api/categories/admin').then(data => {
+      if (mounted) setCategories((data?.rows || []).filter(c => c.parent_id !== null && c.is_active));
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+  useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    apiGet('/manage/stock', { branch_id: branch, q: search, limit: LIMIT, offset: page * LIMIT }, {signal:controller.signal})
+    apiGet('/manage/stock', { branch_id: branch, q: search, gender, stock_state: stock, category_id: category, sort, limit: LIMIT, offset: page * LIMIT }, {signal:controller.signal})
       .then(response => { if (!controller.signal.aborted) setData(response); })
       .catch(err => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [branch, search, page, revision]);
+  }, [branch, search, gender, stock, category, sort, page, revision]);
   const rows = data.rows || [];
   const isDelete = mode === 'delete';
   const closeDialog = () => { if (!busy) { setTarget(null); setConfirmBarcode(''); } };
@@ -45,10 +57,16 @@ function ProductList({ mode }) {
   };
   return <main className="tadm-records">
     <div className="tadm-records-heading"><div><h1>{isDelete ? 'Delete Products' : 'Update Products'}</h1><p>{isDelete ? 'Remove product listings and release their barcode for future uploads.' : 'Find a product, then open its dedicated editor.'}</p></div>
-      <div className="tadm-records-actions"><Link to="/products" className="tadm-records-secondary">Add Product</Link><Link to="/categories/new" className="tadm-records-secondary">Add Category</Link><Link to={isDelete?'/products/update':'/products/delete'} className="tadm-records-primary">{isDelete?'Update Products':'Delete Products'}</Link></div>
+      <div className="tadm-records-actions"><Link to="/products" className="tadm-records-secondary">Add Product</Link>{user?.role !== 'SUPER_ADMIN' && <Link to="/categories/new" className="tadm-records-secondary">New Category</Link>}<Link to={isDelete?'/products/update':'/products/delete'} className="tadm-records-primary">{isDelete?'Update Products':'Delete Products'}</Link></div>
     </div>
     <section className="tadm-records-card">
-      <form onSubmit={event=>{event.preventDefault();setPage(0);setSearch(query.trim());}} className="tadm-records-search"><label htmlFor="product-lookup">Search by product, colour, size or barcode</label><div><input id="product-lookup" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Enter name or barcode" /><button type="submit">Search</button><button type="button" className="tadm-records-reset" onClick={()=>{setQuery('');setSearch('');setPage(0);setRevision(r=>r+1);}}>Reset</button></div></form>
+      <form onSubmit={event=>{event.preventDefault();setPage(0);setSearch(query.trim());}} className="tadm-records-search"><label htmlFor="product-lookup">Search by product, colour, size or barcode</label><div><input id="product-lookup" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Enter name or barcode" /><button type="submit">Search</button><button type="button" className="tadm-records-reset" onClick={()=>{setQuery('');setSearch('');setGender('');setCategory('');setStock('');setSort('recent');setPage(0);setRevision(r=>r+1);}}>Reset</button></div></form>
+      <div className="tadm-filter-grid" aria-label="Product filters">
+        <label>Department<select value={gender} onChange={e=>{setGender(e.target.value);setCategory('');setPage(0)}}><option value="">All departments</option><option value="MEN">Men</option><option value="WOMEN">Women</option><option value="KIDS">Kids</option></select></label>
+        <label>Category<select value={category} onChange={e=>{setCategory(e.target.value);setPage(0)}}><option value="">All categories</option>{categories.filter(c=>!gender||c.gender===gender).map(c=><option key={c.id} value={c.id}>{c.category_path}</option>)}</select></label>
+        <label>Stock<select value={stock} onChange={e=>{setStock(e.target.value);setPage(0)}}><option value="">All stock levels</option><option value="low">Low (1–5)</option><option value="out">Out of stock</option><option value="in">In stock</option><option value="high">High (100+)</option></select></label>
+        <label>Sort<select value={sort} onChange={e=>{setSort(e.target.value);setPage(0)}}><option value="recent">Recently added</option><option value="name">Product name</option><option value="stock_asc">Stock: low to high</option><option value="stock_desc">Stock: high to low</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option></select></label>
+      </div>
       {notice&&<p className="tadm-records-notice" role="status">{notice}</p>}
       {error&&<p className="tadm-records-error" role="alert">{error}</p>}
       {!branch && <p className="tadm-records-notice">All branches are selected. Deleting a product removes its variant from every branch. Choose a branch above if you want to narrow the list.</p>}
