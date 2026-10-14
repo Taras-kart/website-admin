@@ -183,6 +183,7 @@ export default function ImportStock() {
   const [message, setMessage] = useState('');
   const [imageMessage, setImageMessage] = useState('');
   const [jobs, setJobs] = useState([]);
+  const [importDetails, setImportDetails] = useState({jobId:null,rows:[],total:0,loading:false,error:''});
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState(null);
   const [imageProgress, setImageProgress] = useState({
@@ -298,6 +299,16 @@ export default function ImportStock() {
       hide();
     }
   }, [branchId, show, hide]);
+  const showImportErrors = useCallback(async (jobId) => {
+    if (!branchId) return;
+    setImportDetails({jobId,rows:[],total:0,loading:true,error:''});
+    try {
+      const response=await apiGet(`/api/branch/${encodeURIComponent(branchId)}/import-rows?jobId=${encodeURIComponent(jobId)}&status=ERROR&limit=30`);
+      setImportDetails({jobId,rows:response?.rows||[],total:Number(response?.total||0),loading:false,error:''});
+    } catch(error) {
+      setImportDetails({jobId,rows:[],total:0,loading:false,error:error?.message||'Could not load errors'});
+    }
+  },[branchId]);
   const fetchDiscounts = useCallback(async () => {
     if (!branchId) return;
     try {
@@ -324,6 +335,7 @@ export default function ImportStock() {
   const processJob = useCallback(async (jobId, setProg) => {
     let start = 0;
     let finished = false;
+    let lastResult = null;
     setProg({
       jobId,
       state: 'Processing…',
@@ -332,6 +344,7 @@ export default function ImportStock() {
     });
     while (!finished) {
       const r = await apiPost(`/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=${PROCESS_LIMIT}`);
+      lastResult = r;
       const processed = Number(r?.processed || 0);
       const next = r?.nextStart !== undefined && r?.nextStart !== null ? Number(r.nextStart) : start + processed;
       const total = r?.totalRows !== undefined && r?.totalRows !== null ? Number(r.totalRows) : null;
@@ -349,6 +362,7 @@ export default function ImportStock() {
         start = safeNext;
       }
     }
+    return lastResult;
   }, [branchId]);
   const onUpload = useCallback(async e => {
     e.preventDefault();
@@ -374,17 +388,30 @@ export default function ImportStock() {
       localStorage.setItem('import_gender', gender);
       localStorage.setItem('import_category_id', categoryId);
       const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd);
-      setMessage('Uploaded. Starting processing…');
+      if (job.alreadyProcessed) {
+        setMessage(`This file is already ${job.status_enum} under this category. No new stock was added.`);
+        await fetchJobs();
+        return;
+      }
+      setMessage(job.retried ? 'Retrying previously failed rows…' : 'Uploaded. Starting processing…');
       setFile(null);
-      await processJob(job.id, setProgress);
+      const result=await processJob(job.id, setProgress);
       await fetchJobs();
+      // A 200 HTTP response is not proof of a successful import: read job row counts.
+      const current=await apiGet(`/api/branch/${encodeURIComponent(branchId)}/import-rows?jobId=${encodeURIComponent(job.id)}&limit=1`);
+      const status=String(current?.job?.status_enum||'');
+      const passed=Number(current?.job?.rows_success||0);
+      const failed=Number(current?.job?.rows_error||0);
+      const mode=result?.mode==='RECLASSIFY_EXISTING' ? ' Existing inventory retained; no duplicate stock receipt.' : '';
+      setMessage(`Import ${status.toLowerCase()||'finished'}: ${passed} successful, ${failed} failed.${mode}`);
+      if (failed) await showImportErrors(job.id);
     } catch (err) {
       setMessage(err?.payload?.message || err?.message || 'Upload failed');
     } finally {
       setUploading(false);
       hide();
     }
-  }, [file, branchId, gender, categoryId, show, hide, processJob, fetchJobs]);
+  }, [file, branchId, gender, categoryId, show, hide, processJob, fetchJobs, showImportErrors]);
   async function uploadToCloudinary(blob, publicIdBase) {
     const form = new FormData();
     form.append('image', blob, `${publicIdBase}.jpg`);
@@ -963,6 +990,7 @@ export default function ImportStock() {
                       </td>
                       <td data-label="Error" className="tadm-importstock-node-42">
                         {j.rows_error ?? 0}
+                        {Number(j.rows_error||0)>0 && <button type="button" className="tara-import-view-errors" onClick={()=>showImportErrors(j.id)}>View errors</button>}
                       </td>
                       <td data-label="Uploaded" className="tadm-importstock-node-43">
                         {j.uploaded_at ? new Date(j.uploaded_at).toLocaleString() : '-'}
@@ -979,8 +1007,19 @@ export default function ImportStock() {
               </tbody>
             </table>
           </div>
+          {importDetails.jobId !== null && <section className="tara-import-errors" aria-live="polite">
+            <div className="tara-import-errors-heading"><h3>Import #{importDetails.jobId} — failed rows ({importDetails.total})</h3>
+              <button type="button" onClick={()=>setImportDetails({jobId:null,rows:[],total:0,loading:false,error:''})}>Close</button>
+            </div>
+            {importDetails.loading ? <p>Loading errors…</p> : importDetails.error ? <p role="alert">{importDetails.error}</p>
+              : importDetails.rows.length===0 ? <p>No failed rows are recorded for this import.</p>
+              : <div className="tara-import-error-table"><table><thead><tr><th>Product</th><th>Barcode</th><th>Failure reason</th></tr></thead><tbody>
+                {importDetails.rows.map(row=><tr key={row.id}><td>{row.raw_row_json?.Product || row.raw_row_json?.productname || row.raw_row_json?.['Product Name'] || '-'}</td>
+                  <td>{row.raw_row_json?.['EANCode/STYLE'] || row.raw_row_json?.EANCode || row.raw_row_json?.eancode || '-'}</td><td>{row.error_msg || 'Unspecified import error'}</td></tr>)}
+              </tbody></table></div>}
+          </section>}
           <div className={portalClass("import-note-admin")}>
-            Quantity counts selling units. For a 3-piece pack, enter quantity 1 and PACK SIZE 3, or 1box (pack of3). MRP is the full pack price. Normal products use PACK SIZE 1. Reimporting adds stock to your branch.
+            Quantity counts selling units. For a 3-piece pack, enter quantity 1 and PACK SIZE 3, or 1box (pack of3). MRP is the full pack price. Normal products use PACK SIZE 1. Reimporting an already completed identical file does not add stock. Reclassification to an existing child category preserves current stock when the source file exactly matches a previously completed parent-category import.
           </div>
         </div>
       </div>
