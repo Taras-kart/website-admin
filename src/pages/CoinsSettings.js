@@ -110,7 +110,7 @@ export default function CoinsSettings() {
 
         <div style={styles.header} className="tadm-coinssettings-node-4">
           <h2 style={styles.title} className="tadm-coinssettings-node-5">Coin wallet settings</h2>
-          <p style={styles.subtitle} className="tadm-coinssettings-node-6">Configure how Attach coins work for customers</p>
+          <p style={styles.subtitle} className="tadm-coinssettings-node-6">Configure how customer coins work (maximum redemption: 10 points per product unit)</p>
         </div>
 
         {message.text && <div style={{
@@ -148,7 +148,7 @@ export default function CoinsSettings() {
             <span style={styles.unit} className="tadm-coinssettings-node-19">coins</span>
           </div>
           <div style={styles.preview} className="tadm-coinssettings-node-20">
-            Customer gets <strong className="tadm-coinssettings-node-21">{form.coins_signup_bonus || 0} coins = ₹{form.coins_signup_bonus || 0} discount</strong> on first {form.coins_redeem_order_limit} orders
+            Customer gets <strong className="tadm-coinssettings-node-21">{form.coins_signup_bonus || 0} bonus coins</strong>. Redemption is limited to 10 coins per product unit, with at least ₹1 payable per unit.
           </div>
         </div>
 
@@ -218,7 +218,7 @@ export default function CoinsSettings() {
           <div style={styles.summaryRow} className="tadm-coinssettings-node-49"><span className="tadm-coinssettings-node-50">Signup bonus</span><span className="tadm-coinssettings-node-51">{form.coins_signup_bonus} coins</span></div>
           <div style={styles.summaryRow} className="tadm-coinssettings-node-52"><span className="tadm-coinssettings-node-53">Earn rate</span><span className="tadm-coinssettings-node-54">{form.coins_earn_rate_pct}% of subtotal</span></div>
           <div style={styles.summaryRow} className="tadm-coinssettings-node-55"><span className="tadm-coinssettings-node-56">Signup coins valid for</span><span className="tadm-coinssettings-node-57">First {form.coins_redeem_order_limit} paid orders</span></div>
-          <div style={styles.summaryRow} className="tadm-coinssettings-node-58"><span className="tadm-coinssettings-node-59">B2B eligible</span><span className="tadm-coinssettings-node-60">{form.coins_b2b_enabled === 'true' ? 'Yes' : 'No'}</span></div>
+          <div style={styles.summaryRow}><span>Maximum redemption</span><span>10 points per product unit</span></div><div style={styles.summaryRow} className="tadm-coinssettings-node-58"><span className="tadm-coinssettings-node-59">B2B eligible</span><span className="tadm-coinssettings-node-60">{form.coins_b2b_enabled === 'true' ? 'Yes' : 'No'}</span></div>
         </div>
 
         <button onClick={handleSave} disabled={saving} style={{
