@@ -45,18 +45,20 @@ function ProductList({ mode }) {
   const rows = data.rows || [];
   const isDelete = mode === 'delete';
   const closeDialog = () => { if (!busy) { setTarget(null); setConfirmBarcode(''); } };
+  const confirmationText = target ? (target.scope === 'entire' ? `DELETE PRODUCT ${target.product_id}` : target.ean_code || `DELETE VARIANT ${target.variant_id}`) : ''; 
   const deleteProduct = async () => {
-    if (!target || confirmBarcode.trim() !== (target.ean_code || `DELETE ${target.variant_id}`)) return;
+    if (!target || confirmBarcode.trim() !== confirmationText) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const result = await apiDelete(`/manage/products/${target.variant_id}`, { branch_id: target.branch_id });
-      setNotice(`${target.name} deleted. ${result.released_barcodes || 0} barcode(s) released for a future upload.`);
+      const path = target.scope === 'entire' ? `/manage/products/by-product/${target.product_id}` : `/manage/products/${target.variant_id}`;
+      const result = await apiDelete(path, { branch_id: target.branch_id });
+      setNotice(`${target.name} permanently deleted: ${result.deleted_variants || 0} variant(s), ${result.released_barcodes || 0} barcode(s). The parent product was ${result.deleted_product ? 'also deleted' : 'retained for its remaining variants'}. Stock movements are archived in the audit log.`);
       setTarget(null); setConfirmBarcode(''); setRevision(r => r + 1);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
   return <main className="tadm-records">
-    <div className="tadm-records-heading"><div><h1>{isDelete ? 'Delete Products' : 'Update Products'}</h1><p>{isDelete ? 'Remove product listings and release their barcode for future uploads.' : 'Find a product, then open its dedicated editor.'}</p></div>
+    <div className="tadm-records-heading"><div><h1>{isDelete ? 'Delete Products' : 'Update Products'}</h1><p>{isDelete ? 'Permanently delete variants or entire product styles from PostgreSQL. Sales-linked records cannot be deleted.' : 'Find a product, then open its dedicated editor.'}</p></div>
       <div className="tadm-records-actions"><Link to="/products" className="tadm-records-secondary">Add Product</Link>{user?.role !== 'SUPER_ADMIN' && <Link to="/categories/new" className="tadm-records-secondary">New Category</Link>}<Link to={isDelete?'/products/update':'/products/delete'} className="tadm-records-primary">{isDelete?'Update Products':'Delete Products'}</Link></div>
     </div>
     <section className="tadm-records-card">
@@ -70,15 +72,15 @@ function ProductList({ mode }) {
       {notice&&<p className="tadm-records-notice" role="status">{notice}</p>}
       {error&&<p className="tadm-records-error" role="alert">{error}</p>}
       {!branch && <p className="tadm-records-notice">All branches are selected. Deleting a product removes its variant from every branch. Choose a branch above if you want to narrow the list.</p>}
-      {loading ? <p className="tadm-records-empty">Loading products...</p> : rows.length ? <div className="tadm-records-table-wrap"><table><thead><tr><th>Product</th><th>Variant</th><th>Barcode</th><th>Branch</th><th>Stock</th><th>Action</th></tr></thead><tbody>{rows.map(row=><tr key={`${row.branch_id}-${row.variant_id}`}><td><strong>{row.name}</strong><small>{row.brand_name || 'Unbranded'} · {row.category_name || row.gender || 'Uncategorised'}</small></td><td>{row.colour} / {row.size}</td><td className="tadm-records-code">{row.ean_code || 'No barcode'}</td><td>{row.branch_name}</td><td>{row.on_hand}</td><td><div className="tadm-records-actions">{isDelete?<button type="button" className="tadm-records-danger" onClick={()=>{setTarget(row);setConfirmBarcode('');setError('');}}>Delete</button>:<Link className="tadm-records-primary" to={`/products/update?variantId=${row.variant_id}&branchId=${row.branch_id}`}>Update</Link>}</div></td></tr>)}</tbody></table></div> : <p className="tadm-records-empty">No active products found. Try a different search or branch.</p>}
+      {loading ? <p className="tadm-records-empty">Loading products...</p> : rows.length ? <div className="tadm-records-table-wrap"><table><thead><tr><th>Product</th><th>Variant</th><th>Barcode</th><th>Branch</th><th>Stock</th><th>Action</th></tr></thead><tbody>{rows.map(row=><tr key={`${row.branch_id}-${row.variant_id}`}><td><strong>{row.name}</strong><small>{row.brand_name || 'Unbranded'} · {row.category_name || row.gender || 'Uncategorised'}</small></td><td>{row.colour} / {row.size}</td><td className="tadm-records-code">{row.ean_code || 'No barcode'}</td><td>{row.branch_name}</td><td>{row.on_hand}</td><td><div className="tadm-records-actions">{isDelete?<><button type="button" className="tadm-records-danger" onClick={()=>{setTarget({...row,scope:'variant'});setConfirmBarcode('');setError('');}}>Delete Variant</button><button type="button" className="tadm-records-danger" onClick={()=>{setTarget({...row,scope:'entire'});setConfirmBarcode('');setError('');}}>Delete Entire Product</button></>:<Link className="tadm-records-primary" to={`/products/update?variantId=${row.variant_id}&branchId=${row.branch_id}`}>Update</Link>}</div></td></tr>)}</tbody></table></div> : <p className="tadm-records-empty">No active products found. Try a different search or branch.</p>}
       <div className="tadm-records-pagination"><span>{Number(data.total||0).toLocaleString('en-IN')} products</span><div className="tadm-records-actions"><button type="button" disabled={!page||loading} onClick={()=>setPage(n=>n-1)}>Previous</button><span>Page {page+1}</span><button type="button" disabled={loading||(page+1)*LIMIT>=Number(data.total||0)} onClick={()=>setPage(n=>n+1)}>Next</button></div></div>
     </section>
     {target && <div className="tadm-records-overlay" onMouseDown={closeDialog}><section className="tadm-records-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-title" onMouseDown={e=>e.stopPropagation()}>
-      <h2 id="delete-title">Delete {target.name}?</h2><p>Its listing will be disabled in every branch, associated stock will be retired, and its barcode mapping will be permanently released. Existing orders and stock movement history remain available.</p>
-      <p className="tadm-records-warning">Deletion is blocked if there are outstanding stock reservations. Shared products require Super Admin permissions.</p>
-      <label>Type <strong>{target.ean_code || `DELETE ${target.variant_id}`}</strong> to confirm<input value={confirmBarcode} onChange={e=>setConfirmBarcode(e.target.value)} autoComplete="off" autoFocus /></label>
+      <h2 id="delete-title">Permanently delete {target.scope === 'entire' ? 'entire product' : 'variant'}?</h2><p>This permanently removes {target.scope === 'entire' ? 'the product row and all its variants' : 'this variant row and the parent if no variants remain'} from the database, along with linked stock, cart entries when applicable, and released barcode/image mappings. This cannot be undone from the admin page. Historical stock movements are archived in the audit log.</p>
+      <p className="tadm-records-warning">Deletion is blocked if there are outstanding reservations, historical sales, or unknown foreign-key dependencies. Products stocked in multiple branches require Super Admin.</p>
+      <label>Type <strong>{confirmationText}</strong> to confirm<input value={confirmBarcode} onChange={e=>setConfirmBarcode(e.target.value)} autoComplete="off" autoFocus /></label>
       {error&&<p className="tadm-records-error" role="alert">{error}</p>}
-      <div className="tadm-records-actions"><button type="button" onClick={closeDialog} disabled={busy}>Cancel</button><button type="button" className="tadm-records-danger" disabled={busy||confirmBarcode.trim()!==(target.ean_code||`DELETE ${target.variant_id}`)} onClick={deleteProduct}>{busy?'Deleting...':'Delete product & release barcode'}</button></div>
+      <div className="tadm-records-actions"><button type="button" onClick={closeDialog} disabled={busy}>Cancel</button><button type="button" className="tadm-records-danger" disabled={busy||confirmBarcode.trim()!==confirmationText} onClick={deleteProduct}>{busy?'Deleting...':'Permanently Delete'}</button></div>
     </section></div>}
   </main>;
 }

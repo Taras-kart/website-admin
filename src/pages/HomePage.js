@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './HomePage.css';
 import AddProduct from './AddProduct';
 import UpdateProduct from './UpdateProduct';
-import DeleteProduct from './DeleteProduct';
+import { DeleteProductPage } from './ProductRecords';
 const portalClass = value => String(value || '').split(/\s+/).filter(Boolean).flatMap(name => ({
   "ops-main": ["tadm-operations-ops-main"],
   "ops-heading": ["tadm-operations-ops-heading"],
@@ -47,7 +47,7 @@ const HomePage = () => {
   const renderContent = () => {
     if (activeTab === 'Add') return <AddProduct />;
     if (activeTab === 'Update') return <UpdateProduct />;
-    if (activeTab === 'Delete') return <DeleteProduct />;
+    if (activeTab === 'Delete') return <DeleteProductPage />;
     return null;
   };
   return <div className={portalClass("admin-homepage")}>

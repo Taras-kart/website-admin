@@ -393,7 +393,7 @@ export default function ImportStock() {
         await fetchJobs();
         return;
       }
-      setMessage(job.retried ? 'Retrying previously failed rows…' : 'Uploaded. Starting processing…');
+      setMessage(job.retried ? 'Retrying previously failed rows…' : job.reuploaded ? 'Previously deleted products detected. Starting a fresh import without duplicating active stock…' : 'Uploaded. Starting processing…');
       setFile(null);
       const result=await processJob(job.id, setProgress);
       await fetchJobs();
@@ -668,7 +668,7 @@ export default function ImportStock() {
   return <div className={portalClass("import-page-admin")}>
       <div className={portalClass("ops-main")} style={{
       paddingBottom: 0
-    }}><h1 className="tadm-importstock-heading">Excel &amp; images</h1><a href="/templates/Tara-Product-Import-Template.xlsx" download className="tadm-importstock-node-0">Download product import template</a><p className="tadm-importstock-node-1">Choose branch, department and category. Upload one row per colour and size. Re-uploading the same file resumes its original job.</p></div>
+    }}><h1 className="tadm-importstock-heading">Excel &amp; images</h1><a href="/templates/Tara-Product-Import-Template.xlsx" download className="tadm-importstock-node-0">Download product import template</a><p className="tadm-importstock-node-1">Choose branch, department and category. Upload one row per colour and size. Previously completed files can be reuploaded after every matching product is deleted; active products are protected against duplicate stock.</p></div>
       <div className={portalClass("import-wrap-admin")}>
         <div className={portalClass("import-card-admin")}>
           <div className={portalClass("import-title-admin")}>
