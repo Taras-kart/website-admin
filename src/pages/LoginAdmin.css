@@ -202,3 +202,13 @@
     }
 }
 .tadm-loginadmin-login-card-admin-admin-login{background:#fff;box-shadow:0 14px 40px #20314a14;border-color:#e0e4eb}.tadm-loginadmin-login-title-admin-admin-login{color:#263248}.tadm-loginadmin-login-wrap-admin-admin-login{min-height:auto}.tadm-loginadmin-login-subtitle-admin-admin-login{color:#657187}
+
+/* Login: centered, restrained styling and no overlapping field icons. */
+.tadm-loginadmin-login-wrap-admin-admin-login{min-height:calc(100dvh - 20px);background:#f2f7f6;display:grid;place-items:center}
+.tadm-loginadmin-login-card-admin-admin-login{background:#fff;border:1px solid #deebea;box-shadow:0 18px 48px rgba(19,53,58,.10);padding:clamp(22px,4vw,34px);border-radius:16px}
+.tadm-loginadmin-login-title-admin-admin-login{color:#185f5b}
+.tadm-loginadmin-login-field-admin-admin-login{position:relative;min-width:0}
+.tadm-loginadmin-login-input-admin-admin-login{width:100%;min-width:0;box-sizing:border-box}
+.tadm-loginadmin-login-input-icon-admin-admin-login{pointer-events:none}
+.tadm-loginadmin-login-toggle-btn-admin-admin-login{z-index:1}
+@media(max-width:480px){.tadm-loginadmin-login-card-admin-admin-login{width:calc(100vw - 24px);padding:20px}.tadm-loginadmin-login-wrap-admin-admin-login{padding:12px}}

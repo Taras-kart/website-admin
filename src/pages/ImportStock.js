@@ -81,6 +81,7 @@ const portalClass = value => String(value || '').split(/\s+/).filter(Boolean).fl
   "discount-input": ["tadm-importstock-discount-input"]
 })[name] || ["tadm-importstock-" + name]).join(' ');
 const PROCESS_LIMIT = 100;
+const MAX_IMPORT_BATCHES = 250;
 function baseNameNoExt(name) {
   const n = name.split('/').pop() || name;
   const i = n.lastIndexOf('.');
@@ -173,6 +174,7 @@ export default function ImportStock() {
     hide
   } = useLoading();
   const [file, setFile] = useState(null);
+  const [fileError, setFileError] = useState('');
   const [imageZip, setImageZip] = useState(null);
   const [gender, setGender] = useState('');
   const [categories, setCategories] = useState([]);
@@ -205,7 +207,7 @@ export default function ImportStock() {
   const [b2bMessage, setB2bMessage] = useState('');
   const [b2bUploading, setB2bUploading] = useState(false);
   const branchId = user?.branch_id;
-  const canUpload = useMemo(() => !!file && !!branchId && !uploading && !!gender && !!categoryId, [file, branchId, uploading, gender, categoryId]);
+  const canUpload = useMemo(() => !!file && !fileError && !!branchId && !uploading && !!gender && !!categoryId, [file, fileError, branchId, uploading, gender, categoryId]);
   const canUploadImages = useMemo(() => !!imageZip && !!branchId && !uploadingImages, [imageZip, branchId, uploadingImages]);
   const canSaveDiscounts = useMemo(() => {
     return !!branchId && !savingDiscounts && b2cDiscount !== '' && b2bDiscount !== '' && !isNaN(parseFloat(b2cDiscount)) && !isNaN(parseFloat(b2bDiscount));
@@ -245,10 +247,20 @@ export default function ImportStock() {
       localStorage.removeItem('import_category_id');
     }
   }, [categoryId, categoriesLoading, genderCategories]);
+  const validateFile = (candidate, type = importType) => {
+    if (!candidate) return 'Choose an Excel or CSV file.';
+    if (!/\.(xlsx|xls|csv)$/i.test(candidate.name)) return 'Only .xlsx, .xls or .csv files are supported.';
+    if (!candidate.size) return 'This file is empty.';
+    const limit = type === 'B2B' ? 50 : 10;
+    if (candidate.size > limit * 1024 * 1024) return `Maximum ${type} import size is ${limit} MB. Split larger spreadsheets into smaller files.`;
+    return '';
+  };
   const onB2BUpload = useCallback(async () => {
     if (!file || !gender || b2bUploading) {
       return;
     }
+    const issue = validateFile(file, 'B2B');
+    if (issue) { setB2bMessage(issue); return; }
     setB2bUploading(true);
     setB2bMessage('');
     show();
@@ -259,18 +271,8 @@ export default function ImportStock() {
       if (categoryId) {
         fd.append('categoryId', categoryId);
       }
-      const token = localStorage.getItem('auth_token') || '';
-      const API_BASE_RAW = process.env.REACT_APP_API_BASE || 'https://taras-kart-backend.vercel.app';
-      const API_BASE = API_BASE_RAW.replace(/\/+$/, '');
-      const res = await fetch(`${API_BASE}/api/b2b/import`, {
-        method: 'POST',
-        headers: token ? {
-          Authorization: `Bearer ${token}`
-        } : {},
-        body: fd
-      });
-      const data = await res.json();
-      if (res.ok) {
+      const data = await apiUpload('/api/b2b/import', fd);
+      if (data.ok) {
         setB2bMessage(data.message || 'B2B import complete');
         if (data.errors?.length) {
           setB2bMessage(prev => prev + ' | Errors: ' + data.errors.slice(0, 3).join('; '));
@@ -279,7 +281,7 @@ export default function ImportStock() {
         setB2bMessage(data.message || 'B2B import failed');
       }
     } catch (e) {
-      setB2bMessage('Network error: ' + e.message);
+      setB2bMessage(e?.payload?.message || e.message || 'B2B import failed. Check your connection.');
     } finally {
       setB2bUploading(false);
       hide();
@@ -342,7 +344,9 @@ export default function ImportStock() {
       done: 0,
       total: null
     });
+    let batches = 0;
     while (!finished) {
+      if (++batches > MAX_IMPORT_BATCHES) throw new Error('Import exceeded the safe processing limit. Refresh the job history and check row errors before retrying.');
       const r = await apiPost(`/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=${PROCESS_LIMIT}`);
       lastResult = r;
       const processed = Number(r?.processed || 0);
@@ -370,9 +374,11 @@ export default function ImportStock() {
       setMessage('Please select a gender, category, and file.');
       return;
     }
+    const validationError = validateFile(file, 'B2C');
+    if (validationError) { setMessage(validationError); return; }
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      setMessage('You are not logged in');
+      setMessage('Your session has expired. Please sign in again.');
       return;
     }
     setUploading(true);
@@ -394,7 +400,6 @@ export default function ImportStock() {
         return;
       }
       setMessage(job.retried ? 'Retrying previously failed rows…' : job.reuploaded ? 'Previously deleted products detected. Starting a fresh import without duplicating active stock…' : 'Uploaded. Starting processing…');
-      setFile(null);
       const result=await processJob(job.id, setProgress);
       await fetchJobs();
       // A 200 HTTP response is not proof of a successful import: read job row counts.
@@ -403,7 +408,8 @@ export default function ImportStock() {
       const passed=Number(current?.job?.rows_success||0);
       const failed=Number(current?.job?.rows_error||0);
       const mode=result?.mode==='RECLASSIFY_EXISTING' ? ' Existing inventory retained; no duplicate stock receipt.' : '';
-      setMessage(`Import ${status.toLowerCase()||'finished'}: ${passed} successful, ${failed} failed.${mode}`);
+      setMessage(`Import ${status.toLowerCase()||'finished'}: ${passed} successful, ${failed} failed.${mode}${failed ? ' Open failed rows below, correct the spreadsheet, then retry.' : ''}`);
+      if (!failed && status === 'COMPLETE') setFile(null);
       if (failed) await showImportErrors(job.id);
     } catch (err) {
       setMessage(err?.payload?.message || err?.message || 'Upload failed');
@@ -684,6 +690,7 @@ export default function ImportStock() {
         }} className="tadm-importstock-node-2">
             <button type="button" onClick={() => {
             setImportType('B2C');
+            setFileError(file ? validateFile(file, 'B2C') : '');
             setB2bMessage('');
           }} style={{
             padding: '8px 24px',
@@ -699,6 +706,7 @@ export default function ImportStock() {
             </button>
             <button type="button" onClick={() => {
             setImportType('B2B');
+            setFileError(file ? validateFile(file, 'B2B') : '');
             setMessage('');
           }} style={{
             padding: '8px 24px',
@@ -755,7 +763,8 @@ export default function ImportStock() {
                 <label className={portalClass("label")}>
                   Excel / CSV
                 </label>
-                <input type="file" accept=".xlsx,.xls,.csv" onChange={e => setFile(e.target.files?.[0] || null)} className="tadm-importstock-node-11" />
+                <input type="file" accept=".xlsx,.xls,.csv" onChange={e => { const selected = e.target.files?.[0] || null; setFile(selected); setFileError(selected ? validateFile(selected) : ''); }} className="tadm-importstock-node-11" />
+                {fileError && <p className={portalClass('import-msg-admin')} role="alert">{fileError}</p>}
                 {file ? <div className={portalClass("import-filehint-admin")}>
                     {file.name}
                     {' • '}
@@ -772,7 +781,7 @@ export default function ImportStock() {
                         {message}
                       </div> : null}
                   </> : <>
-                    <button className={portalClass("import-btn-admin")} onClick={onB2BUpload} disabled={!file || !gender || !categoryId || b2bUploading}>
+                    <button className={portalClass("import-btn-admin")} onClick={onB2BUpload} disabled={!file || !!fileError || !gender || !categoryId || b2bUploading}>
                       {b2bUploading ? 'Uploading…' : 'Upload B2B Excel'}
                     </button>
                     {b2bMessage ? <div className={portalClass("import-msg-admin")}>
