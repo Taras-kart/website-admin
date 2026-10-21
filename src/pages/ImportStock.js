@@ -165,6 +165,14 @@ function buildImageLookups(products) {
     sharedCollisions
   };
 }
+function validateFile(candidate, type = 'B2C') {
+    if (!candidate) return 'Choose an Excel or CSV file.';
+    if (!/\.(xlsx|xls|csv)$/i.test(candidate.name)) return 'Only .xlsx, .xls or .csv files are supported.';
+    if (!candidate.size) return 'This file is empty.';
+    const limit = type === 'B2B' ? 50 : 10;
+    if (candidate.size > limit * 1024 * 1024) return `Maximum ${type} import size is ${limit} MB. Split larger spreadsheets into smaller files.`;
+    return '';
+}
 export default function ImportStock() {
   const {
     user
@@ -247,14 +255,6 @@ export default function ImportStock() {
       localStorage.removeItem('import_category_id');
     }
   }, [categoryId, categoriesLoading, genderCategories]);
-  const validateFile = (candidate, type = importType) => {
-    if (!candidate) return 'Choose an Excel or CSV file.';
-    if (!/\.(xlsx|xls|csv)$/i.test(candidate.name)) return 'Only .xlsx, .xls or .csv files are supported.';
-    if (!candidate.size) return 'This file is empty.';
-    const limit = type === 'B2B' ? 50 : 10;
-    if (candidate.size > limit * 1024 * 1024) return `Maximum ${type} import size is ${limit} MB. Split larger spreadsheets into smaller files.`;
-    return '';
-  };
   const onB2BUpload = useCallback(async () => {
     if (!file || !gender || b2bUploading) {
       return;
@@ -763,7 +763,7 @@ export default function ImportStock() {
                 <label className={portalClass("label")}>
                   Excel / CSV
                 </label>
-                <input type="file" accept=".xlsx,.xls,.csv" onChange={e => { const selected = e.target.files?.[0] || null; setFile(selected); setFileError(selected ? validateFile(selected) : ''); }} className="tadm-importstock-node-11" />
+                <input type="file" accept=".xlsx,.xls,.csv" onChange={e => { const selected = e.target.files?.[0] || null; setFile(selected); setFileError(selected ? validateFile(selected, importType) : ''); }} className="tadm-importstock-node-11" />
                 {fileError && <p className={portalClass('import-msg-admin')} role="alert">{fileError}</p>}
                 {file ? <div className={portalClass("import-filehint-admin")}>
                     {file.name}
